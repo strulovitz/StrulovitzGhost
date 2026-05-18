@@ -50,3 +50,48 @@ Preserved context, decisions, and direction.
 - No cloud AI ever — local Qwen for both text splitting and image generation
 - MySQL switch is a one-line config change (SQLAlchemy abstraction)
 - ComfyUI bundled in repo for accessibility, but diffusers is default path
+
+---
+
+## Layer Generation Pipeline
+
+### Layer 1 — Closest (20cm, 100% scale, center=60%)
+**Prompt:**
+```
+Ghibli animation style.
+Tree branch tips entering from LEFT and RIGHT edges, framing the scene like a window.
+On one branch, an owl sits silently, watching.
+On the ground at the BOTTOM, a thick tree root with detailed bark texture,
+drawn as if viewed from VERY CLOSE, 20 centimeters away — large, textured, immersive.
+A curious rabbit sits on the root, its back turned to the viewer, looking forward.
+The ground is drawn from extremely close — detailed moss, grass blades, textures.
+Green screen background in the center where the clearing view would be.
+Clean edges. Isolated subjects.
+```
+**Pipeline:** Qwen 4-bit (diffusers) → 15 steps @768×576 → rembg BG removal → scale 100% / center 60% → save
+**Est time:** ~4 min on RTX 4070 Ti | **Disk:** ~2 MB output
+
+### Layer 2 — Mid-close (90% scale, center=55%)
+Elf paladin girl + Human druid girl on fallen log, backs to viewer, gossiping, laughing, backpacks.
+
+### Layer 3 — Mid (80% scale, center=50%)
+Dwarf cleric guy + Halfling thief guy arguing over campfire with roasting pig, closer flowers.
+
+### Layer 4 — Mid-far (70% scale, center=45%)
+Tiefling fighter girl + Dragonborn wizard guy on rocks, mid flower patches. "20 meters away — grass smooth texture, flowers tiny dots."
+
+### Layer 5 — Far background (N/A — no scaling)
+Ancient magical oak forest, glowing motes, tree line around clearing, dark forest shadows.
+
+### Layer 6 — Farthest background / sky (N/A — no scaling)
+Night sky with stars and full moon, snow-capped mountains on horizon, subtle clouds, misty haze at mountain base.
+
+### Scaling Formula (Layers 1–4)
+| Layer | Scale % | Center % | Distance |
+|-------|---------|----------|----------|
+| 1     | 100     | 60       | 20 cm    |
+| 2     | 90      | 55       | ~3 m     |
+| 3     | 80      | 50       | ~10 m    |
+| 4     | 70      | 45       | ~20 m    |
+
+`center = 45 + (4 - layer) * 5` — higher center% = lower on canvas = closer to viewer. Farther layers shift up toward horizon.
