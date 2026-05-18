@@ -105,12 +105,27 @@ CUDA DLLs (`c10.dll`, `c10_cuda.dll`, `torch.dll`, `cudnn*.dll`, etc.) are locke
 - Some other CUDA-using application
 
 ### What to try next (in order)
-1. **Reboot PC** — unlocks all DLLs. Then reinstall torch:
-   ```
-   %USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install torch==2.12.0+cu126 torchvision==0.27.0+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
-   ```
-2. If reboot doesn't fix: **recreate conda env from scratch** using exact version pins below.
-3. If still broken: run `setup.bat` fresh.
+
+**Option A — Reboot + reinstall (try first, may fail)**
+Reboot PC to unlock the DLLs. Then:
+```
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip uninstall -y torch torchvision torchaudio
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install torch==2.12.0+cu126 torchvision==0.27.0+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -c "import torch; print(torch.cuda.get_device_name(0))"
+```
+⚠️ If pip uninstall hangs again even after reboot, skip to Option B.
+
+**Option B — Full env recreate (reliable)**
+Delete and recreate the entire conda environment:
+```
+conda remove -n strulovitzghost --all -y
+conda create -n strulovitzghost python=3.12 -y
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install torch==2.12.0+cu126 torchvision==0.27.0+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install diffusers==0.39.0.dev0 transformers==5.8.1 accelerate==1.13.0 bitsandbytes==0.49.2 sentencepiece==0.2.1
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install flask flask-sqlalchemy pyqt6 pillow requests python-dotenv rembg
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install -r src/comfyui/requirements.txt
+```
+⚠️ Models are already downloaded and will NOT be re-downloaded. Only packages (~6 GB) need reinstalling.
 
 ### Exact versions (from working state)
 ```
