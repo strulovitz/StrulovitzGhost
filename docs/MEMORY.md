@@ -66,14 +66,19 @@ bitsandbytes         0.49.2
 sentencepiece        0.2.1
 ```
 
-### Model Inventory (May 18 2026)
+### Model Inventory (May 18 2026 — Updated)
 | Model | Size | Status |
 |-------|------|--------|
-| `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~13 GB | ❌ Deleted (HF cache cleared) |
-| `unsloth/Qwen-Image-2512-GGUF` | ~13 GB | ❌ Deleted (HF cache cleared) |
-| `blanchon/Qwen-Image-Edit-2509-bnb-4bit` | ~14 GB | ❌ Unknown if ever downloaded |
+| `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~13 GB | ✅ Downloaded |
+| `unsloth/Qwen-Image-2512-GGUF` | ~13 GB | ✅ Downloaded (fixed filename: lowercase `qwen-image-2512-Q4_K_M.gguf`) |
+| `blanchon/Qwen-Image-Edit-2509-bnb-4bit` | ~14 GB | ✅ Downloaded |
 | ComfyUI | ~2 GB | ✅ Present at `src/comfyui/main.py` |
 | Output PNGs | ~50 MB | ✅ 26 test images in `src/output/` |
+| C: drive free | 32 GB | After all 3 model downloads |
+
+### Fix: GGUF filename in downloader.py
+- **Was:** `GGUF_FILE = "Qwen-Image-2512-Q4_K_S.gguf"` → 404
+- **Fixed:** `GGUF_FILE = "qwen-image-2512-Q4_K_M.gguf"` → works
 
 ## Troubleshooting Log
 

@@ -10,7 +10,7 @@ MODEL_DIFFUSERS_4BIT = "unsloth/Qwen-Image-2512-unsloth-bnb-4bit"
 MODEL_DIFFUSERS_FULL = "Qwen/Qwen-Image-2512"
 MODEL_COMFYUI_GGUF = "unsloth/Qwen-Image-2512-GGUF"
 MODEL_EDIT_4BIT = "blanchon/Qwen-Image-Edit-2509-bnb-4bit"
-GGUF_FILE = "Qwen-Image-2512-Q4_K_S.gguf"
+GGUF_FILE = "qwen-image-2512-Q4_K_M.gguf"
 
 
 def download_with_retry(
