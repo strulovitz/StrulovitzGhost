@@ -12,33 +12,23 @@ This is a fully worked example showing how a Dungeon Master's text description g
 
 ## Layer Breakdown (Farthest → Closest)
 
-### Layer 6 — Sky & Moon 🌌 (Farthest from viewer, ~2 meters away)
+### Layer 6 — Night Sky & Mountains 🌌🏔️ (Farthest from viewer, ~2 meters away)
 
 **What it contains:**
 - Clear night sky filled with stars
 - A bright, glowing full moon
 - Subtle clouds near the moon
-
-**Everything else:** TRANSPARENT
-
-**Purpose:** Establishes the deepest background — infinite distance. The moon provides the light source for the entire scene.
-
----
-
-### Layer 5 — Far Mountains 🏔️
-
-**What it contains:**
 - Snow-capped mountain peaks on the horizon
 - Dark mountain silhouettes against the night sky
 - Misty haze at the base of the mountains
 
 **Everything else:** TRANSPARENT
 
-**Purpose:** Creates the far background — establishes the wilderness setting. The mountains sit behind the forest and give scale to the world.
+**Purpose:** Establishes the deepest background — infinite distance. The moon provides the light source for the entire scene. The mountains add scale and set the wilderness location. These two elements are combined because at this far distance, the parallax effect between them is minimal.
 
 ---
 
-### Layer 4 — The Magical Forest 🌳✨
+### Layer 5 — The Magical Forest 🌳✨
 
 **What it contains:**
 - Ancient, large oak trees — thick trunks, sprawling branches
@@ -52,7 +42,7 @@ This is a fully worked example showing how a Dungeon Master's text description g
 
 ---
 
-### Layer 3 — Tiefling Fighter & Dragonborn Wizard 🗡️📖
+### Layer 4 — Tiefling Fighter & Dragonborn Wizard 🗡️📖
 
 **What it contains:**
 - **Tiefling Fighter Girl** — sitting on a medium-sized rounded rock, sharpening her sword with a whetstone. Her horns and tail are visible. She looks focused and serious.
@@ -66,7 +56,7 @@ This is a fully worked example showing how a Dungeon Master's text description g
 
 ---
 
-### Layer 2 — Dwarf Cleric & Halfling Thief + Campfire 🔥🐗
+### Layer 3 — Dwarf Cleric & Halfling Thief + Campfire 🔥🐗
 
 **What it contains:**
 - **Dwarf Cleric Guy** — standing, gesturing angrily/enthusiastically, his armor and holy symbol visible
@@ -82,7 +72,7 @@ This is a fully worked example showing how a Dungeon Master's text description g
 
 ---
 
-### Layer 1 — Elf Paladin & Human Druid 🌿👯‍♀️
+### Layer 2 — Elf Paladin & Human Druid 🌿👯‍♀️
 
 **What it contains:**
 - **Elf Paladin Girl** — sitting on a fallen tree log trunk, turned away from us (her back to the viewer), gossiping and laughing with the Druid
@@ -92,11 +82,11 @@ This is a fully worked example showing how a Dungeon Master's text description g
 
 **Everything else:** TRANSPARENT
 
-**Purpose:** The closest character layer. These two are right near the viewer, with their backs to us — this makes us feel like we're standing right behind them.
+**Purpose:** The characters closest to the viewer. These two are right near us, with their backs turned — this makes us feel like we're standing right behind them. Their laughter and gossip create a warm, social atmosphere.
 
 ---
 
-### Layer 0 — Foreground Framing 🦉🐇 (Closest to viewer, ~20 cm away)
+### Layer 1 — Foreground Framing 🦉🐇 (Closest to viewer, ~20 cm away)
 
 **What it contains:**
 - Very close tree branch tips entering from the sides and top edges (like a natural frame)
@@ -106,34 +96,22 @@ This is a fully worked example showing how a Dungeon Master's text description g
 
 **Everything else:** TRANSPARENT
 
-**Purpose:** The closest possible elements. These frame the scene from the edges (not blocking the main view) and provide the ultimate depth cue. The viewer is "peeping" from the forest into the clearing. The rabbit and owl add life and reinforce the idea that the group is being watched from the woods.
-
----
-
-## Note on Layer Count ⚠️
-
-The physical Strulovitz Ghost setup has **6 layers** (3 monitors × 2 layers each), but this example describes **7 layers** (6 scene layers + 1 foreground framing layer). This will be resolved during implementation — options include:
-
-- Combine Layer 1 and Layer 0 into a single PNG (characters + foreground framing on the same layer)
-- Adjust the physical setup to accommodate more layers
-- Assign the foreground framing to share Layer 1 on the closest monitor
-
-This is a planning consideration for the implementation phase.
+**Purpose:** The closest possible elements — maximum parallax effect. These frame the scene from the edges (not blocking the main view) and provide the ultimate depth cue. The viewer is "peeping" from the forest into the clearing. The rabbit and owl add life and reinforce the idea that the group is being watched from the woods.
 
 ---
 
 ## The Characters (Full Reference)
 
-These are the **6 player characters** in our example D&D group. They appear across Layers 1–3 in this scene.
+These are the **6 player characters** in our example D&D group. They appear across Layers 2–4 in this scene.
 
 | # | Species | Class | Gender | Layer | Activity in This Scene |
 |---|---------|------|--------|-------|------------------------|
-| 1 | Tiefling | Fighter | Girl | 3 | Sharpening her sword on a rock |
-| 2 | Dragonborn | Wizard | Guy | 3 | Memorizing spells from his magic book |
-| 3 | Dwarf | Cleric | Guy | 2 | Arguing over the campfire |
-| 4 | Halfling | Thief | Guy | 2 | Arguing over the campfire |
-| 5 | Elf | Paladin | Girl | 1 | Gossiping and laughing (back to viewer) |
-| 6 | Human | Druid | Girl | 1 | Gossiping and laughing (back to viewer) |
+| 1 | Tiefling | Fighter | Girl | 4 | Sharpening her sword on a rock |
+| 2 | Dragonborn | Wizard | Guy | 4 | Memorizing spells from his magic book |
+| 3 | Dwarf | Cleric | Guy | 3 | Arguing over the campfire |
+| 4 | Halfling | Thief | Guy | 3 | Arguing over the campfire |
+| 5 | Elf | Paladin | Girl | 2 | Gossiping and laughing (back to viewer) |
+| 6 | Human | Druid | Girl | 2 | Gossiping and laughing (back to viewer) |
 
 ---
 
@@ -142,13 +120,12 @@ These are the **6 player characters** in our example D&D group. They appear acro
 ```
 VIEWER 👁️
   │
-  │  20 cm  ┃ Layer 0: Branches, owl, rabbit (framing)
-  │         ┃ Layer 1: Elf Paladin + Human Druid (on tree trunk)
-  │         ┃ Layer 2: Dwarf Cleric + Halfling Thief + campfire
-  │         ┃ Layer 3: Tiefling Fighter + Dragonborn Wizard (on rocks)
-  │         ┃ Layer 4: Magical forest of oak trees
-  │         ┃ Layer 5: Far mountains (snow-capped)
-  │   2 m   ┃ Layer 6: Night sky, stars, moon
+  │  20 cm  ┃ Layer 1: Branches, owl, rabbit (framing)
+  │         ┃ Layer 2: Elf Paladin + Human Druid (on tree trunk)
+  │         ┃ Layer 3: Dwarf Cleric + Halfling Thief + campfire
+  │         ┃ Layer 4: Tiefling Fighter + Dragonborn Wizard (on rocks)
+  │         ┃ Layer 5: Magical forest of oak trees
+  │   2 m   ┃ Layer 6: Night sky, moon, mountains
   │
   ▼  INFINITY
 ```

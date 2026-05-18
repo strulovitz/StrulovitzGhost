@@ -80,6 +80,17 @@ The software's job is to **calculate and render the correct image for each of th
 
 The user (typically a Dungeon Master for D&D or similar tabletop RPG) runs a **browser-based GUI** — not a CLI. This is important for ease of use and for future phases where computing will be distributed across the internet between multiple players' machines.
 
+### Important: This is NOT Real-Time ⏳
+
+This system produces **static scenes, not live video**. Each scene takes a few minutes for the AI to generate all 6 layers. This is perfectly fine for the use case:
+
+- The system acts like a **3D diorama** or a **custom illustrated book page** — not an action game or movie
+- Fantasy tabletop RPGs (like D&D) are slow-paced — characters discuss, plan, and roleplay
+- The generated images are **tailored specifically** to the group's unique characters and current situation
+- It's a **bespoke illustration tool**, not a real-time rendering engine
+
+> **Future stages** may explore faster generation, but Stage 1 intentionally embraces the "slow art" approach.
+
 ### Stage 1 Pipeline
 
 ```
