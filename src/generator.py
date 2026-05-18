@@ -10,7 +10,8 @@ import torch
 from PIL import Image
 
 
-MODEL_ID = "Qwen/Qwen-Image-2512"
+MODEL_DIFFUSERS_4BIT = "unsloth/Qwen-Image-2512-unsloth-bnb-4bit"
+MODEL_DIFFUSERS_FULL = "Qwen/Qwen-Image-2512"
 COMFYUI_DIR = os.path.join(os.path.dirname(__file__), "comfyui")
 COMFYUI_PORT = 8188
 COMFYUI_URL = f"http://localhost:{COMFYUI_PORT}"
@@ -26,16 +27,34 @@ def generate_diffusers(
 ) -> Optional[str]:
     try:
         from diffusers import DiffusionPipeline
+        from downloader import check_model_cached, MODEL_DIFFUSERS_4BIT, MODEL_DIFFUSERS_FULL
 
-        print(f"Loading Qwen-Image-2512 pipeline...")
+        if check_model_cached(MODEL_DIFFUSERS_4BIT):
+            model_id = MODEL_DIFFUSERS_4BIT
+            print("Using 4-bit quantized model (fits 12GB VRAM)")
+        elif check_model_cached(MODEL_DIFFUSERS_FULL):
+            model_id = MODEL_DIFFUSERS_FULL
+            print("Using full model (needs 20GB+ VRAM)")
+        else:
+            print("No model found! Please download a model first from the GUI.")
+            return None
+
+        print(f"Loading from: {model_id}")
         pipe = DiffusionPipeline.from_pretrained(
-            MODEL_ID,
+            model_id,
             torch_dtype=torch.bfloat16,
         )
 
         if torch.cuda.is_available():
-            pipe = pipe.to("cuda")
-            print(f"Using CUDA: {torch.cuda.get_device_name(0)}")
+            vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
+            print(f"GPU: {torch.cuda.get_device_name(0)} ({vram_gb:.1f} GB VRAM)")
+
+            if "bnb-4bit" in model_id or vram_gb < 16:
+                print("Using CPU offload for memory efficiency...")
+                pipe.enable_model_cpu_offload()
+            else:
+                pipe = pipe.to("cuda")
+                print("Using CUDA directly")
         else:
             print("CUDA not available, using CPU (slow)")
 
@@ -48,7 +67,7 @@ def generate_diffusers(
             width=width,
             height=height,
             num_inference_steps=num_steps,
-            guidance_scale=guidance_scale,
+            true_cfg_scale=guidance_scale,
         ).images[0]
 
         image.save(output_path)
@@ -57,6 +76,8 @@ def generate_diffusers(
 
     except Exception as e:
         print(f"Diffusers generation error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 

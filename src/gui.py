@@ -340,6 +340,38 @@ class GenerateThread(QThread):
             self.error_signal.emit(str(e))
 
 
+class DownloadThread(QThread):
+    progress_signal = pyqtSignal(str)
+    finished_signal = pyqtSignal(str)
+    error_signal = pyqtSignal(str)
+
+    def __init__(self, model_type):
+        super().__init__()
+        self.model_type = model_type
+
+    def run(self):
+        try:
+            from downloader import (
+                download_diffusers_4bit,
+                download_comfyui_gguf,
+            )
+
+            def progress_cb(msg, pct):
+                self.progress_signal.emit(f"{msg} ({pct}%)" if pct >= 0 else msg)
+
+            if self.model_type == "diffusers":
+                result = download_diffusers_4bit(progress_callback=progress_cb)
+            else:
+                result = download_comfyui_gguf(progress_callback=progress_cb)
+
+            if result:
+                self.finished_signal.emit(f"{self.model_type} model ready! ✅")
+            else:
+                self.error_signal.emit("Download failed after retries. Check internet connection.")
+        except Exception as e:
+            self.error_signal.emit(str(e))
+
+
 class WorkerWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -354,6 +386,14 @@ class WorkerWidget(QWidget):
         self.method_combo = QComboBox()
         self.method_combo.addItems(["diffusers", "comfyui"])
         config_row.addWidget(self.method_combo)
+
+        self.dl_diffusers_btn = QPushButton("Download Diffusers Model")
+        self.dl_diffusers_btn.clicked.connect(lambda: self.download_model("diffusers"))
+        config_row.addWidget(self.dl_diffusers_btn)
+
+        self.dl_comfy_btn = QPushButton("Download ComfyUI Model")
+        self.dl_comfy_btn.clicked.connect(lambda: self.download_model("comfyui"))
+        config_row.addWidget(self.dl_comfy_btn)
 
         config_row.addStretch()
         self.poll_toggle = QPushButton("Start Polling")
@@ -404,6 +444,30 @@ class WorkerWidget(QWidget):
 
     def get_server(self):
         return self.window().get_server()
+
+    def download_model(self, model_type):
+        self.dl_diffusers_btn.setEnabled(False)
+        self.dl_comfy_btn.setEnabled(False)
+        self.status_label.setText(f"Downloading {model_type} model... (may take several minutes)")
+
+        self.dl_thread = DownloadThread(model_type)
+        self.dl_thread.progress_signal.connect(self.on_dl_progress)
+        self.dl_thread.finished_signal.connect(self.on_dl_finished)
+        self.dl_thread.error_signal.connect(self.on_dl_error)
+        self.dl_thread.start()
+
+    def on_dl_progress(self, msg):
+        self.status_label.setText(msg)
+
+    def on_dl_finished(self, msg):
+        self.status_label.setText(msg)
+        self.dl_diffusers_btn.setEnabled(True)
+        self.dl_comfy_btn.setEnabled(True)
+
+    def on_dl_error(self, msg):
+        self.status_label.setText(f"Download error: {msg}")
+        self.dl_diffusers_btn.setEnabled(True)
+        self.dl_comfy_btn.setEnabled(True)
 
     def toggle_polling(self):
         if self.poll_toggle.isChecked():

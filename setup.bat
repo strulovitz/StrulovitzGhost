@@ -26,6 +26,10 @@ call conda run -n strulovitzghost pip install -r src\comfyui\requirements.txt
 
 echo [4/4] Setup complete!
 echo.
+echo Models are NOT downloaded yet (saves disk space).
+echo After starting the GUI, use the "Download Models" buttons
+echo in the Worker tab to download the AI models you need.
+echo.
 echo To start the server: run_server.bat
 echo To start the GUI:    run_gui.bat
 echo.
