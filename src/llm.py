@@ -100,3 +100,25 @@ def split_scene(scene: str, style: str = "fantasy art", provider: str = "ollama"
     if provider == "lmstudio":
         return split_scene_lmstudio(scene, style, model)
     return split_scene_ollama(scene, style, model)
+
+
+def check_ollama_health() -> bool:
+    try:
+        response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def check_lmstudio_health() -> bool:
+    try:
+        response = requests.get("http://localhost:1234/v1/models", timeout=5)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def check_llm_health(provider: str = "ollama") -> bool:
+    if provider == "lmstudio":
+        return check_lmstudio_health()
+    return check_ollama_health()

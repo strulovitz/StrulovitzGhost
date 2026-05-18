@@ -136,9 +136,15 @@ The website runs on the DM's computer using **Python Flask**. It is the ONLY com
 
 **Style Preservation** 🎨 — Every question can have an optional `style` field (e.g., "Ghibli animation", "oil painting", "pixel art"). This style is passed down the entire chain: from Client → Boss → Worker prompts → Qwen-Image generation → Boss merge with Qwen-Image-Edit. This ensures visual consistency across all 6 layers.
 
-**Local LLM for Boss Splitting** 🧠 — The Boss uses a **local text LLM** (NOT a cloud AI) to break complex scene descriptions into 6 layer-specific prompts. Supported backends:
+**Local LLM for Boss Splitting** 🧠 — The Boss uses a **local text LLM** (NOT a cloud AI) to break complex scene descriptions into 6 layer-specific prompts. 
+
+> **Important:** Ollama and/or LM Studio are installed by the user independently, OUTSIDE our Miniconda environment. Our software connects to them via HTTP (`localhost:11434` for Ollama, `localhost:1234` for LM Studio). They are the user's responsibility to install and run.
+
+Supported backends:
 - **Ollama** (default) — Recommended model: `qwen3` (Qwen3.6 27B dense or Qwen3.6 35B MoE quantized)
 - **LM Studio** — User's choice of any local model
+
+The `GET /api/health/llm` endpoint checks if the chosen LLM backend is running and accessible.
 
 The LLM is only used for text-to-prompts splitting. Image generation always uses Qwen-Image-2512 (local). **At no stage does the system rely on cloud-based AI.**
 

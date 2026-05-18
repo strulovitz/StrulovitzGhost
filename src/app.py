@@ -241,6 +241,18 @@ def serve_result(filename):
     return send_from_directory(OUTPUT_DIR, filename)
 
 
+@app.route("/api/health/llm", methods=["GET"])
+def health_llm():
+    provider = request.args.get("provider", LLM_PROVIDER)
+    try:
+        from llm import check_llm_health
+
+        ok = check_llm_health(provider)
+        return jsonify({"provider": provider, "available": ok})
+    except Exception as e:
+        return jsonify({"provider": provider, "available": False, "error": str(e)})
+
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
