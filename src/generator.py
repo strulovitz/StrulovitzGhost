@@ -24,6 +24,8 @@ def generate_diffusers(
     height: int = 768,
     num_steps: int = 28,
     guidance_scale: float = 4.0,
+    remove_bg: bool = True,
+    progress_callback=None,
 ) -> Optional[str]:
     try:
         from diffusers import DiffusionPipeline
@@ -31,53 +33,123 @@ def generate_diffusers(
 
         if check_model_cached(MODEL_DIFFUSERS_4BIT):
             model_id = MODEL_DIFFUSERS_4BIT
-            print("Using 4-bit quantized model (fits 12GB VRAM)")
         elif check_model_cached(MODEL_DIFFUSERS_FULL):
             model_id = MODEL_DIFFUSERS_FULL
-            print("Using full model (needs 20GB+ VRAM)")
         else:
             print("No model found! Please download a model first from the GUI.")
             return None
 
-        print(f"Loading from: {model_id}")
-        pipe = DiffusionPipeline.from_pretrained(
-            model_id,
-            torch_dtype=torch.bfloat16,
+        if progress_callback:
+            progress_callback("Loading model...", 3)
+
+        pipe = DiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+
+        if torch.cuda.is_available() and ("bnb-4bit" in model_id or torch.cuda.get_device_properties(0).total_memory < 16e9):
+            pipe.enable_model_cpu_offload()
+        elif torch.cuda.is_available():
+            pipe = pipe.to("cuda")
+
+        if progress_callback:
+            progress_callback("Running timing test shot...", 8)
+
+        step_times = []
+
+        def timing_cb(pipeline, step, timestep, kwargs):
+            now = time.time()
+            if hasattr(timing_cb, "last"):
+                step_times.append(now - timing_cb.last)
+            timing_cb.last = now
+            return kwargs
+
+        timing_cb.last = time.time()
+        pipe(
+            prompt="test shot",
+            negative_prompt="",
+            width=64, height=64,
+            num_inference_steps=3,
+            true_cfg_scale=4.0,
+            callback_on_step_end=timing_cb,
+            callback_on_step_end_tensor_inputs=["latents"],
         )
 
-        if torch.cuda.is_available():
-            vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
-            print(f"GPU: {torch.cuda.get_device_name(0)} ({vram_gb:.1f} GB VRAM)")
+        sec_per_step = sum(step_times) / len(step_times) if step_times else 18.0
+        pixels = width * height
+        test_pixels = 64 * 64
+        est_sec_per_step = sec_per_step * (pixels / test_pixels) * 0.6
+        est_total = est_sec_per_step * num_steps
 
-            if "bnb-4bit" in model_id or vram_gb < 16:
-                print("Using CPU offload for memory efficiency...")
-                pipe.enable_model_cpu_offload()
-            else:
-                pipe = pipe.to("cuda")
-                print("Using CUDA directly")
-        else:
-            print("CUDA not available, using CPU (slow)")
+        if progress_callback:
+            progress_callback(
+                f"Estimated: ~{est_total/60:.1f} min ({num_steps} steps, {width}x{height})",
+                10,
+            )
 
-        full_prompt = f"{prompt}, transparent background, isolated on transparent"
+        full_prompt = (
+            f"{prompt}. The subject is small and centered on a plain green screen background. "
+            f"Isolated subject. Studio lighting. Clean edges."
+        )
 
-        print(f"Generating: {width}x{height}, {num_steps} steps...")
-        image = pipe(
+        class ProgressTracker:
+            def __init__(self):
+                self.start_time = time.time()
+                self.step_times = []
+
+            def __call__(self, pipeline, step_idx, timestep, callback_kwargs):
+                now = time.time()
+                if self.step_times:
+                    self.step_times.append(now - self._last)
+                self._last = now
+                if progress_callback and self.step_times:
+                    done = len(self.step_times)
+                    avg = sum(self.step_times) / done
+                    remaining = (num_steps - done) * avg
+                    pct = 10 + int(80 * done / num_steps)
+                    progress_callback(
+                        f"Step {done}/{num_steps} | ~{remaining:.0f}s left", pct
+                    )
+                return callback_kwargs
+
+            def get_total(self):
+                return time.time() - self.start_time
+
+        tracker = ProgressTracker()
+        tracker._last = time.time()
+        tracker.start_time = time.time()
+
+        result = pipe(
             prompt=full_prompt,
-            negative_prompt="background, solid background, white background, black background, frame, border",
+            negative_prompt="busy background, cluttered, multiple objects, frame filling, close-up, border, text, watermark",
             width=width,
             height=height,
             num_inference_steps=num_steps,
             true_cfg_scale=guidance_scale,
-        ).images[0]
+            callback_on_step_end=tracker,
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        image = result.images[0]
+
+        if remove_bg:
+            if progress_callback:
+                progress_callback("Removing background...", 92)
+            try:
+                from rembg import remove
+                image = remove(image)
+            except Exception as e:
+                print(f"Background removal failed: {e}")
 
         image.save(output_path)
-        print(f"Saved: {output_path}")
+        gen_time = tracker.get_total()
+        if progress_callback:
+            progress_callback(f"Done in {gen_time:.0f}s!", 100)
+        print(f"Generated in {gen_time:.0f}s, saved: {output_path}")
         return output_path
 
     except Exception as e:
-        print(f"Diffusers generation error: {e}")
+        print(f"Generation error: {e}")
         import traceback
         traceback.print_exc()
+        if progress_callback:
+            progress_callback(f"Error: {e}", -1)
         return None
 
 
@@ -240,10 +312,15 @@ def generate_image(
     height: int = 768,
     num_steps: int = 28,
     guidance_scale: float = 4.0,
+    remove_bg: bool = True,
+    progress_callback=None,
 ) -> Optional[str]:
     if method == "comfyui":
         return generate_comfyui(prompt, output_path, width, height, num_steps, guidance_scale)
-    return generate_diffusers(prompt, output_path, width, height, num_steps, guidance_scale)
+    return generate_diffusers(
+        prompt, output_path, width, height, num_steps,
+        guidance_scale, remove_bg, progress_callback,
+    )
 
 
 if __name__ == "__main__":

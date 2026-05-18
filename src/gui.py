@@ -333,14 +333,16 @@ class BossWidget(QWidget):
 
 class GenerateThread(QThread):
     progress_signal = pyqtSignal(int)
+    progress_msg_signal = pyqtSignal(str)
     finished_signal = pyqtSignal(str)
     error_signal = pyqtSignal(str)
 
-    def __init__(self, prompt, method, output_dir):
+    def __init__(self, prompt, method, output_dir, num_steps=15):
         super().__init__()
         self.prompt = prompt
         self.method = method
         self.output_dir = output_dir
+        self.num_steps = num_steps
 
     def run(self):
         try:
@@ -350,10 +352,14 @@ class GenerateThread(QThread):
             filename = f"generated_layer_{int(time.time())}.png"
             output_path = os.path.join(self.output_dir, filename)
 
-            self.progress_signal.emit(10)
+            def progress_cb(msg, pct):
+                self.progress_signal.emit(pct)
+                self.progress_msg_signal.emit(msg)
+
             result = generate_image(
                 self.prompt, output_path, method=self.method,
-                width=768, height=576, num_steps=20,
+                width=768, height=576, num_steps=self.num_steps,
+                remove_bg=True, progress_callback=progress_cb,
             )
             if result:
                 self.progress_signal.emit(100)
@@ -564,9 +570,10 @@ class WorkerWidget(QWidget):
 
         output_dir = os.path.join(os.path.dirname(__file__), "output")
         self.gen_thread = GenerateThread(
-            self.active_task["prompt"], method, output_dir
+            self.active_task["prompt"], method, output_dir, num_steps=15,
         )
         self.gen_thread.progress_signal.connect(self.on_gen_progress)
+        self.gen_thread.progress_msg_signal.connect(lambda m: self.status_label.setText(m))
         self.gen_thread.finished_signal.connect(self.on_gen_finished)
         self.gen_thread.error_signal.connect(self.on_gen_error)
         self.gen_thread.start()
