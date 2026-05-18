@@ -65,12 +65,48 @@ The software's job is to **calculate and render the correct image for each of th
 
 ## Future Stages (Planned)
 
-| Stage | Description |
-|-------|-------------|
-| **Stage 1** | Text-to-6-Layers — DM pastes scene description, AI generates 6 PNG layers with transparent backgrounds |
-| **Stage 2** | Real-time rendering — dynamic graphics that update per frame as the game progresses |
-| **Stage 3** | Distributed computing — combine computing power from multiple players' gaming PCs over the internet |
-| **Stage 4** | Game engine integration — hook into existing fantasy games for automatic scene capture |
+### Stage 1 — Single Machine 🖥️ (Current Focus)
+
+The DM's computer does everything: receives the text description → generates 6 PNG layers → displays them. Slow but simple. One machine, one Qwen model, sequential generation.
+
+### Stage 2 — Distributed: Private Mode 🔒🏠
+
+The 6 players bring their gaming laptops to the DM's house and connect to the same LAN/Wi-Fi. **No internet needed.**
+
+- **DM's computer ("The Boss")**: Splits the task — assigns 1 layer to each player's computer. At the end, collects the 6 finished PNGs and displays them.
+- **Players' computers ("The Workers")**: Each generates exactly **1 PNG layer** — the same layer every time (e.g., Player 1 always renders Layer 1).
+- **All 6 workers operate in parallel**, fully independent — no communication between them.
+- **Speed**: ~6× faster than Stage 1 (all layers generated simultaneously).
+
+### Stage 3 — Distributed: Public Mode 🌐🏠
+
+Same division of labor as Stage 2, but players leave their desktop gaming PCs at home. Connection happens **over the internet**.
+
+- Players come to the DM's house **without any computer** — just themselves.
+- Their home PCs (with our software pre-installed) act as remote workers.
+- Requires internet, but the architecture is identical to Private Mode.
+
+### Stage 4 — Hierarchical Scaling 🏫🏛️ (Theoretical / Demand-Driven)
+
+The whole structure acts as a "block" that can be stacked hierarchically:
+
+| Level | "Boss" | "Workers" |
+|-------|--------|-----------|
+| Classroom | Teacher | 6 Students |
+| School | Principal ("Super Queen") | 6 Teachers |
+| County | Superintendent | 6 Principals |
+| Country | ... | ... |
+
+Each level works in **completely parallel and distributed** fashion. A school of 6 classrooms could produce an image where each individual flower, leaf, and blade of grass gets dedicated GPU time — detail impossible for any single cloud-based AI.
+
+### Hardware Required Per Stage
+
+| Stage | Machines Needed | Network |
+|-------|----------------|---------|
+| 1 | 1 (DM only) | None |
+| 2 | 7 (DM + 6 players) | LAN (no internet) |
+| 3 | 7 (DM + 6 remote players) | Internet |
+| 4 | N × 7 (hierarchical) | Internet |
 
 ---
 
@@ -119,9 +155,86 @@ DM types/pastes scene description
 
 All generated images MUST be **PNG with transparent backgrounds** (NOT JPG). Each layer image contains ONLY the elements that belong at that depth — everything else is transparent. This is what allows the user to see through each layer to the layers behind it.
 
+### Stage 2+ Distributed Pipeline
+
+```
+DM types/pastes scene description
+        │
+        ▼
+  ┌─────────────┐
+  │  DM's        │  ← Splits scene into 6 layer-prompts
+  │  Computer    │
+  │  ("The Boss")│
+  └──────┬──────┘
+         │
+    ┌────┴──────────────────────────┐
+    │    Sends 1 prompt to each      │
+    │    player's computer           │
+    └────┬──────────────────────────┘
+         │
+    ┌────┴────┬────┬────┬────┬────┐
+    ▼         ▼    ▼    ▼    ▼    ▼
+  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐
+  │ PC1 │ │ PC2 │ │ PC3 │ │ PC4 │ │ PC5 │ │ PC6 │  ← ALL in PARALLEL
+  │ L1  │ │ L2  │ │ L3  │ │ L4  │ │ L5  │ │ L6  │     No communication
+  └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘     between workers
+     │       │       │       │       │       │
+     └───────┴───────┴───┬───┴───────┴───────┘
+                         │
+                         ▼
+                  ┌─────────────┐
+                  │  DM's        │  ← Collects 6 PNGs
+                  │  Computer    │     Displays them
+                  │  ("The Boss")│
+                  └─────────────┘
+```
+
+**Key principles:**
+- **DM = Boss**: Splits task, collects & displays results. No heavy GPU work.
+- **Players = Workers**: Each handles exactly 1 layer. Same layer every time. Fully independent.
+- **Zero communication between workers** — by design. Just like the DM-player relationship in the game itself.
+- The DM's computer runs a lightweight "coordinator" role, not the heavy Qwen-Image model.
+
 ---
 
 ## Technical Stack
+
+### DM Computer vs Player Computers
+
+| Role | Software Needed | AI Model |
+|------|----------------|----------|
+| **DM's Computer** | GUI (browser), coordinator/network server, image combiner | None (or lightweight text-to-prompts AI for splitting) |
+| **Player's Computer** | Qwen image generator, network client | **Qwen-Image-2512** (the heavy GPU model) |
+
+> In Stage 1 (single machine), one computer plays both roles.
+
+### Additional AI: Qwen-Image-Edit 🖼️✂️
+
+For advanced versions where multiple sub-images need to be combined into a single layer (e.g., many individual flower PNGs merged into one flower patch PNG), the DM's computer can run **Qwen-Image-Edit**:
+
+- **Model**: [Qwen/Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit)
+- **Purpose**: Intelligently merge/overlay multiple images into a coherent whole
+- **Installation**: Same two methods as Qwen-Image-2512 — ComfyUI (GGUF) or Python Diffusers
+- **Hardware**: ~13.5+ GB combined RAM/VRAM with GGUF quantization
+- **Simpler alternative**: Python's Pillow library can mechanically overlay transparent PNGs (less intelligent, but zero GPU cost)
+
+```python
+# Qwen-Image-Edit basic usage (Python Diffusers)
+import torch
+from diffusers import DiffusionPipeline
+from diffusers.utils import load_image
+
+pipe = DiffusionPipeline.from_pretrained(
+    "Qwen/Qwen-Image-Edit",
+    dtype=torch.bfloat16,
+    device_map="cuda"
+)
+
+input_image = load_image("layer_base.png")
+prompt = "Merge these flowers naturally into the grass, soft lighting"
+image = pipe(image=input_image, prompt=prompt).images[0]
+image.save("layer_merged.png")
+```
 
 ### Environment: Miniconda 🐍
 
@@ -223,6 +336,38 @@ The group consists of **7 friends** — 6 players + 1 Dungeon Master (DM):
 6. Optional: User can toggle **number overlays** (1-6) on each image to verify correct placement
 
 > 📖 Full step-by-step example: see [EXAMPLE-SCENE.md](EXAMPLE-SCENE.md)
+
+---
+
+## The Big Picture: Why This Beats Cloud AI 🏆
+
+### Scaling Advantage
+
+Cloud-based AI (OpenAI, Google, etc.) has a fixed amount of GPU time per image. Our system scales **horizontally** — add more workers, get more detail.
+
+| Approach | GPU time per layer | Detail Level |
+|----------|-------------------|--------------|
+| Cloud AI (single GPU) | ~5-10 seconds | Factory standard |
+| 6 Workers (1 per layer) | ~5-10 seconds per layer | Already better (parallel) |
+| 36 Workers (6 per layer) | ~30-60 seconds per layer | Massively detailed |
+| 6,000 Workers (1 school) | Minutes per layer | Extreme micro-detail |
+
+With enough workers, each individual element gets dedicated attention: every flower, every leaf, every blade of grass, every scale on the Dragonborn's skin, every thread on the Halfling's cloak.
+
+### Limitations ⚠️
+
+Because each layer is generated independently with no communication between workers:
+
+- **Cross-layer effects are NOT possible:**
+  - A far moon reflecting in a nearby pond ✗
+  - A long shadow stretching across multiple layers when the sun is low ✗
+  - Light from a campfire casting shadows on a far tree ✗
+
+These are edge cases that rarely matter in practice. The tradeoff — near-infinite detail scaling for free — far outweighs these limitations.
+
+### The Vision
+
+> A free, open-source system that — given enough volunteer hardware — can produce fantasy illustrations with detail exceeding the best cloud AI in the world. All running on gamers' own PCs, in their own homes, with their own characters.
 
 ---
 
