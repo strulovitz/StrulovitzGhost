@@ -57,6 +57,19 @@ All communication flows through a **Flask website** (the central hub) via simple
 - 🧠 **Local LLM Splitting** — Boss uses Ollama or LM Studio (local, never cloud) to auto-split scenes into 6 layer prompts
 - 🔒 **100% Local** — No cloud AI. Ever. Text LLM (Qwen3.6) + Image AI (Qwen-Image) both run locally.
 
+## 🔧 Quick Start
+
+```bash
+# One-click install (handles conda, packages, ComfyUI, everything)
+setup.bat
+
+# Start the Flask server
+run_server.bat
+
+# In another terminal, start the GUI
+run_gui.bat
+```
+
 ## Tech Stack
 
 | Component | Choice |

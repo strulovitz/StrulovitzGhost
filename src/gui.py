@@ -1,4 +1,6 @@
 import sys
+import os
+import time
 import requests
 from PyQt6.QtWidgets import (
     QApplication,
@@ -305,6 +307,39 @@ class BossWidget(QWidget):
         self.split_btn.setEnabled(True)
 
 
+class GenerateThread(QThread):
+    progress_signal = pyqtSignal(int)
+    finished_signal = pyqtSignal(str)
+    error_signal = pyqtSignal(str)
+
+    def __init__(self, prompt, method, output_dir):
+        super().__init__()
+        self.prompt = prompt
+        self.method = method
+        self.output_dir = output_dir
+
+    def run(self):
+        try:
+            from generator import generate_image
+
+            os.makedirs(self.output_dir, exist_ok=True)
+            filename = f"generated_layer_{int(time.time())}.png"
+            output_path = os.path.join(self.output_dir, filename)
+
+            self.progress_signal.emit(10)
+            result = generate_image(
+                self.prompt, output_path, method=self.method,
+                width=768, height=576, num_steps=20,
+            )
+            if result:
+                self.progress_signal.emit(100)
+                self.finished_signal.emit(result)
+            else:
+                self.error_signal.emit("Generation failed")
+        except Exception as e:
+            self.error_signal.emit(str(e))
+
+
 class WorkerWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -314,6 +349,12 @@ class WorkerWidget(QWidget):
         config_row.addWidget(QLabel("Worker ID:"))
         self.worker_id = QLineEdit("worker-1")
         config_row.addWidget(self.worker_id)
+
+        config_row.addWidget(QLabel("Method:"))
+        self.method_combo = QComboBox()
+        self.method_combo.addItems(["diffusers", "comfyui"])
+        config_row.addWidget(self.method_combo)
+
         config_row.addStretch()
         self.poll_toggle = QPushButton("Start Polling")
         self.poll_toggle.setCheckable(True)
@@ -340,19 +381,26 @@ class WorkerWidget(QWidget):
         self.progress.setVisible(False)
         active_layout.addWidget(self.progress)
 
-        upload_row = QHBoxLayout()
+        gen_row = QHBoxLayout()
+        self.generate_btn = QPushButton("Generate with Qwen AI")
+        self.generate_btn.clicked.connect(self.generate_image)
+        self.generate_btn.setEnabled(False)
+        gen_row.addWidget(self.generate_btn)
+
         self.upload_btn = QPushButton("Upload Result PNG")
         self.upload_btn.clicked.connect(self.upload_result)
         self.upload_btn.setEnabled(False)
-        upload_row.addWidget(self.upload_btn)
-        upload_row.addStretch()
-        active_layout.addLayout(upload_row)
+        gen_row.addWidget(self.upload_btn)
+        gen_row.addStretch()
+        active_layout.addLayout(gen_row)
         active_group.setLayout(active_layout)
         layout.addWidget(active_group)
 
         self.poll_timer = QTimer()
         self.poll_timer.timeout.connect(self.poll_tasks)
         self.active_task = None
+        self.generated_path = None
+        self.gen_thread = None
 
     def get_server(self):
         return self.window().get_server()
@@ -401,10 +449,10 @@ class WorkerWidget(QWidget):
                     f"Task #{self.active_task['id']} — Layer {self.active_task['layer_number']}\n"
                     f"Prompt: {self.active_task['prompt']}"
                 )
-                self.upload_btn.setEnabled(True)
+                self.generate_btn.setEnabled(True)
                 self.progress.setVisible(True)
                 self.progress.setValue(0)
-                self.status_label.setText("Task claimed! Generate the PNG and upload it.")
+                self.status_label.setText("Task claimed! Click Generate with Qwen AI.")
                 self.tasks_list.clear()
             else:
                 err = r.json().get("error", r.text)
@@ -412,12 +460,44 @@ class WorkerWidget(QWidget):
         except Exception as e:
             self.status_label.setText(f"Claim error: {e}")
 
-    def upload_result(self):
+    def generate_image(self):
         if not self.active_task:
             return
-        filepath, _ = QFileDialog.getOpenFileName(
-            self, "Select PNG Result", "", "PNG Images (*.png)"
+        method = self.method_combo.currentText()
+        self.generate_btn.setEnabled(False)
+        self.status_label.setText(f"Generating with Qwen ({method})... this may take a few minutes")
+        self.progress.setValue(0)
+
+        output_dir = os.path.join(os.path.dirname(__file__), "output")
+        self.gen_thread = GenerateThread(
+            self.active_task["prompt"], method, output_dir
         )
+        self.gen_thread.progress_signal.connect(self.on_gen_progress)
+        self.gen_thread.finished_signal.connect(self.on_gen_finished)
+        self.gen_thread.error_signal.connect(self.on_gen_error)
+        self.gen_thread.start()
+
+    def on_gen_progress(self, val):
+        self.progress.setValue(val)
+
+    def on_gen_finished(self, path):
+        self.generated_path = path
+        self.progress.setValue(100)
+        self.upload_btn.setEnabled(True)
+        self.generate_btn.setEnabled(True)
+        self.status_label.setText(f"Generated! ✅ Click Upload Result PNG.")
+
+    def on_gen_error(self, err):
+        self.status_label.setText(f"Generation error: {err}")
+        self.generate_btn.setEnabled(True)
+        self.progress.setVisible(False)
+
+    def upload_result(self):
+        filepath = self.generated_path
+        if not filepath or not self.active_task:
+            filepath, _ = QFileDialog.getOpenFileName(
+                self, "Select PNG Result", "", "PNG Images (*.png)"
+            )
         if not filepath:
             return
         try:
@@ -430,8 +510,10 @@ class WorkerWidget(QWidget):
             if r.ok:
                 self.status_label.setText("Uploaded! ✅")
                 self.active_task = None
+                self.generated_path = None
                 self.active_task_label.setText("No active task")
                 self.upload_btn.setEnabled(False)
+                self.generate_btn.setEnabled(False)
                 self.progress.setVisible(False)
             else:
                 err = r.json().get("error", r.text)

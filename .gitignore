@@ -5,3 +5,4 @@ __pycache__/
 strulovitz.db
 output/
 test_*.py
+src/comfyui/

@@ -345,6 +345,25 @@ All project dependencies (Python, ComfyUI, Qwen model, libraries) will be instal
 
 ### AI Image Generation: Qwen-Image-2512
 
+The Worker generates images using **Qwen-Image-2512**, a powerful local AI model. Two methods are supported — the user picks in the GUI:
+
+| Method | How it Works | Pros | Cons |
+|--------|-------------|------|------|
+| **diffusers** 🐍 | Python `diffusers` library loads the model directly in our conda env | ✅ Simpler, one process ✅ Auto-downloads models from Hugging Face | ❌ Needs ~13GB VRAM (full model) ❌ No GUI workflow editor |
+| **comfyui** 🎨 | ComfyUI runs as a local server (bundled in `src/comfyui/`), Worker sends HTTP requests | ✅ GGUF quantized models (fits 8-12GB) ✅ Visual workflow editor ✅ Industry standard | ❌ Two processes running ❌ Slightly more complex |
+
+**The choice is in the GUI** — a dropdown in the Worker tab lets the user select their preferred method. ComfyUI is bundled directly in the project (cloned during `setup.bat`), with all its dependencies installed in the same conda environment.
+
+### One-Click Setup 🪄
+
+`setup.bat` handles everything:
+1. Creates conda environment `strulovitzghost`
+2. Installs Flask, PyQt6, SQLAlchemy, Pillow
+3. Installs PyTorch with CUDA
+4. Installs diffusers, transformers, accelerate, bitsandbytes
+5. Clones ComfyUI into `src/comfyui/` and installs its requirements
+6. Done! User runs `run_server.bat` + `run_gui.bat`
+
 We use a **free, local AI model** (not a cloud-based service):
 
 - **Model**: [Qwen/Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) on Hugging Face
