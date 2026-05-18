@@ -80,13 +80,100 @@ sentencepiece        0.2.1
 - **Was:** `GGUF_FILE = "Qwen-Image-2512-Q4_K_S.gguf"` → 404
 - **Fixed:** `GGUF_FILE = "qwen-image-2512-Q4_K_M.gguf"` → works
 
-## Troubleshooting Log
+## BLOCKER — Torch broken, DLLs locked (Late Night May 18 2026)
 
-### May 18 — Python/torch hangs in conda env
-- Python binary works: `python -c "print('works')"` → OK
-- `import torch` hangs silently (both with and without CUDA). 10-15s timeouts, no output.
-- HuggingFace cache deleted (47GB freed) earlier — possible torch dependency conflict or conda env corruption.
-- Next: research and fix. Do NOT retry same command.
+### State at session end
+- **All 3 AI models downloaded** (~40 GB total, 32 GB free on C:)
+- **ComfyUI present** at `src/comfyui/main.py`
+- **GGUF filename fixed** in `downloader.py` (lowercase)
+- **Torch CANNOT import** — hangs silently with any timeout length
+- **Torch DLLs CANNOT be deleted** — locked by running process (permission denied on every .dll/.pyd)
+
+### What was tried and failed
+1. `conda run` → hangs in PowerShell (known issue)
+2. `import torch` → hangs, no output, any timeout (15-30s)
+3. `import torch` with `CUDA_VISIBLE_DEVICES=""` → still hangs
+4. `pip uninstall torch` → hangs, no output
+5. `pip uninstall --verbose torch` → hangs, no output
+6. `Remove-Item -Force` on torch dir → all .dll/.pyd files Access Denied (locked)
+7. `pip install --force-reinstall torch==2.12.0+cu126` → hangs, no output
+
+### Most likely cause
+CUDA DLLs (`c10.dll`, `c10_cuda.dll`, `torch.dll`, `cudnn*.dll`, etc.) are locked by some process. Either:
+- Zombie Python from a previous torch import
+- ComfyUI background process
+- Some other CUDA-using application
+
+### What to try next (in order)
+1. **Reboot PC** — unlocks all DLLs. Then reinstall torch:
+   ```
+   %USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install torch==2.12.0+cu126 torchvision==0.27.0+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
+   ```
+2. If reboot doesn't fix: **recreate conda env from scratch** using exact version pins below.
+3. If still broken: run `setup.bat` fresh.
+
+### Exact versions (from working state)
+```
+torch                2.12.0+cu126
+torchvision          0.27.0+cu126
+diffusers            0.39.0.dev0
+transformers         5.8.1
+accelerate           1.13.0
+bitsandbytes         0.49.2
+sentencepiece        0.2.1
+flask                 (latest)
+flask-sqlalchemy      (latest)
+pyqt6                 (latest)
+pillow                (latest)
+requests              (latest)
+python-dotenv         (latest)
+rembg                 (latest)
+```
+
+### Conda env Python path (CRITICAL — always use this)
+```
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe
+```
+Never use `conda run` — it hangs in PowerShell.
+
+### AI Models — How to download (already done, May 18)
+All 3 models downloaded to `~/.cache/huggingface/hub/`. To verify:
+```python
+from downloader import check_model_cached
+print(check_model_cached("unsloth/Qwen-Image-2512-unsloth-bnb-4bit"))  # True
+print(check_model_cached("unsloth/Qwen-Image-2512-GGUF"))   # True
+print(check_model_cached("blanchon/Qwen-Image-Edit-2509-bnb-4bit"))  # True
+```
+GGUF filename fixed in downloader.py: `qwen-image-2512-Q4_K_M.gguf` (lowercase!)
+
+### Next task when env is fixed: Generate Layer 1
+```
+Prompt: Ghibli animation style. Tree branches left+right framing, owl on branch,
+rabbit on root, drawn 20cm away, green screen bg, clean edges.
+→ Qwen 4-bit diffusers, 15 steps @768×576 → rembg → scale 100% / center 60% → save
+Est: ~4 min on RTX 4070 Ti
+```
+Full prompt in Layer Generation Pipeline section below.
+
+### Successful commands (save for reference)
+```
+# Check GPU (fast)
+%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "import torch; print(torch.cuda.get_device_name(0))"
+
+# Download models (one at a time, ~10-15 min each, from src/ directory)
+%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "exec(open('downloader.py').read()); download_diffusers_4bit()"
+%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "exec(open('downloader.py').read()); download_comfyui_gguf()"
+%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "exec(open('downloader.py').read()); download_qwen_image_edit()"
+
+# Generate Layer 1 (when torch works)
+%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "from generator import generate_diffusers; generate_diffusers('PROMPT HERE', 'output/layer1.png', width=768, height=576, num_steps=15, remove_bg=True)"
+
+# Check disk
+%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "import shutil; s=shutil.disk_usage('C:/'); print(f'Free: {s.free/1e9:.1f} GB')"
+
+# Check if model cached
+%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "from downloader import check_model_cached; print(check_model_cached('unsloth/Qwen-Image-2512-unsloth-bnb-4bit'))"
+```
 
 ---
 
