@@ -39,15 +39,29 @@ Strulovitz Ghost is a **multi-layer Pepper's Ghost** effect: instead of one refl
 👉 **Full design**: [docs/DESIGN.md](docs/DESIGN.md)
 👉 **Detailed scene walkthrough**: [docs/EXAMPLE-SCENE.md](docs/EXAMPLE-SCENE.md)
 
+## Architecture
+
+Three entities, one unified app, one central website:
+
+| Entity | Role | UI |
+|--------|------|----|
+| **Client** 🙋 | Submits the scene description | PyQt6 |
+| **Boss** 👑 | Splits into 6 layer prompts, coordinates | PyQt6 |
+| **Worker** 🔧 | Polls for tasks, generates PNG with Qwen | PyQt6 |
+
+All communication flows through a **Flask website** (the central hub) via simple polling — no WebSockets, no direct connections between workers. Works over LAN (Private Mode) or internet via **Cloudflared** tunnel (Public Mode).
+
 ## Tech Stack
 
 | Component | Choice |
 |-----------|--------|
 | Language | Python 🐍 |
+| Desktop UI | PyQt6 (cross-platform: Win / Mac / Linux) |
+| Web Server | Flask (central hub) |
 | AI Model | [Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) (local, free) |
 | AI Merge | [Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit) (DM's computer) |
+| Public Tunnel | [Cloudflared](https://github.com/cloudflare/cloudflared) (no firewall ports needed) |
 | Environment | Miniconda (isolated, one-click install) |
-| GUI | Browser-based (not CLI) |
 
 ## Status
 

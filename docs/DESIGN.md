@@ -114,7 +114,68 @@ Each level works in **completely parallel and distributed** fashion. A school of
 
 ### Overview
 
-The user (typically a Dungeon Master for D&D or similar tabletop RPG) runs a **browser-based GUI** — not a CLI. This is important for ease of use and for future phases where computing will be distributed across the internet between multiple players' machines.
+The system is built around a **Flask web server** that acts as the central hub. All communication between entities flows through this website. The user interface is browser-based, making it accessible from any device on the network.
+
+The desktop application is built with **PyQt6** — the same executable runs on **Windows, Linux, and macOS**. There is ONE unified application that can operate in three different modes.
+
+### The Three Entities
+
+The same PyQt6 application runs on every computer, but each instance is configured for one of three roles:
+
+| Entity | Role | Where it Runs | What it Does |
+|--------|------|---------------|-------------|
+| **Client** 🙋 | Asks the "question" | DM's computer (or any player's) | Submits the initial text description of the scene to the website |
+| **Boss** 👑 (DM) | Splits the work, coordinates | DM's computer | Reads questions from the website, breaks them into 6 layer-specific prompts, posts each as a sub-task on the website, collects finished PNGs |
+| **Worker** 🔧 | Does the GPU work | Each player's computer (or same machine in Stage 1) | Polls the website for available sub-tasks, claims one, generates the PNG with Qwen-Image-2512, uploads the result |
+
+### The Flask Website (Central Hub)
+
+The website runs on the DM's computer using **Python Flask**. It is the ONLY communication channel — entities never talk directly to each other.
+
+**Endpoints (conceptual):**
+
+| Endpoint | Who Uses It | Purpose |
+|----------|------------|---------|
+| `POST /question` | Client | Submit a new scene description |
+| `GET /questions` | Boss | Poll for new unanswered questions |
+| `POST /task` | Boss | Create a sub-task (layer prompt) from a question |
+| `GET /tasks` | Worker | Poll for available sub-tasks to claim |
+| `POST /claim/{task_id}` | Worker | Claim a specific sub-task |
+| `POST /result/{task_id}` | Worker | Upload the finished PNG |
+| `GET /results/{question_id}` | Boss | Check if all 6 layers are ready |
+
+### Polling Mechanism 🔄
+
+Entities do NOT wait for push notifications. Instead, they **poll** the website periodically:
+
+- **Client** → Submits question once, then polls `GET /results/{id}` until all 6 layers are ready
+- **Boss** → Polls `GET /questions` every few seconds for new questions from Clients
+- **Worker** → Polls `GET /tasks` every few seconds for unclaimed sub-tasks
+
+This simple polling architecture means:
+- No complex real-time connections (no WebSockets needed)
+- Works perfectly over LAN (Private Mode) or internet (Public Mode)
+- Workers can join/leave at any time without coordination
+- The website is the single source of truth
+
+### Network Modes
+
+#### Private Mode 🔒 (LAN / Intranet)
+
+The Flask website runs on the DM's computer and is accessible only on the local network.
+
+- Players connect their laptops to the same Wi-Fi / LAN
+- They open a browser and navigate to `http://<dm-ip>:5000`
+- **No internet required** — works completely offline
+
+#### Public Mode 🌐 (Internet via Cloudflared)
+
+The Flask website is still served from the DM's computer, but **Cloudflared** ([github.com/cloudflare/cloudflared](https://github.com/cloudflare/cloudflared)) creates a secure tunnel that exposes it to the global internet — without opening any firewall ports.
+
+- DM runs: `cloudflared tunnel --url http://localhost:5000`
+- Players at home access the site via a Cloudflare-generated URL
+- No port forwarding, no router configuration needed
+- DM's computer remains firewalled and secure
 
 ### Important: This is NOT Real-Time ⏳
 
@@ -127,73 +188,90 @@ This system produces **static scenes, not live video**. Each scene takes a few m
 
 > **Future stages** may explore faster generation, but Stage 1 intentionally embraces the "slow art" approach.
 
-### Stage 1 Pipeline
+### PyQt6 Unified Application
+
+One PyQt6 application, three modes — selectable on launch:
 
 ```
-DM types/pastes scene description
-        │
-        ▼
-  ┌─────────────┐
-  │  Text Parser │  ← Breaks scene into depth layers
-  └─────────────┘
-        │
-        ▼
-  ┌─────────────┐
-  │  AI Generator│  ← Qwen-Image-2512 (local, free)
-  └─────────────┘
-        │
-        ▼
-  6 PNG files (transparent backgrounds)
-  Each = one depth layer
-        │
-        ▼
-  Each PNG opens in its own window
-  User drags each window to correct monitor position
+┌──────────────────────────────┐
+│  Strulovitz Ghost 👻         │
+│                              │
+│  Select Mode:                │
+│  ○ Client (Ask a question)   │
+│  ○ Boss (Coordinate work)    │
+│  ○ Worker (Generate images)  │
+│                              │
+│  Server URL: [_____________] │
+│                              │
+│  [ Start ]                   │
+└──────────────────────────────┘
 ```
 
-### Important: Image Format
+**Client Mode UI:**
+- Text input area for pasting the scene description
+- Submit button
+- Progress display showing which layers are completed
 
-All generated images MUST be **PNG with transparent backgrounds** (NOT JPG). Each layer image contains ONLY the elements that belong at that depth — everything else is transparent. This is what allows the user to see through each layer to the layers behind it.
+**Boss Mode UI:**
+- Dashboard showing incoming questions
+- Text editor to split a question into 6 layer prompts
+- "Post Tasks" button to publish sub-tasks
+- Gallery showing completed layers as they arrive
+
+**Worker Mode UI:**
+- Status display: "Polling for tasks..."
+- Shows claimed task and generation progress
+- Preview of generated PNG before uploading
+
+### Stage 1 Pipeline (Single Machine)
+
+In Stage 1, one computer runs all three modes — or simply runs a combined "standalone" mode where the same machine plays Client, Boss, and Worker roles.
+
+```
+  ┌──────────────────────────────────────────┐
+  │              Single Machine               │
+  │                                          │
+  │  Client ──→ Flask ──→ Boss ──→ Worker    │
+  │   (UI)     (local)   (logic)   (Qwen)    │
+  │                                          │
+  │  Output: 6 PNG windows for drag & drop   │
+  └──────────────────────────────────────────┘
+```
 
 ### Stage 2+ Distributed Pipeline
 
 ```
-DM types/pastes scene description
-        │
-        ▼
-  ┌─────────────┐
-  │  DM's        │  ← Splits scene into 6 layer-prompts
-  │  Computer    │
-  │  ("The Boss")│
-  └──────┬──────┘
-         │
-    ┌────┴──────────────────────────┐
-    │    Sends 1 prompt to each      │
-    │    player's computer           │
-    └────┬──────────────────────────┘
-         │
-    ┌────┴────┬────┬────┬────┬────┐
-    ▼         ▼    ▼    ▼    ▼    ▼
-  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐
-  │ PC1 │ │ PC2 │ │ PC3 │ │ PC4 │ │ PC5 │ │ PC6 │  ← ALL in PARALLEL
-  │ L1  │ │ L2  │ │ L3  │ │ L4  │ │ L5  │ │ L6  │     No communication
-  └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘     between workers
-     │       │       │       │       │       │
-     └───────┴───────┴───┬───┴───────┴───────┘
-                         │
-                         ▼
-                  ┌─────────────┐
-                  │  DM's        │  ← Collects 6 PNGs
-                  │  Computer    │     Displays them
-                  │  ("The Boss")│
-                  └─────────────┘
+                     ┌──────────────────┐
+                     │   Flask Website  │  ← Central hub
+                     │ (DM's computer)  │     on LAN or via Cloudflared
+                     └──┬───┬───┬───┬──┘
+                        │   │   │   │
+        ┌───────────────┘   │   │   └───────────────┐
+        ▼                   │   │                   ▼
+  ┌──────────┐              │   │            ┌──────────┐
+  │ Client   │              │   │            │ Worker 1 │  ← Polls site
+  │ (DM)     │              │   │            │ (Layer 1)│     Claims task
+  └──────────┘              │   │            └──────────┘     Generates PNG
+                            │   │
+                    ┌───────┘   └───────┐
+                    ▼                   ▼
+              ┌──────────┐       ┌──────────┐
+              │  Boss    │       │ Worker 2 │  ... (Workers 3-6)
+              │  (DM)    │       │ (Layer 2)│
+              └──────────┘       └──────────┘
 ```
 
 **Key principles:**
-- **DM = Boss**: Splits task, collects & displays results. No heavy GPU work.
-- **Players = Workers**: Each handles exactly 1 layer. Same layer every time. Fully independent.
-- **Zero communication between workers** — by design. Just like the DM-player relationship in the game itself.
-- The DM's computer runs a lightweight "coordinator" role, not the heavy Qwen-Image model.
+- **Client submits question** → stored on Flask website
+- **Boss polls** → sees new question → splits into 6 prompts → posts as tasks
+- **Workers poll** → see available tasks → claim one → generate PNG → upload result
+- **Zero communication between workers** — by design
+- **All 6 workers operate in parallel**, completely independent
+- The Flask website is the single source of truth for all state
+
+### Important: Image Format
+
+All generated images MUST be **PNG with transparent backgrounds** (NOT JPG). Each layer image contains ONLY the elements that belong at that depth — everything else is transparent. This is what allows the user to see through each layer to the layers behind it.
 
 ---
 
@@ -203,10 +281,10 @@ DM types/pastes scene description
 
 | Role | Software Needed | AI Model |
 |------|----------------|----------|
-| **DM's Computer** | GUI (browser), coordinator/network server, image combiner | None (or lightweight text-to-prompts AI for splitting) |
-| **Player's Computer** | Qwen image generator, network client | **Qwen-Image-2512** (the heavy GPU model) |
+| **DM's Computer** | Flask web server, PyQt6 GUI (Client/Boss mode), Cloudflared (for Public Mode) | None required (uses text LLM of choice for splitting) |
+| **Player's Computer** | PyQt6 GUI (Worker mode), Qwen-Image-2512 | **Qwen-Image-2512** (the heavy GPU model) |
 
-> In Stage 1 (single machine), one computer plays both roles.
+> In Stage 1 (single machine), one computer runs everything: Flask, PyQt6 in combined mode, and Qwen-Image-2512.
 
 ### Additional AI: Qwen-Image-Edit 🖼️✂️
 
