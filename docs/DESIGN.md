@@ -132,6 +132,8 @@ The same PyQt6 application runs on every computer, but each instance is configur
 
 The website runs on the DM's computer using **Python Flask**. It is the ONLY communication channel — entities never talk directly to each other.
 
+**Database: SQLite** 🗄️ — chosen because it's embedded, zero-config, and perfect for single-DM setups. The schema and all database operations are designed through **SQLAlchemy ORM**, which means switching to **MySQL** (or PostgreSQL) in the future is a simple configuration change — change one connection string, and everything else works the same. No raw SQL queries anywhere in the codebase — all database access goes through SQLAlchemy models only.
+
 **Endpoints (conceptual):**
 
 | Endpoint | Who Uses It | Purpose |
@@ -281,7 +283,7 @@ All generated images MUST be **PNG with transparent backgrounds** (NOT JPG). Eac
 
 | Role | Software Needed | AI Model |
 |------|----------------|----------|
-| **DM's Computer** | Flask web server, PyQt6 GUI (Client/Boss mode), Cloudflared (for Public Mode) | None required (uses text LLM of choice for splitting) |
+| **DM's Computer** | Flask web server, PyQt6 GUI (Client/Boss mode), Cloudflared (for Public Mode), SQLite database | None required (uses text LLM of choice for splitting) |
 | **Player's Computer** | PyQt6 GUI (Worker mode), Qwen-Image-2512 | **Qwen-Image-2512** (the heavy GPU model) |
 
 > In Stage 1 (single machine), one computer runs everything: Flask, PyQt6 in combined mode, and Qwen-Image-2512.

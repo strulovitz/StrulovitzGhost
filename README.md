@@ -58,6 +58,7 @@ All communication flows through a **Flask website** (the central hub) via simple
 | Language | Python 🐍 |
 | Desktop UI | PyQt6 (cross-platform: Win / Mac / Linux) |
 | Web Server | Flask (central hub) |
+| Database | SQLite via SQLAlchemy (easy switch to MySQL for scale) |
 | AI Model | [Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) (local, free) |
 | AI Merge | [Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit) (DM's computer) |
 | Public Tunnel | [Cloudflared](https://github.com/cloudflare/cloudflared) (no firewall ports needed) |
