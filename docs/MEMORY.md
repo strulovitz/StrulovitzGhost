@@ -38,6 +38,8 @@ Preserved context, decisions, and direction.
 
 3. **Any command that might write large amounts of data** (downloads, generations, cache writes) MUST be confirmed with user first.
 
+4. **DO THE FULL JOB.** Never reward hack, never do a tiny part of what Nir asked, never ignore parts of the request, never do a half-ass job to save time. Complete everything asked.
+
 ### Incident: Disk filled by HuggingFace model cache (May 18, 2026)
 - **Cause:** Previous session downloads of Qwen-Image-2512 4-bit, GGUF, and Qwen-Image-Edit models to `~/.cache/huggingface/hub/`
 - **Size:** 47 GB
@@ -52,6 +54,26 @@ Preserved context, decisions, and direction.
 - ComfyUI bundled in repo for accessibility, but diffusers is default path
 
 ---
+
+### Working package versions (from conda env, May 18 2026)
+```
+torch                2.12.0+cu126
+torchvision          0.27.0+cu126
+diffusers            0.39.0.dev0
+transformers         5.8.1
+accelerate           1.13.0
+bitsandbytes         0.49.2
+sentencepiece        0.2.1
+```
+
+### Model Inventory (May 18 2026)
+| Model | Size | Status |
+|-------|------|--------|
+| `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~13 GB | ❌ Deleted (HF cache cleared) |
+| `unsloth/Qwen-Image-2512-GGUF` | ~13 GB | ❌ Deleted (HF cache cleared) |
+| `blanchon/Qwen-Image-Edit-2509-bnb-4bit` | ~14 GB | ❌ Unknown if ever downloaded |
+| ComfyUI | ~2 GB | ✅ Present at `src/comfyui/main.py` |
+| Output PNGs | ~50 MB | ✅ 26 test images in `src/output/` |
 
 ## Troubleshooting Log
 
