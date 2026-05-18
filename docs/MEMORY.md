@@ -30,7 +30,21 @@ Preserved context, decisions, and direction.
 - Object scaling for depth illusion (100% near → 70% far)
 - Realistic D&D scene generation with distance-based prompt engineering
 
-**Key decisions made:**
+### ⛔ CRITICAL RULES (May 18, 2026)
+
+1. **NEVER download models without explicit permission.** HuggingFace `snapshot_download` filled 47 GB disk. Models are downloaded via GUI buttons only, never automatically by any script or test. Before any download, report size and ask.
+
+2. **Conda env Python path:** `%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe` — always use this full path, never `conda run` (hangs in PowerShell).
+
+3. **Any command that might write large amounts of data** (downloads, generations, cache writes) MUST be confirmed with user first.
+
+### Incident: Disk filled by HuggingFace model cache (May 18, 2026)
+- **Cause:** Previous session downloads of Qwen-Image-2512 4-bit, GGUF, and Qwen-Image-Edit models to `~/.cache/huggingface/hub/`
+- **Size:** 47 GB
+- **Status:** Cleared. Models NOT needed for development — only for actual generation runs initiated by user.
+- **Prevention:** `downloader.py` must be modified to warn size before downloading. The `generate_diffusers()` function must NOT auto-download models — it should fail with a clear message if model not found.
+
+### Key decisions made:
 - All communication is polling-based via Flask (no WebSockets) — simpler, works over LAN/internet
 - Workers generate independently, 6 separate Qwen runs (no cross-layer coordination)
 - No cloud AI ever — local Qwen for both text splitting and image generation
