@@ -53,6 +53,16 @@ Preserved context, decisions, and direction.
 
 ---
 
+## Troubleshooting Log
+
+### May 18 — Python/torch hangs in conda env
+- Python binary works: `python -c "print('works')"` → OK
+- `import torch` hangs silently (both with and without CUDA). 10-15s timeouts, no output.
+- HuggingFace cache deleted (47GB freed) earlier — possible torch dependency conflict or conda env corruption.
+- Next: research and fix. Do NOT retry same command.
+
+---
+
 ## Layer Generation Pipeline
 
 ### Layer 1 — Closest (20cm, 100% scale, center=60%)
