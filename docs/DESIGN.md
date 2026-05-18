@@ -134,17 +134,27 @@ The website runs on the DM's computer using **Python Flask**. It is the ONLY com
 
 **Database: SQLite** 🗄️ — chosen because it's embedded, zero-config, and perfect for single-DM setups. The schema and all database operations are designed through **SQLAlchemy ORM**, which means switching to **MySQL** (or PostgreSQL) in the future is a simple configuration change — change one connection string, and everything else works the same. No raw SQL queries anywhere in the codebase — all database access goes through SQLAlchemy models only.
 
-**Endpoints (conceptual):**
+**Style Preservation** 🎨 — Every question can have an optional `style` field (e.g., "Ghibli animation", "oil painting", "pixel art"). This style is passed down the entire chain: from Client → Boss → Worker prompts → Qwen-Image generation → Boss merge with Qwen-Image-Edit. This ensures visual consistency across all 6 layers.
+
+**Local LLM for Boss Splitting** 🧠 — The Boss uses a **local text LLM** (NOT a cloud AI) to break complex scene descriptions into 6 layer-specific prompts. Supported backends:
+- **Ollama** (default) — Recommended model: `qwen3` (Qwen3.6 27B dense or Qwen3.6 35B MoE quantized)
+- **LM Studio** — User's choice of any local model
+
+The LLM is only used for text-to-prompts splitting. Image generation always uses Qwen-Image-2512 (local). **At no stage does the system rely on cloud-based AI.**
+
+**Endpoints:**
 
 | Endpoint | Who Uses It | Purpose |
 |----------|------------|---------|
-| `POST /question` | Client | Submit a new scene description |
-| `GET /questions` | Boss | Poll for new unanswered questions |
-| `POST /task` | Boss | Create a sub-task (layer prompt) from a question |
-| `GET /tasks` | Worker | Poll for available sub-tasks to claim |
-| `POST /claim/{task_id}` | Worker | Claim a specific sub-task |
-| `POST /result/{task_id}` | Worker | Upload the finished PNG |
-| `GET /results/{question_id}` | Boss | Check if all 6 layers are ready |
+| `POST /api/question` | Client | Submit a new scene description (optional: `style`) |
+| `GET /api/questions` | Boss | Poll for new unanswered questions |
+| `GET /api/question/{id}` | Boss | Get a specific question's details |
+| `POST /api/question/{id}/split` | Boss | Use local LLM (Ollama/LM Studio) to auto-split scene into 6 layer prompts |
+| `POST /api/task` | Boss | Manually create sub-tasks (layer prompts) from a question |
+| `GET /api/tasks` | Worker | Poll for available sub-tasks to claim |
+| `POST /api/task/{id}/claim` | Worker | Claim a specific sub-task |
+| `POST /api/task/{id}/result` | Worker | Upload the finished PNG |
+| `GET /api/result/{filename}` | Anyone | Download a generated PNG |
 
 ### Polling Mechanism 🔄
 
@@ -283,8 +293,8 @@ All generated images MUST be **PNG with transparent backgrounds** (NOT JPG). Eac
 
 | Role | Software Needed | AI Model |
 |------|----------------|----------|
-| **DM's Computer** | Flask web server, PyQt6 GUI (Client/Boss mode), Cloudflared (for Public Mode), SQLite database | None required (uses text LLM of choice for splitting) |
-| **Player's Computer** | PyQt6 GUI (Worker mode), Qwen-Image-2512 | **Qwen-Image-2512** (the heavy GPU model) |
+| **DM's Computer** | Flask web server, PyQt6 GUI (Client/Boss mode), Cloudflared (for Public Mode), SQLite database, **Local LLM** (Ollama or LM Studio) | Local text LLM for splitting (Qwen3.6 quantized) + optionally Qwen-Image-Edit for merging |
+| **Player's Computer** | PyQt6 GUI (Worker mode) | **Qwen-Image-2512** (the heavy GPU model) |
 
 > In Stage 1 (single machine), one computer runs everything: Flask, PyQt6 in combined mode, and Qwen-Image-2512.
 

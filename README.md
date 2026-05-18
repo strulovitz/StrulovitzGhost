@@ -51,6 +51,12 @@ Three entities, one unified app, one central website:
 
 All communication flows through a **Flask website** (the central hub) via simple polling — no WebSockets, no direct connections between workers. Works over LAN (Private Mode) or internet via **Cloudflared** tunnel (Public Mode).
 
+## Key Features
+
+- 🎨 **Style Preservation** — Set a global style (e.g., "Ghibli animation") that flows through the entire chain
+- 🧠 **Local LLM Splitting** — Boss uses Ollama or LM Studio (local, never cloud) to auto-split scenes into 6 layer prompts
+- 🔒 **100% Local** — No cloud AI. Ever. Text LLM (Qwen3.6) + Image AI (Qwen-Image) both run locally.
+
 ## Tech Stack
 
 | Component | Choice |
@@ -59,8 +65,9 @@ All communication flows through a **Flask website** (the central hub) via simple
 | Desktop UI | PyQt6 (cross-platform: Win / Mac / Linux) |
 | Web Server | Flask (central hub) |
 | Database | SQLite via SQLAlchemy (easy switch to MySQL for scale) |
-| AI Model | [Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) (local, free) |
-| AI Merge | [Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit) (DM's computer) |
+| Text LLM | Ollama / LM Studio (local Qwen3.6 quantized) |
+| Image AI | [Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) (local, free) |
+| Image Merge | [Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit) (DM's computer) |
 | Public Tunnel | [Cloudflared](https://github.com/cloudflare/cloudflared) (no firewall ports needed) |
 | Environment | Miniconda (isolated, one-click install) |
 

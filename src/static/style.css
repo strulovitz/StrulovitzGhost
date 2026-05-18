@@ -1,0 +1,188 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 2.5em;
+    margin-bottom: 0;
+}
+
+.subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.card h2 {
+    margin-bottom: 15px;
+    color: #e94560;
+}
+
+textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #0f3460;
+    color: #eee;
+    font-size: 14px;
+    resize: vertical;
+    margin-bottom: 10px;
+}
+
+button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+button:hover {
+    background: #c73652;
+}
+
+#submit-status {
+    display: inline-block;
+    margin-left: 15px;
+    color: #4ecca3;
+}
+
+.question-item {
+    background: #0f3460;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.question-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.question-header strong {
+    color: #e94560;
+}
+
+.question-header small {
+    color: #666;
+    margin-left: auto;
+}
+
+.description {
+    color: #aaa;
+    font-style: italic;
+    margin-bottom: 10px;
+}
+
+.tasks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.task-item {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #1a1a2e;
+}
+
+.task-item a {
+    color: #4ecca3;
+    margin-left: 8px;
+    text-decoration: none;
+}
+
+.status {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #ffc10733;
+    color: #ffc107;
+}
+
+.status-claimed, .status-processing {
+    background: #2196f333;
+    color: #2196f3;
+}
+
+.status-completed {
+    background: #4caf5033;
+    color: #4caf50;
+}
+
+.task-item.status-pending {
+    border-left: 3px solid #ffc107;
+}
+
+.task-item.status-claimed {
+    border-left: 3px solid #2196f3;
+}
+
+.task-item.status-completed {
+    border-left: 3px solid #4caf50;
+}
+
+.style-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.style-row label {
+    color: #888;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.style-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #0f3460;
+    color: #eee;
+    font-size: 14px;
+}
+
+.style-tag {
+    color: #e94560;
+    font-size: 13px;
+    margin-bottom: 8px;
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strulovitz Ghost 👻</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Strulovitz Ghost 👻</h1>
+        <p class="subtitle">Multi-Layer Pepper's Ghost — Dashboard</p>
+
+        <div class="card">
+            <h2>Submit New Scene</h2>
+            <textarea id="description" rows="4" placeholder="Paste the DM's scene description here..."></textarea>
+            <div class="style-row">
+                <label>Style:</label>
+                <input type="text" id="style" placeholder="e.g. Ghibli animation, oil painting, pixel art..." />
+            </div>
+            <button onclick="submitQuestion()">Submit Question</button>
+            <p id="submit-status"></p>
+        </div>
+
+        <div class="card">
+            <h2>Questions & Tasks</h2>
+            <div id="questions-list">
+                {% for q in questions %}
+                <div class="question-item">
+                    <div class="question-header">
+                        <strong>Question #{{ q.id }}</strong>
+                        <span class="status status-{{ q.status.value }}">{{ q.status.value }}</span>
+                        <small>{{ q.created_at.strftime('%H:%M:%S') }}</small>
+                    </div>
+                    <p class="description">{{ q.description[:200] }}{% if q.description|length > 200 %}...{% endif %}</p>
+                    {% if q.style %}
+                    <p class="style-tag">🎨 Style: {{ q.style }}</p>
+                    {% endif %}
+                    {% if q.tasks %}
+                    <div class="tasks">
+                        {% for t in q.tasks %}
+                        <div class="task-item status-{{ t.status.value }}">
+                            Layer {{ t.layer_number }}: {{ t.status.value }}
+                            {% if t.result_filename %}
+                            <a href="{{ url_for('serve_result', filename=t.result_filename) }}" target="_blank">📷 View</a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <button onclick="location.reload()">Refresh</button>
+        </div>
+    </div>
+
+    <script>
+        async function submitQuestion() {
+            const desc = document.getElementById("description").value;
+            if (!desc) return;
+            const style = document.getElementById("style").value || null;
+            const statusEl = document.getElementById("submit-status");
+            statusEl.textContent = "Submitting...";
+            try {
+                const res = await fetch("/api/question", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ description: desc, style: style })
+                });
+                if (res.ok) {
+                    statusEl.textContent = "Submitted! ✅ Refresh to see it.";
+                    document.getElementById("description").value = "";
+                    document.getElementById("style").value = "";
+                } else {
+                    const err = await res.json();
+                    statusEl.textContent = "Error: " + (err.error || "unknown");
+                }
+            } catch (e) {
+                statusEl.textContent = "Error: " + e.message;
+            }
+        }
+    </script>
+</body>
+</html>
