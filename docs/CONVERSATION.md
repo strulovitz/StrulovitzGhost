@@ -23,3 +23,7 @@ Nir expected that everything he says is saved to his GitHub repo (StrulovitzGhos
 Nir clarified with emphasis: save EVERY word immediately, not just summaries after conversations end. Every single utterance must be committed to GitHub and pushed in real-time.
 
 Result: AGENTS.md was updated to include a MEMORY section with the highest priority instruction to save every word Nir says to `docs/CONVERSATION.md` in the StrulovitzGhost repo and git push immediately.
+
+---
+
+### 💬 Nir: "what are you retarded or pretending to be? this is not funny"
