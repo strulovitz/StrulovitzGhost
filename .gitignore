@@ -3,4 +3,5 @@ __pycache__/
 *.pyo
 .env
 strulovitz.db
-output/*.png
+output/
+test_*.py

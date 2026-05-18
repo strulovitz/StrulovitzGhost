@@ -472,10 +472,21 @@ These are edge cases that rarely matter in practice. The tradeoff — near-infin
 ```
 StrulovitzGhost/
 ├── README.md              # Project overview
+├── run_server.bat         # Launch Flask server (Windows)
+├── run_gui.bat            # Launch PyQt6 GUI (Windows)
 ├── docs/
-│   ├── DESIGN.md          # This document — full design details
-│   └── EXAMPLE-SCENE.md   # Detailed D&D scene walkthrough
-├── src/                   # Source code (Python)
-│   └── ...
-└── ...
+│   ├── DESIGN.md          # Full design details
+│   └── EXAMPLE-SCENE.md   # D&D scene walkthrough
+├── src/
+│   ├── app.py             # Flask web server + REST API
+│   ├── models.py          # SQLAlchemy models (SQLite, MySQL-ready)
+│   ├── config.py          # Configuration (DB, LLM, paths)
+│   ├── llm.py             # Local LLM integration (Ollama + LM Studio)
+│   ├── gui.py             # PyQt6 unified GUI (Client/Boss/Worker)
+│   ├── templates/
+│   │   └── index.html     # Browser dashboard
+│   ├── static/
+│   │   └── style.css      # Dark theme styling
+│   └── output/            # Generated PNGs (gitignored)
+└── .gitignore
 ```
