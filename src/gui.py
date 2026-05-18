@@ -183,8 +183,22 @@ class BossWidget(QWidget):
 
         self.llm_label = QLabel("LLM: checking...")
         refresh_row.addWidget(self.llm_label)
+
+        self.dl_edit_btn = QPushButton("Download Image-Edit Model")
+        self.dl_edit_btn.clicked.connect(self.download_edit_model)
+        refresh_row.addWidget(self.dl_edit_btn)
+
         refresh_row.addStretch()
         left.addLayout(refresh_row)
+
+        llm_info = QLabel(
+            "LLM Setup: Install Ollama (ollama.com) or LM Studio (lmstudio.ai), "
+            "then pull a model: ollama pull qwen3:27b"
+        )
+        llm_info.setWordWrap(True)
+        llm_info.setStyleSheet("color: #888; font-size: 11px;")
+        left.addWidget(llm_info)
+
         layout.addLayout(left)
 
         right = QVBoxLayout()
@@ -261,6 +275,16 @@ class BossWidget(QWidget):
         except Exception:
             self.llm_label.setText("LLM: ❌ server error")
             self.llm_label.setStyleSheet("color: #e94560")
+
+    def download_edit_model(self):
+        self.dl_edit_btn.setEnabled(False)
+        self.llm_label.setText("Downloading Image-Edit model...")
+
+        self.bt = DownloadThread("edit")
+        self.bt.progress_signal.connect(lambda m: self.llm_label.setText(m))
+        self.bt.finished_signal.connect(lambda m: [self.llm_label.setText(m), setattr(self.dl_edit_btn, 'enabled', True)])
+        self.bt.error_signal.connect(lambda m: [self.llm_label.setText(f"Error: {m}"), setattr(self.dl_edit_btn, 'enabled', True)])
+        self.bt.start()
 
     def on_question_select(self):
         item = self.question_list.currentItem()
@@ -354,6 +378,7 @@ class DownloadThread(QThread):
             from downloader import (
                 download_diffusers_4bit,
                 download_comfyui_gguf,
+                download_qwen_image_edit,
             )
 
             def progress_cb(msg, pct):
@@ -361,8 +386,13 @@ class DownloadThread(QThread):
 
             if self.model_type == "diffusers":
                 result = download_diffusers_4bit(progress_callback=progress_cb)
-            else:
+            elif self.model_type == "comfyui":
                 result = download_comfyui_gguf(progress_callback=progress_cb)
+            elif self.model_type == "edit":
+                result = download_qwen_image_edit(progress_callback=progress_cb)
+            else:
+                self.error_signal.emit(f"Unknown model type: {self.model_type}")
+                return
 
             if result:
                 self.finished_signal.emit(f"{self.model_type} model ready! ✅")

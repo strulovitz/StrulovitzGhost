@@ -9,6 +9,7 @@ from huggingface_hub.utils import HfHubHTTPError
 MODEL_DIFFUSERS_4BIT = "unsloth/Qwen-Image-2512-unsloth-bnb-4bit"
 MODEL_DIFFUSERS_FULL = "Qwen/Qwen-Image-2512"
 MODEL_COMFYUI_GGUF = "unsloth/Qwen-Image-2512-GGUF"
+MODEL_EDIT_4BIT = "blanchon/Qwen-Image-Edit-2509-bnb-4bit"
 GGUF_FILE = "Qwen-Image-2512-Q4_K_S.gguf"
 
 
@@ -71,6 +72,24 @@ def download_comfyui_gguf(
             MODEL_COMFYUI_GGUF,
             GGUF_FILE,
             resume_download=True,
+        )
+        if progress_callback:
+            progress_callback(f"Downloaded to: {path}", 100)
+        return path
+
+    return download_with_retry(_download, progress_callback=progress_callback)
+
+
+def download_qwen_image_edit(
+    progress_callback: Optional[Callable[[str, float], None]] = None,
+) -> Optional[str]:
+    def _download():
+        if progress_callback:
+            progress_callback("Downloading Qwen-Image-Edit 4-bit model...", 0)
+        path = snapshot_download(
+            MODEL_EDIT_4BIT,
+            resume_download=True,
+            max_workers=4,
         )
         if progress_callback:
             progress_callback(f"Downloaded to: {path}", 100)
