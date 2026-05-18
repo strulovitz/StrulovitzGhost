@@ -12,13 +12,28 @@ Strulovitz Ghost is a **multi-layer Pepper's Ghost** effect: instead of one refl
 - **6 reflective layers** made from CD/DVD cases, opened at 45° angles (2 per monitor)
 - The user sits at the head of the table and looks through all 6 layers
 - Each layer is half-transparent — you see through it to the layers behind
-- The software sends the correct image to each monitor for each layer
+- **AI generates 6 PNG images** (one per layer), each with transparent background
+- Each PNG opens in its own window — user drags to correct position
 
-👉 Full design details: [docs/DESIGN.md](docs/DESIGN.md)
+### Quick Example: D&D Night Camp
+
+> The DM pastes "The group makes camp in a moonlit forest clearing..." → AI generates: night sky (far), mountains, forest, characters around campfire, close-up framing with an owl and rabbit (near).
+
+👉 **Full design**: [docs/DESIGN.md](docs/DESIGN.md)
+👉 **Detailed scene walkthrough**: [docs/EXAMPLE-SCENE.md](docs/EXAMPLE-SCENE.md)
+
+## Tech Stack
+
+| Component | Choice |
+|-----------|--------|
+| Language | Python 🐍 |
+| AI Model | [Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) (local, free) |
+| Environment | Miniconda (isolated, one-click install) |
+| GUI | Browser-based (not CLI) |
 
 ## Status
 
-🚧 **Stage 1** — Concept & physical prototype ready. Software development starting soon.
+🚧 **Planning / Design Phase** — All specifications being documented. Code development not yet started.
 
 ## License
 
