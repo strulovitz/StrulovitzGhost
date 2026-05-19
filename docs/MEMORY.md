@@ -107,15 +107,38 @@ sentencepiece        0.2.1
 - Doesn't solve our problem (we need to CREATE specific content per depth layer, not decompose)
 - Useful to know about but irrelevant for this project
 
-### Open questions for Google AI search
-Need specific answers about Qwen-Image-2512 prompt techniques for green screen backgrounds.
+### Open questions for Google AI search — ANSWERS
 
-### Google search prompts needed:
-1. How to prompt Qwen-Image-2512 to generate images with pure chroma key green background that can be keyed out for transparency
-2. What negative prompts work best with Qwen-Image-2512 to prevent background artifacts when generating on green screen
-3. Does Qwen-Image-2512 support output with alpha channel / transparent background directly
-4. Qwen-Image-Edit-2509 examples for removing background and making it transparent - prompt examples that work
-5. Best approach combining Qwen-Image-2512 generation + Qwen-Image-Edit-2509 for green screen background removal pipeline
+### Answer #1: How to prompt Qwen-Image-2512 for chroma key green background
+
+**Working formula (from Google AI, confirmed):**
+
+Positive prompt structure:
+```
+[Your Subject], centered, professional studio portrait photography.
+The entire background is a single, completely solid, uniform flat chroma key green color, hex #00FF00.
+The green background has no shadows, no gradients, no textures, and no highlights.
+Even illumination across a perfectly flat green surface.
+```
+
+Negative prompt:
+```
+shadows on background, gradient background, studio lights, green screen stand,
+wrinkles, fabric texture, environment, wall texture, vignette,
+color bleeding, light spill, rim light
+```
+
+**Why this works:**
+1. Never say "green screen" alone — model draws physical studio equipment (fabric, stands, lights)
+2. "uniform flat chroma key green color, hex #00FF00" shifts attention to graphic element, not physical object
+3. "no gradients, no highlights" + negative "rim light, light spill" prevents green light bouncing onto subject
+4. hex #00FF00 gives unambiguous anchor for pure green — avoids model's tendency toward natural green gradients
+
+**Recommended settings:**
+- CFG Scale: 3.5 to 4.5 (slightly higher forces stricter background compliance)
+- Output: PNG ONLY (JPEG artifacts ruin chroma key edges)
+
+### Open questions for Google AI search
 
 ### Root cause analysis
 The generator's hardcoded suffix + negative prompt + rembg pipeline is fundamentally wrong for framing layers:
