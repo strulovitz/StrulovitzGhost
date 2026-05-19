@@ -4,5 +4,5 @@ __pycache__/
 .env
 strulovitz.db
 output/
-test_*.py
+
 src/comfyui/
