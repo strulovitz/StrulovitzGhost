@@ -85,8 +85,9 @@ def generate_diffusers(
             )
 
         full_prompt = (
-            f"{prompt}. The subject is small and centered on a plain green screen background. "
-            f"Isolated subject. Studio lighting. Clean edges."
+            f"{prompt}. Completely solid, uniform flat chroma key green color, "
+            f"hex #00FF00. No shadows, no gradients, no textures, no highlights. "
+            f"Even illumination across a perfectly flat green surface."
         )
 
         class ProgressTracker:
@@ -118,7 +119,7 @@ def generate_diffusers(
 
         result = pipe(
             prompt=full_prompt,
-            negative_prompt="busy background, cluttered, multiple objects, frame filling, close-up, border, text, watermark",
+            negative_prompt="shadows on background, gradient background, studio lights, green screen stand, wrinkles, fabric texture, environment, wall texture, vignette, color bleeding, light spill, rim light",
             width=width,
             height=height,
             num_inference_steps=num_steps,
