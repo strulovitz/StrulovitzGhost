@@ -92,13 +92,27 @@ sentencepiece        0.2.1
 
 ## BLOCKER — Torch broken, env corrupted (May 18 → May 19, 2026)
 
-### State (May 19, 2026 — UPDATED)
+### State (May 19, 2026 — UPDATED May 19 session #2)
 - **All 3 AI models downloaded** (~40 GB total, 32 GB free on C:)
 - **ComfyUI present** at `src/comfyui/main.py`
 - **GGUF filename fixed** in `downloader.py` (lowercase)
 - **Step 1 (reboot) DONE** ✓
-- **Step 2: 99% complete** — env folder renamed to `strulovitzghost_OLD`, name `strulovitzghost` is FREE for fresh env
-- **One file remains undeletable:** `strulovitzghost_OLD\Lib\site-packages\torch\lib\cublasLt64_12.dll.DELETE` (507 MB)
+- **Step 2: 95% complete** — env folder renamed to `strulovitzghost_OLD`, name `strulovitzghost` is FREE for fresh env
+- **Most of old env DELETED** — only 5 empty directories + the locked file remain (507 MB)
+- **One file STILL undeletable:** `strulovitzghost_OLD\Lib\site-packages\torch\lib\cublasLt64_12.dll.DELETE` (507 MB)
+
+### 🔴 REBOOT DID NOT FIX IT (May 19, 2026 — NEW)
+The locked DLL **survived reboot**. Theory: NVIDIA display/cuda driver reloads at every startup and re-maps the DLL into kernel space. The kernel lock is re-acquired at boot time. This is NOT a stale lock from a previous session — it's actively maintained by the running NVIDIA driver.
+
+**Everything that was tried (post-reboot):**
+| Method | Result |
+|--------|--------|
+| `Remove-Item -Recurse -Force` | Access Denied |
+| `cmd /c del /f /q \\\\?\\<path>` | Access Denied |
+| `takeown /f` + `icacls /grant` | Ownership granted, permissions granted — STILL Access Denied |
+| `cmd /c rmdir /s /q` on parent | Deleted EVERYTHING else — this file blocked |
+
+**NEW PLAN:** Reopen OpenCode as **Administrator**, stop NVIDIA kernel services, then delete the file. This requires admin elevation to stop system services. After deletion, proceed to create fresh conda env.
 
 ### Root Cause Diagnosis (May 19, 2026 — HARD LESSON LEARNED)
 
