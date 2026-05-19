@@ -506,3 +506,153 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 | 4     | 70      | 45       | ~20 m    |
 
 `center = 45 + (4 - layer) * 5` — higher center% = lower on canvas = closer to viewer. Farther layers shift up toward horizon.
+
+---
+
+## 📋 Appendix: Google AI Search — Verbatim Answers (May 19, 2026)
+
+### Query #1: How to prompt Qwen-Image-2512 to generate images with pure chroma key green background that can be keyed out for transparency. What prompt wording actually works.
+
+> To successfully generate images with a pure chroma key green background using Qwen-Image-2512, you must leverage its advanced Multimodal Diffusion Transformer (MMDiT) architecture, which responds best to hyper-specific, literal, and non-overlapping background descriptions. Buzzwords like "chroma key" alone often cause the model to generate actual studio equipment (like physical green cloth wrinkles or light stands).
+>
+> Instead, you need to enforce a digitally flat, uniform solid color and explicitly suppress environmental lighting shadows and reflections in your parameters.
+>
+> 🟩 The Working Prompt Formula
+>
+> Combine a precise subject description with a literal definition of the background hex color (#00FF00) and texture:
+>
+> Positive Prompt:
+> `[Your Subject], centered, professional studio portrait photography. The entire background is a single, completely solid, uniform flat chroma key green color, hex #00FF00. The green background has no shadows, no gradients, no textures, and no highlights. Even illumination across a perfectly flat green surface.`
+>
+> Negative Prompt:
+> `shadows on background, gradient background, studio lights, green screen stand, wrinkles, fabric texture, environment, wall texture, vignette, color bleeding, light spill, rim light`
+>
+> 🛠️ Why This Specific Structure Works in Qwen-Image-2512
+>
+> 1. Avoids the "Studio Prop" Trap — Because Qwen-Image-2512 understands semantic relationships deeply, writing "on a green screen" forces it to draw what it thinks a green screen studio looks like (fabric seams, stands, and lighting drops). Describing it as a "uniform flat chroma key green color, hex #00FF00" shifts its attention to a graphic element rather than a physical object.
+>
+> 2. Controls Light Spill and Rim Lighting — By default, the model tries to integrate subjects realistically with their environments. If you generate a person, it will try to bounce green light onto their hair or skin (light spill). The phrase "no gradients, no highlights" in the positive prompt, paired with "rim light, light spill" in the negative prompt, forces the model to clip the subject cleanly away from the flat backcloth.
+>
+> 3. Keeps It Flat — The inclusion of "hex #00FF00" gives the underlying text encoder a clear, unambiguous anchor for pure, high-saturation digital green, preventing the model from rendering natural "rich gradations of greens" that it usually prefers for landscapes.
+>
+> 🎛️ Recommended Generation Settings
+>
+> For the cleanest edges that key out seamlessly in post-production, use these settings in your API or ComfyUI pipeline:
+>
+> CFG Scale / Guidance Scale: Set to 3.5 to 4.5. Pushing the guidance slightly higher forces stricter compliance with the text prompt, ensuring the background doesn't wander into creative styling.
+>
+> Output Format: Always select PNG. Formats like JPEG introduce compression artifacts along the high-contrast borders between your subject and the green backdrop, which ruins a clean key.
+
+### Query #2: What negative prompts work best with Qwen-Image-2512 to prevent unwanted background elements and artifacts when generating subjects on a solid green screen background.
+
+> To achieve a clean, isolated subject on a solid green screen using Qwen-Image-2512, your negative prompt needs to address three core issues: background complexity, color bleeding, and texture artifacts. Because Qwen-Image-2512 responds best to a mix of natural language definitions and structural constraints rather than long, generic keyword lists, target the negative prompt strategically.
+>
+> Ensure your generation setup has Classifier-Free Guidance (CFG) set above 1.0 (ideally between 3.5 and 7.0), otherwise Qwen-Image-2512 will ignore the negative prompt entirely.
+>
+> Optimized Negative Prompt Strings
+>
+> 1. Core Background Exclusion (Natural Language Format)
+> Qwen-Image models lean heavily on natural language understanding. Instead of just typing scenery, directly describe what shouldn't exist behind the subject:
+> `"background scenery, studio equipment, lighting stands, softboxes, props, floor visible, walls, shadows on the background, gradients, photographic studio context, complex environment, outdoor setting, interior design elements."`
+>
+> 2. Artifact and Cleanliness Guard
+> To stop the model from trying to ground the subject or adding standard rendering noise, explicitly ban text, composition lines, and common AI artifacts:
+> `"blurry background, bokeh, out of focus elements, depth of field artifacts, watermark, text overlay, signature, vignette, borders, frames, digital compression noise."`
+>
+> 3. Preventing Green Color Bleed (Chroma Key Artifacts)
+> When generating against a solid color, AI models frequently blend the background color into the subject's edges, hair strands, or skin tones. Stop color contamination with:
+> `"green tint on skin, green color bleeding, color fringing, chromatic aberration, green light reflections on subject, translucent edges, green spill."`
+>
+> The Complete Combo String
+> Combine these into a single, punchy list of under 12 distinct concepts to avoid diluting the model's focus:
+> `background scenery, studio equipment, floor, wall, shadows on background, bokeh, blurry background, watermark, green color bleed, color fringing, green reflections on skin`
+>
+> Critical Positive Prompt Synergy
+> Negative prompts do not work in isolation; they only subtract from what the positive prompt establishes. Qwen-Image-2512 tends to hallucinate environments if the positive prompt is too simple.
+>
+> To lock down a flat green screen background, always embed strict structural anchors in your positive prompt:
+> Bad Positive: "A realistic photo of a professional chef on a green screen." (Qwen will likely render a kitchen with a green screen hanging up somewhere in the shot).
+> Good Positive: "A crisp, clean studio photograph of a professional chef. The subject is perfectly centered. Completely flat, uniform, solid chroma key green screen background (#00FF00). Smooth background with no shadows, no gradients, and no depth. Solid monochrome color background."
+
+### Query #3: Does Qwen-Image-2512 or any Qwen image generation model support outputting images with alpha channel or transparent background directly, without post-processing.
+
+> Yes, Alibaba has an official Qwen model that directly outputs transparent images with an alpha channel. While the standard base text-to-image model Qwen-Image-2512 outputs flat RGB images, Alibaba specifically developed and open-sourced Qwen-Image-Layered.
+>
+> Qwen-Image-Layered
+> Instead of generating a single flat rasterized image, Qwen-Image-Layered generates natively structured, editable RGBA layers.
+> Native Transparency: It yields physically isolated elements directly in an RGBA format (Red, Green, Blue, Alpha).
+> No Post-Processing Required: It does not use background-removal masks or green-screen filters as an afterthought. The model treats transparency natively as part of its generative output.
+> How it works: It can take a text prompt or decompose a static flat image into isolated, transparent layers (e.g., separating a foreground subject cleanly from its background).
+>
+> Qwen-Image-2512 (Standard Base Model)
+> The standard Qwen-Image-2512 text-to-image model is built for photorealism, fine text rendering, and landscapes. It handles pixel color generation but cannot natively create transparent backgrounds on its own. To get a transparent PNG from Qwen-Image-2512, you must route its output through post-processing nodes (like LayerDiffuse or a separate background removal step) within tools like ComfyUI.
+
+### Query #4: Qwen-Image-Edit-2509 background removal prompt examples that actually work. How to tell it to remove the background and keep only the subject. Specific prompt wording that people have tested and confirmed.
+
+> To remove a background and isolate a subject using Qwen-Image-Edit-2509, you must instruct the generative model to paint a uniform, solid background. Because it is a diffusion-based generative model and cannot natively output alpha-channel transparency (.png holes), testing shows that forcing a single solid color provides the best separation for clean post-processing.
+>
+> Confirmed Prompt Examples
+>
+> To get the best results, use these exact, community-tested prompt structures depending on your subject:
+>
+> For Portraits & People:
+> `"Extract the person from the image. Replace the background with a solid black color while keeping the person's face, features, body proportions, and lighting completely unchanged."`
+>
+> For Products & Objects:
+> `"Isolate the main product. Replace the cluttered background with a clean, solid white studio backdrop while keeping the product positioning, textures, and lighting unchanged."`
+>
+> The "Chroma Key" Green Screen Method:
+> `"Remove the background and replace it with a solid, uniform green screen color, preserving only the subject exactly as it appears."`
+>
+> Why These Prompts Work: The Key Elements
+>
+> If you want to write your own prompts, you must include specific constraints to prevent Qwen from hallucinating or distorting your subject:
+> 1. Explicit Color Definition: Do not just say "remove background". Tell it to replace it with "solid black", "solid white", or "a uniform green screen". This stops the model from painting a different creative scene.
+> 2. Fidelity Constraints: Always append text like "keeping the subject completely unchanged" or "preserve pixel-perfect fidelity to original features." Without this, Qwen-Image-Edit-2509 can alter facial expressions, body weights, or product labels.
+> 3. Lighting & Palette Holds: Include phrases such as "maintaining the original lighting and color palette." This prevents the model from changing the shadows or highlights on your subject to match the new background color.
+>
+> Pro-Tips for the Best Workflow
+> Use Inpainting Masks if Possible: If you are using Qwen-Image-Edit-2509 in ComfyUI or a Web UI, paint a mask over the background. Masking combined with the text prompt ensures 100% of your subject remains untouched.
+> The Post-Processing Step: Once Qwen outputs the image with your solid green, black, or white backdrop, pass it through a quick traditional node or tool (like Photoshop's Select Subject or ComfyUI's RMBG / BiRefNet nodes) to instantly key out the solid color and achieve true transparency.
+
+### Query #5: Best workflow combining Qwen-Image-2512 for generation and Qwen-Image-Edit-2509 for background removal to create transparent PNGs. Anyone who has done this successfully and documented their pipeline.
+
+> To successfully generate images with Qwen-Image-2512 and isolate subjects using Qwen-Image-Edit-2509, you must account for a well-documented LLM quirk: Qwen-Image-Edit-2509 tends to interpret the phrase "transparent background" by rendering a literal, flattened gray-and-white checkerboard pattern rather than true alpha transparency.
+>
+> The most efficient, automated, and community-proven workflow links these two models inside ComfyUI, using a chroma-keying strategy combined with a secondary masking node to output flawless, transparent .png files.
+>
+> The ComfyUI Production Pipeline
+> ```
+> [ Step 1: Generation ]       [ Step 2: Solid Fill ]        [ Step 3: Matte & Output ]
+>  Qwen-Image-2512       -->   Qwen-Image-Edit-2509    -->   Convert Mask to Alpha
+> (Generate Base Image)       (Green Screen / Flat Back)     (Export Transparent PNG)
+> ```
+>
+> Step 1: Base Image Generation (Qwen-Image-2512)
+> Generate your high-fidelity asset using the standard text-to-image pipeline.
+> Load Models: Add your qwen_2.5_vl_7b_fp8_scaled.safetensors text encoder and the primary diffusion model.
+> K-Sampler Setup: For optimal realism and crisp edge definition, use 50 steps. If iterating rapidly or dealing with VRAM constraints, you can swap in the Qwen-Image-Lightning-4steps-V1.0.safetensors LoRA at 4 steps.
+> Prompting: Clearly define your subject. Avoid asking for transparency in this first step; give the model a simple, unified background to make isolation cleaner later (e.g., "A detailed studio shot of a ceramic coffee mug, sitting on a plain studio table").
+>
+> Step 2: The "Chroma Key" Hack (Qwen-Image-Edit-2509)
+> Instead of prompting Qwen-Image-Edit-2509 for a "transparent background" (which triggers the checkerboard failure), you will turn it into a virtual green-screen engine.
+> Node Connection: Route the IMAGE output from your Step 1 VAE Decode directly into the image1 input of the TextEncodeQwenImageEditPlus node.
+> Skip Resizers: Let the native Qwen node manage scaling. Bypassing standard scaling nodes prevents the alignment and blurriness bugs common to this model combination.
+> The Prompt: Feed a highly descriptive isolation instruction to the text encoder:
+> `"Isolate the main subject. Replace everything else in the background with a completely solid, uniform neon green color (#00FF00) with no shadows or gradients."`
+> Execution: Run your K-Sampler. Qwen-Image-Edit-2509 will effortlessly track the semantic boundaries of your subject and cleanly repaint the background into a flat chroma key color.
+>
+> Step 3: Generating Alpha Channel and Saving PNG
+> Because the image output is still an RGB file containing flat neon green pixels, you need a quick node-based filter to strip it out and convert it into a true alpha transparency layer.
+> Masking Node: Pass the output image into a Mask to Region or a Color to Mask node.
+> Target Color: Sample or input the exact hexadecimal/RGB value of your solid background (e.g., Neon Green). Adjust the color tolerance slider slightly (usually around 0.01 to 0.05) to cleanly capture the edges without bleeding into your subject.
+> Invert & Join: Invert the mask so that the subject is selected, then pipe it into an Image to Mask (Alpha) or Join Image with Alpha node.
+> Save File: Connect the combined image to a standard Save Image node. Ensure your output extension is set explicitly to .png to preserve the newly embedded transparency channel.
+>
+> Summary Checklist for Local Deployment
+> | Pipeline Element | Recommended Model / Configuration | VRAM Optimization |
+> |------------------|-----------------------------------|-------------------|
+> | Generator | Qwen-Image-2512 (BF16 or FP8) | 4-Step Lightning LoRA |
+> | Editor | Qwen-Image-Edit-2509 (FP8 or GGUF) | Use EmptySD3LatentImage node |
+> | Isolation Prompt | "Replace background with solid color #00FF00" | Avoid the word "transparent" |
+> | Output Format | Clean RGB + Chroma Mask | Export via transparent .png node |
