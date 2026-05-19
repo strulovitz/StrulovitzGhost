@@ -54,6 +54,30 @@ Preserved context, decisions, and direction.
 
 9. ~~**🚫 NEVER USE rembg.**~~ **REVOKED May 19.** The "rembg destroyed Layer 1" diagnosis was wrong. The real cause was the generator's hardcoded suffix ("isolated subject, small and centered") + negative prompt ("busy background, multiple objects") which contradicted our prompt and told the model to erase all the framing we asked for. rembg just received already-broken output. With proper green screen prompts (Answer #1 from Google AI), rembg may work fine. The tool wasn't the problem — the prompt was.
 
+---
+
+## 🎯 FINAL CLEANEST PIPELINE (May 19, 2026)
+
+Three tools, each doing what it's best at. One model in GPU at a time.
+
+### Step 1 — Qwen-Image-2512: DRAW
+Generate layer on flat #00FF00 green screen.
+- REMOVE hardcoded suffix ("isolated subject, small and centered") from generator
+- REMOVE contradictory negative prompt ("busy background, multiple objects, frame filling")
+- APPEND green screen formula: "Completely solid, uniform flat chroma key green color, hex #00FF00. No shadows, no gradients, no textures, no highlights. Even illumination across a perfectly flat green surface."
+- Negative: "shadows on background, gradient background, studio lights, green screen stand, wrinkles, fabric texture, environment, wall texture, vignette, color bleeding, light spill, rim light"
+- Unload generator when done
+
+### Step 2 — Qwen-Image-Edit-2509: CLEAN
+Clean green spill from subject edges.
+- Prompt: "Remove any green color bleeding from the edges of the subjects. Clean up the green background so it is perfectly uniform #00FF00. Do not modify any subjects in any way — keep all details, textures, animals, branches, and ground completely unchanged."
+- Unload edit model when done
+
+### Step 3 — PIL + despill: KEY
+Convert #00FF00 to alpha=0. Apply despill algorithm to clean remaining green tint.
+
+---
+
 ### Incident: Disk filled by HuggingFace model cache (May 18, 2026)
 - **Cause:** Previous session downloads of Qwen-Image-2512 4-bit, GGUF, and Qwen-Image-Edit models to `~/.cache/huggingface/hub/`
 - **Size:** 47 GB
