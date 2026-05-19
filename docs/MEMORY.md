@@ -148,6 +148,39 @@ green reflections on skin
 - BAD: "A realistic photo of a chef on a green screen." (model draws kitchen with green screen hanging somewhere)
 - GOOD: "Completely flat, uniform, solid chroma key green screen background (#00FF00). Smooth background with no shadows, no gradients, no depth. Solid monochrome color background."
 
+### Answer #4: Qwen-Image-Edit-2509 background removal prompts that actually work
+
+**Key fact:** Qwen-Image-Edit-2509 also cannot output transparency directly (RGB only, like the generator). The technique is: replace background with a SOLID color → then chroma-key that color in post-processing.
+
+**Confirmed prompt examples:**
+
+For portraits/people:
+```
+Extract the person from the image. Replace the background with a solid black color
+while keeping the person's face, features, body proportions, and lighting completely unchanged.
+```
+
+For products/objects:
+```
+Isolate the main product. Replace the cluttered background with a clean, solid white
+studio backdrop while keeping the product positioning, textures, and lighting unchanged.
+```
+
+Chroma key green screen method:
+```
+Remove the background and replace it with a solid, uniform green screen color,
+preserving only the subject exactly as it appears.
+```
+
+**Why these work — 3 required constraints:**
+1. Explicit color definition — never say "remove background", say "replace with solid black/white/green"
+2. Fidelity constraints — "keeping the subject completely unchanged" prevents facial/body distortion
+3. Lighting holds — "maintaining original lighting and color palette" prevents shadow/highlight changes
+
+**Best workflow:** Use inpainting masks if available (ComfyUI). Otherwise: Edit → key the solid color.
+
+**Pipeline insight:** Since Qwen-Image-2512 already generates with green screen, we may not even need the Edit model. Green → PIL chroma-key directly might work. The Edit model would only help if the generator leaves green spill on edges/hair.
+
 ### Answer #3: Does Qwen-Image-2512 output alpha/transparency directly?
 
 **NO.** Qwen-Image-2512 outputs flat RGB only. No alpha channel.
