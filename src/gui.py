@@ -337,35 +337,53 @@ class GenerateThread(QThread):
     finished_signal = pyqtSignal(str)
     error_signal = pyqtSignal(str)
 
-    def __init__(self, prompt, method, output_dir, num_steps=15):
+    def __init__(self, prompt, method, output_dir, num_steps=15, key_color="green"):
         super().__init__()
         self.prompt = prompt
         self.method = method
         self.output_dir = output_dir
         self.num_steps = num_steps
+        self.key_color = key_color
 
     def run(self):
         try:
             from generator import generate_image
+            from chroma_key import chroma_key
 
             os.makedirs(self.output_dir, exist_ok=True)
-            filename = f"generated_layer_{int(time.time())}.png"
-            output_path = os.path.join(self.output_dir, filename)
+            base_name = f"generated_layer_{int(time.time())}"
+            green_path = os.path.join(self.output_dir, f"{base_name}_green.png")
+            final_path = os.path.join(self.output_dir, f"{base_name}.png")
 
             def progress_cb(msg, pct):
                 self.progress_signal.emit(pct)
                 self.progress_msg_signal.emit(msg)
 
+            # Step 1: generate on green screen (no rembg)
+            self.progress_msg_signal.emit("Generating image...")
             result = generate_image(
-                self.prompt, output_path, method=self.method,
+                self.prompt, green_path, method=self.method,
                 width=768, height=576, num_steps=self.num_steps,
-                remove_bg=True, progress_callback=progress_cb,
+                remove_bg=False, progress_callback=progress_cb,
             )
-            if result:
-                self.progress_signal.emit(100)
-                self.finished_signal.emit(result)
-            else:
+            if not result:
                 self.error_signal.emit("Generation failed")
+                return
+
+            # Step 2: chroma-key green to transparent
+            self.progress_msg_signal.emit("Removing background...")
+            self.progress_signal.emit(92)
+            chroma_key(green_path, final_path, self.key_color)
+
+            # Clean up green intermediate
+            try:
+                os.remove(green_path)
+            except OSError:
+                pass
+
+            self.progress_signal.emit(100)
+            self.progress_msg_signal.emit("Done!")
+            self.finished_signal.emit(final_path)
         except Exception as e:
             self.error_signal.emit(str(e))
 
@@ -422,6 +440,12 @@ class WorkerWidget(QWidget):
         self.method_combo = QComboBox()
         self.method_combo.addItems(["diffusers", "comfyui"])
         config_row.addWidget(self.method_combo)
+
+        config_row.addWidget(QLabel("Key Color:"))
+        self.key_combo = QComboBox()
+        self.key_combo.addItems(["green", "red", "blue"])
+        self.key_combo.setToolTip("Chroma-key color for background removal")
+        config_row.addWidget(self.key_combo)
 
         self.dl_diffusers_btn = QPushButton("Download Diffusers Model")
         self.dl_diffusers_btn.clicked.connect(lambda: self.download_model("diffusers"))
@@ -571,6 +595,7 @@ class WorkerWidget(QWidget):
         output_dir = os.path.join(os.path.dirname(__file__), "output")
         self.gen_thread = GenerateThread(
             self.active_task["prompt"], method, output_dir, num_steps=15,
+            key_color=self.key_combo.currentText(),
         )
         self.gen_thread.progress_signal.connect(self.on_gen_progress)
         self.gen_thread.progress_msg_signal.connect(lambda m: self.status_label.setText(m))

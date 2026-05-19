@@ -6,20 +6,27 @@ from typing import Optional
 OLLAMA_URL = "http://localhost:11434/api/generate"
 LMSTUDIO_URL = "http://localhost:1234/v1/chat/completions"
 
-SPLIT_PROMPT_TEMPLATE = """You are a scene analyzer for a multi-layer image generation system.
+SPLIT_PROMPT_TEMPLATE = """You are a scene analyzer for a multi-layer Pepper's Ghost illusion system.
 Break the following scene description into 6 depth layers, from farthest (layer 6) to closest (layer 1).
 
-Layer 6 = farthest background (sky, moon, stars, far mountains)
-Layer 5 = far background (forest, distant buildings, horizon)
-Layer 4 = mid-far (structures, trees, distant characters)
-Layer 3 = mid (medium-distance characters and objects)
-Layer 2 = mid-close (closer characters, campfire, foreground details)
-Layer 1 = closest (very near elements, framing branches, nearest characters)
+Layer 6 = furthest backdrop (night sky, moon, stars, light clouds — upper portion only, lower portion empty)
+Layer 5 = far (a few individual trees, upper half only, self-contained, moonlit — no ground, no forest mass)
+Layer 4 = mid-far (distant characters, sitting together, small scale ~55%, bright, no ground)
+Layer 3 = mid (medium-distance characters, closer together than layer 2, small scale ~70%, bright, no ground)
+Layer 2 = mid-close (closer characters, far apart from each other, scale ~85%, bright, no ground)
+Layer 1 = closest (single nearest element at bottom edge, scale 100%, bright, no ground)
 
-For each layer, write a detailed image generation prompt that describes ONLY what appears in that layer.
-Everything else in that layer should be transparent — mention this explicitly.
-Each prompt must include the description of the elements, their position, lighting, and mood.
+CRITICAL RULES for EVERY layer:
+- NO backgrounds, NO ground, NO terrain — only isolated objects/characters
+- EMPTY CENTER in every layer — objects at edges, top, or bottom, never in the middle
+- All characters must be BRIGHT and vivid
+- Characters get CLOSER TOGETHER with depth (layer 2 far apart, layer 4 together)
+- Deeper layers sit HIGHER on the canvas (vertical staggering)
+- Use spatial composition: describe the empty space FIRST, then the objects
+- Every object must be FULLY CONTAINED within the frame, not cut off
+- Individual objects only — no mass of trees, no mass of clouds
 
+For each layer, write a detailed image generation prompt following these rules.
 Style: {style}
 Scene: {scene}
 
