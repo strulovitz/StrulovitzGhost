@@ -18,7 +18,7 @@ Layer 1 = closest (single nearest element at bottom edge, scale 100%, bright, no
 
 CRITICAL RULES for EVERY layer:
 - Layers 1-5: NO backgrounds, NO ground, NO terrain — only isolated objects/characters
-- Layer 6 EXCEPTION: upper half CAN be filled with night sky (stars, moon, clouds), lower half must be empty/transparent
+- Layer 6 (ABSOLUTE FARTHEST LAYER IN THE ENTIRE HIERARCHY): upper half CAN be filled with night sky (stars, moon, clouds) as this is the final backdrop behind everything. Lower half must be empty/transparent. This is the ONLY layer in the whole system that can have an opaque background — regardless of how many classrooms/schools/levels are in the hierarchy, only the single farthest-from-viewer layer gets this privilege.
 - EMPTY CENTER in every layer — objects at edges, top, or bottom, never in the middle
 - All characters must be BRIGHT and vivid
 - Characters get CLOSER TOGETHER with depth (layer 2 far apart, layer 4 together)
