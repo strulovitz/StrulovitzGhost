@@ -148,6 +148,18 @@ green reflections on skin
 - BAD: "A realistic photo of a chef on a green screen." (model draws kitchen with green screen hanging somewhere)
 - GOOD: "Completely flat, uniform, solid chroma key green screen background (#00FF00). Smooth background with no shadows, no gradients, no depth. Solid monochrome color background."
 
+### Answer #3: Does Qwen-Image-2512 output alpha/transparency directly?
+
+**NO.** Qwen-Image-2512 outputs flat RGB only. No alpha channel.
+
+Google AI claims Qwen-Image-Layered can take a text prompt and generate RGBA layers directly — but this contradicts the HuggingFace docs which show image-only input (decomposition). This needs verification.
+
+**Practical conclusion:** Our pipeline MUST be 2-step:
+1. Qwen-Image-2512 → RGB with green screen background
+2. Post-processing → RGBA with transparency (chroma-key or Qwen-Image-Edit)
+
+No single-step transparent generation available from Qwen ecosystem (unconfirmed for Layered).
+
 ### Answer #1: How to prompt Qwen-Image-2512 for chroma key green background
 
 **Working formula (from Google AI, confirmed):**
