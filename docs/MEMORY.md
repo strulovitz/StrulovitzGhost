@@ -148,6 +148,40 @@ green reflections on skin
 - BAD: "A realistic photo of a chef on a green screen." (model draws kitchen with green screen hanging somewhere)
 - GOOD: "Completely flat, uniform, solid chroma key green screen background (#00FF00). Smooth background with no shadows, no gradients, no depth. Solid monochrome color background."
 
+### Answer #5: Complete Qwen-Image-2512 + Edit-2509 pipeline for transparent PNGs
+
+**CRITICAL WARNING:** Never ask Qwen-Image-Edit for "transparent background" — it renders a literal gray-and-white checkerboard pattern instead of true alpha. This is a documented failure mode.
+
+**The production ComfyUI pipeline (3 steps):**
+
+```
+Step 1: Qwen-Image-2512  →  Generate base image (don't ask for transparency here)
+Step 2: Qwen-Image-Edit-2509  →  "Replace background with solid #00FF00, isolate the subject"
+Step 3: Color to Mask node  →  Convert green pixels to alpha → Save as transparent PNG
+```
+
+**Step 2 isolation prompt (confirmed working):**
+```
+Isolate the main subject. Replace everything else in the background with a completely solid,
+uniform neon green color (#00FF00) with no shadows or gradients.
+```
+
+**Step 3 settings:**
+- Color to Mask node targeting exact green hex
+- Color tolerance: 0.01 to 0.05
+- Output: PNG with alpha channel
+
+**For our Python/diffusers pipeline (not ComfyUI):**
+
+Option A (simpler): Qwen-Image-2512 with green screen prompt → PIL chroma-key green to alpha. Skip the Edit model entirely.
+
+Option B (cleaner edges): Qwen-Image-2512 → Qwen-Image-Edit to clean up green spill on edges → PIL chroma-key. Use only if Option A shows color bleeding on hair/edges.
+
+**VRAM management for local 12GB GPU:**
+- Load generation model → generate → del + empty_cache()
+- Load edit model → edit → del + empty_cache()
+- Never both models in memory simultaneously
+
 ### Answer #4: Qwen-Image-Edit-2509 background removal prompts that actually work
 
 **Key fact:** Qwen-Image-Edit-2509 also cannot output transparency directly (RGB only, like the generator). The technique is: replace background with a SOLID color → then chroma-key that color in post-processing.
