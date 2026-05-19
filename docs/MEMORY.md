@@ -90,6 +90,18 @@ sentencepiece        0.2.1
 - **Was:** `GGUF_FILE = "Qwen-Image-2512-Q4_K_S.gguf"` → 404
 - **Fixed:** `GGUF_FILE = "qwen-image-2512-Q4_K_M.gguf"` → works
 
+## 🎉 LAYER 1 GENERATED! (May 19, 2026 session #4)
+
+**Layer 1 (20cm, foreground)** generated and saved: `src/output/layer1.png`
+- Prompt: Ghibli style D&D camp — owl on branch, rabbit on root, tree frame
+- Method: Qwen-Image-2512 4-bit (diffusers), 15 steps, 768×576
+- Time: 581 seconds (~9 min 41 sec) on RTX 4070 Ti
+- Output: RGBA with transparent background (rembg worked with onnxruntime-gpu)
+- File: 52 KB
+- Fix needed: installed `onnxruntime-gpu` (was missing in base `rembg` install)
+
+---
+
 ## ✅ BLOCKER RESOLVED — Env Rebuilt (May 19, 2026 session #4)
 
 ### State (May 19, 2026 — SESSION #4 FINAL)
