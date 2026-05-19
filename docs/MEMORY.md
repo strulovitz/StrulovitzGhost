@@ -100,6 +100,23 @@ sentencepiece        0.2.1
 - Empty transparent space + single owl floating top-third (partially erased) + single rabbit floating bottom-third
 - NO tree branches, NO root, NO ground, NO moss, NO framing of any kind
 
+### Qwen-Image-Layered (Dec 2025) — Investigated, NOT our solution
+- Model decomposes existing flat images into RGBA layers with transparency
+- NOT a generator — it only cuts up images that already exist
+- We can't control per-layer content — the AI decides what goes in which layer
+- Doesn't solve our problem (we need to CREATE specific content per depth layer, not decompose)
+- Useful to know about but irrelevant for this project
+
+### Open questions for Google AI search
+Need specific answers about Qwen-Image-2512 prompt techniques for green screen backgrounds.
+
+### Google search prompts needed:
+1. How to prompt Qwen-Image-2512 to generate images with pure chroma key green background that can be keyed out for transparency
+2. What negative prompts work best with Qwen-Image-2512 to prevent background artifacts when generating on green screen
+3. Does Qwen-Image-2512 support output with alpha channel / transparent background directly
+4. Qwen-Image-Edit-2509 examples for removing background and making it transparent - prompt examples that work
+5. Best approach combining Qwen-Image-2512 generation + Qwen-Image-Edit-2509 for green screen background removal pipeline
+
 ### Root cause analysis
 The generator's hardcoded suffix + negative prompt + rembg pipeline is fundamentally wrong for framing layers:
 
