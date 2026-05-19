@@ -44,6 +44,12 @@ Preserved context, decisions, and direction.
 
 5. **⛔ NEVER RUN SYSTEM-MODIFYING COMMANDS WITHOUT PERMISSION.** This is Nir's computer. Never create conda environments, install packages, delete files, create directories, or run ANY command that modifies the system without Nir's explicit permission. Ask first, explain what the command will do, and wait for approval. This rule was violated on May 19, 2026 (unauthorized conda create) — MUST NEVER HAPPEN AGAIN.
 
+6. **🗣️ TALK BEFORE ACTING — ALWAYS.** Before ANY command or action, discuss with Nir first. Never surprise-execute. This includes git commands, file writes, directory creation, anything. Explain what you're about to do and get approval.
+
+7. **⚖️ OFFER OPTIONS WITH PROS/CONS.** When there are multiple approaches, present them as choices with tradeoffs. Let Nir decide the path.
+
+8. **⏱️ TIME ESTIMATES FOR EVERY MICRO-STEP.** Before any action, tell Nir exactly how long each sub-step will take. Set short timeouts on all commands (5-10 sec for checks, 30-60 sec for generation, max 120 sec). Never let a command hang indefinitely — if it times out, report and discuss next steps with Nir.
+
 ### Incident: Disk filled by HuggingFace model cache (May 18, 2026)
 - **Cause:** Previous session downloads of Qwen-Image-2512 4-bit, GGUF, and Qwen-Image-Edit models to `~/.cache/huggingface/hub/`
 - **Size:** 47 GB
