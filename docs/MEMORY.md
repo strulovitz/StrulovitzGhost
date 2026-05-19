@@ -859,3 +859,21 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 > "A single ceramic vase placed in the far bottom-right corner. The entire left and upper sections of the image are a completely empty, flat beige wall. Studio lighting, heavy negative space, clean minimalist aesthetic, 16:9 aspect ratio."
 > Natural Environment Space:
 > "A tiny silhouette of a person sitting on a bench, positioned in the lower-left grid intersection. Surrounded by an immense, unbroken field of white snow filling the rest of the frame. High contrast, minimalist photography, immense negative space."
+
+---
+
+## 📋 REMAINING TODO (May 19, 2026 — end of session)
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Update README — says "Planning Phase" but V2 pipeline complete | ⬜ TODO |
+| 2 | Image preview in GUI — user can't see generated result in-app | ⬜ TODO |
+| 3 | Update tests for V2 pipeline (test_api.py, test_e2e_real.py) | ⬜ TODO |
+| 4 | ~~Remove Qwen-Image-Edit~~ | ✅ DONE |
+| 5 | ComfyUI path — exists in code but never tested end-to-end | ⬜ TODO |
+| 6 | Hierarchical architecture (classroom→school→county scaling) | ⬜ TODO |
+| 7 | Update setup.bat for V2 dependencies | ⬜ TODO |
+| 8 | 3-color chroma-key feature in GUI (red/green/blue selector) | ✅ DONE |
+| 9 | combine.py for hierarchical layer stacking | ✅ DONE |
+| 10 | LLM splitter updated with V2 principles | ✅ DONE |
+| 11 | Generator V2 prompts (green screen + spatial composition) | ✅ DONE |
