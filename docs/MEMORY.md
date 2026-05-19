@@ -25,16 +25,24 @@ Preserved context, decisions, and direction.
 - `test_timing.py` — Progress bar benchmark with test-shot timing estimation, working
 - `test_layer1.py`, `test_real_layer.py`, `test_scale.py`, `test_step_by_step.py`, `test_one.py` — various generation/quality tests
 
-**Hardware:** RTX 4070 Ti 12GB — Qwen 4-bit generation works (~3 min per layer at 512×384 / 15 steps)
+**Hardware:** RTX 4070 Ti 12GB — Qwen 4-bit generation works (~9 min per layer at 768×576 / 15 steps)
 
-**Recent work direction (last session, interrupted by Ctrl+C):**
-- Testing individual layer generation quality (Layer 1 foreground, Layer 4 mid-distance)
-- Object scaling for depth illusion (100% near → 70% far)
-- Realistic D&D scene generation with distance-based prompt engineering
+### 🎉 ALL 6 LAYERS GENERATED! (May 19, 2026)
+
+Green screen pipeline: Qwen-Image-2512 (15 steps, 768×576) → chroma-key + despill.
+
+| Layer | Content | File | Green keyed | Time |
+|-------|---------|------|-------------|------|
+| 1 🦉 | Owl, rabbit, tree branches (20cm) | `layer1.png` | 52% | 9.1m |
+| 2 🧝‍♀️ | Elf paladin + Human druid (~3m) | `layer2.png` | 60% | 9.2m |
+| 3 🔥 | Dwarf cleric + Halfling thief (~10m) | `layer3.png` | 41% | 9.3m |
+| 4 🐉 | Tiefling fighter + Dragonborn (~20m) | `layer4.png` | 65% | 9.1m |
+| 5 🌳 | Ancient magical oak forest | `layer5.png` | 37% | 9.0m |
+| 6 🌙 | Night sky, moon, mountains | `layer6.png` | 42% | 9.1m |
+
+**Total: ~54 min for 6 layers.** All RGBA in `src/output/`.
 
 ### ⛔ CRITICAL RULES (May 18, 2026 — updated May 19)
-
-**9. NEVER USE rembg.** It destroyed Layer 1. It is built for product photos (single isolated subject) and strips all complex framing, branches, ground, and edges. Use chroma-key (PIL color range on green screen) instead for background removal on framing layers. For isolated character layers, use Qwen-Image-Edit model instead.
 
 1. **NEVER download models without explicit permission.** HuggingFace `snapshot_download` filled 47 GB disk. Models are downloaded via GUI buttons only, never automatically by any script or test. Before any download, report size and ask.
 
@@ -52,7 +60,9 @@ Preserved context, decisions, and direction.
 
 8. **⏱️ TIME ESTIMATES FOR EVERY MICRO-STEP.** Before any action, tell Nir exactly how long each sub-step will take. Set short timeouts on all commands (5-10 sec for checks, 30-60 sec for generation, max 120 sec). Never let a command hang indefinitely — if it times out, report and discuss next steps with Nir.
 
-9. ~~**🚫 NEVER USE rembg.**~~ **REVOKED May 19.** The "rembg destroyed Layer 1" diagnosis was wrong. The real cause was the generator's hardcoded suffix ("isolated subject, small and centered") + negative prompt ("busy background, multiple objects") which contradicted our prompt and told the model to erase all the framing we asked for. rembg just received already-broken output. With proper green screen prompts (Answer #1 from Google AI), rembg may work fine. The tool wasn't the problem — the prompt was.
+9. ~~**🚫 NEVER USE rembg.**~~ **REVOKED May 19.** The "rembg destroyed Layer 1" diagnosis was wrong. The real cause was the generator's hardcoded suffix ("isolated subject, small and centered") + negative prompt ("busy background, multiple objects") which contradicted our prompt. rembg just received already-broken output. The tool wasn't the problem — the prompt was.
+
+10. **💾 SAVE EVERYTHING TO GITHUB FOREVER.** Every correction, direction, decision, or instruction Nir gives — save to MEMORY.md immediately, commit, and push. Permanent rule for all sessions. No exceptions. "Immediately" means immediately.
 
 ---
 
