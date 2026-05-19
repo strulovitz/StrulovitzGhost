@@ -770,3 +770,95 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 > `rembg i input.png output.png -a -ae 15`
 > -a: Activates alpha matting.
 > -ae 15: Sets the erosion size. Increase or decrease this value depending on how much green fringe is leaking into the edges of your subject.
+
+---
+
+## 📋 Appendix B: Google AI Search — Spatial Composition (May 19, 2026)
+
+### Query #7: How to control exact subject position and size in Qwen-Image-2512 prompts
+
+> To control exact subject size and position in Qwen-Image-2512 prompts, use highly specific camera angles (e.g., "low-angle shot," "bird's eye"), spatial anchors (e.g., "anchored to the bottom edge," "resting on the bottom floor"), and aspect ratio modifications (e.g., landscape 16:9).
+>
+> Because text-only prompting can be imprecise with exact percentages, spatial composition uses relative terms.
+>
+> Best Prompting Keywords for Bottom Placement (15-20% Scale)
+>
+> Camera Angle: "Ultra-wide angle shot," "ground-level view," "looking up from below," or "elevated high-angle shot looking down".
+>
+> Spatial Anchors: "Occupying only the bottom 20% of the frame," "anchored to the bottom edge," "submerged at the bottom," or "resting on the bottom border".
+>
+> Framing Descriptors: "Wide shot," "far away shot," or "small scale" (prevents the model from creating a macro close-up).
+>
+> Negative Prompts: "Close-up," "macro," "zoomed in," "filling the entire frame," "centered".
+>
+> Example Prompt Templates
+>
+> Example 1: A small, low-lying object (e.g., a tiny boat on water)
+> "A wide, extreme long shot of a small wooden boat resting on the water. The boat occupies only the bottom 15% of the frame, leaving the upper 85% of the frame to a vast, moody sky and a wide horizon. Cinematic lighting, photorealistic, wide panoramic view."
+>
+> Example 2: A small character (e.g., a tiny cat at the bottom)
+> "A high-angle, ultra-wide environmental shot. A tiny fluffy cat sitting on the bottom border, looking up at a massive, empty room. The cat occupies a small scale, taking up only 20% of the vertical height. Natural soft morning light, hyper-realistic, highly detailed."
+>
+> 2 Essential Tips for Perfect Execution
+> Use the Right Aspect Ratio: The base model works well when the aspect ratio matches the composition. For an expansive, empty upper section, use a horizontal layout like 16:9 (1664×928) or 4:3 (1472×1104).
+> Turn off Prompt Expansion: If you are using a frontend API/UI (like Fal.ai) that auto-expands prompts, toggle it off. Expansion will likely add "beautiful detailed subject" and override your 15-20% scale instruction.
+
+### Query #8: How to force negative space and make subject small at a specific edge
+
+> To force negative space and keep your subject small and cornered in Qwen-Image-2512, you must explicitly define the background as the dominant subject and anchor the real subject using literal spatial dimensions. Because Qwen uses a Multimodal Diffusion Transformer (MMDiT), mentioning an object naturally prompts it to fill the canvas unless the surrounding canvas is heavily described.
+>
+> Use these targeted strategy steps to overrule the model's auto-zooming behavior:
+>
+> 1. Reverse the Prompt Hierarchy
+> Qwen weighs concepts based on their position and word count in the prompt. If you start with your subject, it becomes the primary focus. Instead, start with the negative space as if it were the main subject.
+> ❌ Bad (Subject first): "A small lone sailboat at the bottom of the frame, surrounded by an immense empty blue ocean." (The model sees "sailboat" first and zooms in).
+> ✅ Good (Background first): "A vast, massive expanse of an empty, minimalist deep blue ocean filling 90% of the frame. In the extreme bottom edge, a tiny, microscopic sailboat is positioned, occupying less than 5% of the total canvas space."
+>
+> 2. Use Absolute and Percentage Language
+> Vague terms like "at the bottom" or "isolated" fail because the model still defaults to a centered composition. Force spatial constraint by using percentages, framing descriptions, and exact layout terminology:
+> Specify scale: Use words like "microscopic scale," "tiny silhouette," "distant speck," "extreme wide shot," or "minuscule size."
+> Define canvas distribution: State exactly how much of the canvas is empty (e.g., "The top 85% of the image is completely blank white space").
+> Edge positioning: Use exact anchor phrases: "hugging the absolute bottom edge," "nestled in the far bottom-right corner," or "positioned at the lowest margin."
+>
+> 3. Turn Off the Prompt Enhancer
+> If you are generating via an interface or API that uses an automatic "Prompt Enhancer" or "Rewriter," turn it off. The Qwen-Image-2512 prompt helper is great for mood boards but terrible for precise layouts. It will automatically inject descriptive flourishes, textures, and extra details onto your subject, which inadvertently tells the model to scale up the subject to show those details. Keep your prompt completely literal.
+>
+> 4. Treat Negative Space as a Concrete Object
+> Instead of leaving the background empty, name it as a solid, overwhelming element so the model has something explicit to generate instead of your subject.
+> For a studio background: "A seamless, completely blank, solid matte grey concrete wall dominates the entire frame..."
+> For nature background: "An endless, clear, completely cloudless stark white sky occupies almost the entire image..."
+>
+> 5. Structure Your Negative Prompt Logically
+> Qwen-Image-2512 responds best to a natural language, NLP-style negative prompt rather than a wall of comma-separated keyword tags. Explicitly ban the zooming behavior in your negative prompt box:
+> Negative Prompt: "close-up shot, medium shot, zoomed-in view, subject filling the frame, centered composition, cropped subject."
+
+### Query #9: Qwen-Image prompt techniques for framing and negative space
+
+> To create large areas of empty or negative space around your subject in Qwen-Image (or similar vision-language models), you need to use explicit aspect ratios, minimalist keywords, and precise framing directives.
+>
+> 1. Aspect Ratio Control
+> Use wide or tall ratios: Specify aspect ratios like --ar 16:9 (horizontal canvas) or --ar 9:16 (vertical canvas).
+> Isolate the subject: Extreme ratios naturally create more room away from the center.
+>
+> 2. Precise Composition Terms
+> Negative space: Use the exact phrase "large areas of negative space."
+> Minimalist composition: Use "minimalist composition" or "clean, uncluttered background."
+> Rule of thirds: Specify "subject placed in the lower third" or "subject off-center in the bottom right corner."
+> Scale contrast: Use "tiny subject in a vast landscape" or "microscopic scale" to force the model to shrink the subject.
+>
+> 3. Background Simplification
+> Uniform surfaces: Describe the empty area specifically, such as "solid matte background," "foggy void," "clear endless sky," or "studio backdrop."
+> Avoid detail bleed: Do not describe textures or secondary objects, as the model will try to fill the empty space with them.
+>
+> 4. Framing Directives
+> Extreme Long Shot (ELS): Forces the camera far back, making the environment dominant.
+> Bird's-eye view: Creates a large floor or ground plane around the subject.
+> Low-angle shot: Looking up at a subject creates massive negative space using the sky.
+>
+> 5. Example Prompt Formulas
+> Vertical Negative Space (Sky/Void):
+> "An extreme long shot of a lone traveler standing at the very bottom edge of the frame. The upper 80% of the image is a vast, empty, solid grey misty sky. Minimalist composition, deep negative space above the subject, 9:16 aspect ratio."
+> Horizontal Negative Space (Studio/Clean):
+> "A single ceramic vase placed in the far bottom-right corner. The entire left and upper sections of the image are a completely empty, flat beige wall. Studio lighting, heavy negative space, clean minimalist aesthetic, 16:9 aspect ratio."
+> Natural Environment Space:
+> "A tiny silhouette of a person sitting on a bench, positioned in the lower-left grid intersection. Surrounded by an immense, unbroken field of white snow filling the rest of the frame. High contrast, minimalist photography, immense negative space."
