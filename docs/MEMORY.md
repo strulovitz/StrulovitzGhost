@@ -109,6 +109,45 @@ sentencepiece        0.2.1
 
 ### Open questions for Google AI search — ANSWERS
 
+### Answer #2: Negative prompts to prevent background artifacts on green screen
+
+**CRITICAL:** CFG must be above 1.0 (ideally 3.5-7.0) or Qwen-Image-2512 IGNORES the negative prompt entirely.
+
+**Three categories of negative prompts:**
+
+1. Core Background Exclusion (natural language):
+```
+background scenery, studio equipment, lighting stands, softboxes, props,
+floor visible, walls, shadows on the background, gradients,
+photographic studio context, complex environment, outdoor setting,
+interior design elements
+```
+
+2. Artifact & Cleanliness Guard:
+```
+blurry background, bokeh, out of focus elements, depth of field artifacts,
+watermark, text overlay, signature, vignette, borders, frames,
+digital compression noise
+```
+
+3. Green Color Bleed Prevention (CHROMA KEY CRITICAL):
+```
+green tint on skin, green color bleeding, color fringing,
+chromatic aberration, green light reflections on subject,
+translucent edges, green spill
+```
+
+**Complete combo string (under 12 concepts — don't dilute):**
+```
+background scenery, studio equipment, floor, wall, shadows on background,
+bokeh, blurry background, watermark, green color bleed, color fringing,
+green reflections on skin
+```
+
+**Critical synergy:** Positive prompt MUST embed strict structural anchors.
+- BAD: "A realistic photo of a chef on a green screen." (model draws kitchen with green screen hanging somewhere)
+- GOOD: "Completely flat, uniform, solid chroma key green screen background (#00FF00). Smooth background with no shadows, no gradients, no depth. Solid monochrome color background."
+
 ### Answer #1: How to prompt Qwen-Image-2512 for chroma key green background
 
 **Working formula (from Google AI, confirmed):**
