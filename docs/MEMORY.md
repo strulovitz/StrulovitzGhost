@@ -1,5 +1,7 @@
 # 🧠 Project Memory 🧠
 
+**⛔ THIS IS NIR'S COMPUTER. NO COMMANDS MAY BE RUN WITHOUT EXPLICIT PERMISSION. ASK FIRST. ALWAYS. ⛔**
+
 Preserved context, decisions, and direction.
 
 ---
