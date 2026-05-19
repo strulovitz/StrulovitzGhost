@@ -42,6 +42,36 @@ Green screen pipeline: Qwen-Image-2512 (15 steps, 768×576) → chroma-key + des
 
 **Total: ~54 min for 6 layers.** All RGBA in `src/output/`.
 
+### 🔧 NIR'S CORRECTIONS — V2 PRINCIPLES (May 19, 2026)
+
+From physical Pepper's Ghost testing with 6 semi-transparent plastic layers:
+
+**1. NO BACKGROUNDS — ONLY OBJECTS.** No ground, mountains, fire behind characters. Backgrounds seen through closer layers destroy the illusion.
+
+**2. EMPTY CENTER EVERY LAYER.** Transparent space in middle for layers behind. Objects at edges/top/bottom, never center.
+
+**3. CHARACTERS MUST BE BRIGHT.** Semi-transparent plastic dims everything — characters must punch through.
+
+**4. FAR APART → CLOSE TOGETHER with depth.** Layer 2 far apart (block everything behind), layer 3 closer, layer 4+ overlapping OK.
+
+**5. SCALING: -15% per layer.** Layer 1=100%, 2=85%, 3=70%, 4=55%, 5=40%, 6=25%.
+
+**6. VERTICAL STAGGERING — deeper = HIGHER.** Nir looks from above. Each deeper layer's content sits higher on canvas.
+
+**7. NO FULL-HEIGHT OBJECTS.** Trees top-to-bottom seen through characters. Confine vertical objects to upper half or bottom third.
+
+**8. NO GROUND.** Destroys illusion when seen through closer characters.
+
+**9. PHYSICAL SETUP:** 6 layers, 3 monitors. Monitor #3 has polarization issues (layer 5 invisible). Nir looks from slightly above (crouched/bar stool). Only ~1 layer visible through previous one.
+
+**10. PER-LAYER V2 SPEC:**
+- **L1:** Rabbit + root at bottom. No owl, no branches. 100% scale. Bright.
+- **L2:** Elf + Human girls on log, gossiping. Far apart. 85%. Bright. No ground.
+- **L3:** Dwarf + Halfling arguing. No fire (or very dim). 70%. Closer.
+- **L4:** Tiefling + Dragonborn SITTING on rocks. Together. 55%. No ground.
+- **L5:** Few trees, upper half only, self-contained, not bright.
+- **L6:** Moon + stars only. No mountains. 25%.
+
 ### ⛔ CRITICAL RULES (May 18, 2026 — updated May 19)
 
 1. **NEVER download models without explicit permission.** HuggingFace `snapshot_download` filled 47 GB disk. Models are downloaded via GUI buttons only, never automatically by any script or test. Before any download, report size and ask.
