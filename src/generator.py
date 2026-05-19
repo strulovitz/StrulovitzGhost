@@ -119,7 +119,7 @@ def generate_diffusers(
 
         result = pipe(
             prompt=full_prompt,
-            negative_prompt="shadows on background, gradient background, studio lights, green screen stand, wrinkles, fabric texture, environment, wall texture, vignette, color bleeding, light spill, rim light",
+            negative_prompt="shadows on background, gradient background, studio lights, green screen stand, wrinkles, fabric texture, environment, wall texture, vignette, color bleeding, light spill, rim light, close-up shot, medium shot, zoomed-in view, subject filling the frame, centered composition, cropped subject, macro",
             width=width,
             height=height,
             num_inference_steps=num_steps,
