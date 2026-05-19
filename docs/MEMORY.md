@@ -86,44 +86,54 @@ sentencepiece        0.2.1
 
 ## BLOCKER — Torch broken, DLLs locked (May 18 → May 19, 2026)
 
-### State at session end (updated May 19)
+### State (May 19, 2026)
 - **All 3 AI models downloaded** (~40 GB total, 32 GB free on C:)
 - **ComfyUI present** at `src/comfyui/main.py`
 - **GGUF filename fixed** in `downloader.py` (lowercase)
-- **Torch `__init__.py` is MISSING** — imports without error but returns garbage module (no `cuda`, no `__version__`)
-- **Torch DLLs CANNOT be deleted** — locked (permission denied on `cublasLt64_12.dll`, `_ctypes.pyd`, `libcrypto-3-x64.dll`)
-- **PC WAS rebooted** (fresh start May 19 morning) — DLLs STILL locked after reboot!
+- **Torch `__init__.py` is MISSING** — imports garbage module (no `cuda`, no `__version__`)
+- **Torch DLLs locked** (`cublasLt64_12.dll`, `_ctypes.pyd`, `libcrypto-3-x64.dll`) — Access Denied
+- Env is partially deleted from failed Remove-Item attempt — mostly empty but .dll files remain
 
-### What was tried and failed (May 18)
-1. `conda run` → hangs in PowerShell
-2. `import torch` → hangs (May 18) / imports broken module (May 19 — `__init__.py` missing)
-3. `import torch` with `CUDA_VISIBLE_DEVICES=""` → still hangs
-4. `pip uninstall torch` → hangs
-5. `Remove-Item -Force` on torch dir → Access Denied (locked)
-6. `pip install --force-reinstall torch` → hangs
+### What failed
+- Reboot didn't unlock DLLs
+- Kill processes didn't help
+- conda remove, Remove-Item, pip uninstall — all failed
+- Env is corrupted beyond repair
 
-### What was tried and failed (May 19)
-7. Killed 3 zombie Python processes → DLLs still locked
-8. `Remove-Item -Recurse -Force` on entire env → Access Denied (same DLLs)
-9. `conda remove -n strulovitzghost --all -y` via `cmd /c` → no effect
-10. Reboot didn't unlock DLLs — NVIDIA driver loads them at boot
+### ✅ NIR'S PLAN (May 19, 2026) — DO EXACTLY THIS, NOTHING ELSE
 
-### Root cause (confirmed)
-CUDA DLLs are locked by something that starts at boot (NVIDIA driver, CUDA kernel module, or similar). A reboot does NOT free them. The `strulovitzghost` env is permanently corrupted and cannot be deleted.
+**Step 1: Restart the computer**
+PC restart to release any remaining DLL locks.
 
-### ⚠️ DO NOT TRY AGAIN: Reboot, kill processes, or delete env — all known to fail
-
-### New strategy (May 19): Create a FRESH env with a NEW name
-Since the old env cannot be deleted, create a new one alongside it:
+**Step 2: Delete the strulovitzghost env**
 ```
-conda create -n sg -p C:\Users\nir_s\miniconda3\envs\sg python=3.12 -y
-C:\Users\nir_s\miniconda3\envs\sg\python.exe -m pip install torch==2.12.0+cu126 torchvision==0.27.0+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
-C:\Users\nir_s\miniconda3\envs\sg\python.exe -m pip install diffusers==0.39.0.dev0 transformers==5.8.1 accelerate==1.13.0 bitsandbytes==0.49.2 sentencepiece==0.2.1
-C:\Users\nir_s\miniconda3\envs\sg\python.exe -m pip install flask flask-sqlalchemy pyqt6 pillow requests python-dotenv rembg
-C:\Users\nir_s\miniconda3\envs\sg\python.exe -m pip install -r src/comfyui/requirements.txt
+Remove-Item -LiteralPath "$env:USERPROFILE\miniconda3\envs\strulovitzghost" -Recurse -Force
 ```
+If still locked after restart, try conda remove:
+```
+cmd /c "C:\Users\nir_s\miniconda3\Scripts\conda.exe remove -n strulovitzghost --all -y"
+```
+
+**Step 3: Recreate strulovitzghost env with SAME name**
+```
+cmd /c "C:\Users\nir_s\miniconda3\Scripts\conda.exe create -n strulovitzghost python=3.12 -y"
+```
+
+**Step 4: Install all packages**
+```
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install torch==2.12.0+cu126 torchvision==0.27.0+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install diffusers==0.39.0.dev0 transformers==5.8.1 accelerate==1.13.0 bitsandbytes==0.49.2 sentencepiece==0.2.1
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -m pip install flask flask-sqlalchemy pyqt6 pillow requests python-dotenv rembg
+```
+
+**Step 5: Verify**
+```
+%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe -c "import torch; print(torch.cuda.get_device_name(0))"
+```
+
 ⚠️ Models in `~/.cache/huggingface/hub/` are NOT affected — no re-download needed.
-⚠️ New env Python path: `C:\Users\nir_s\miniconda3\envs\sg\python.exe`
+⚠️ Python path: `%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe`
+⚠️ DO NOT run any of these steps without Nir's explicit command. THIS IS NIR'S PC.
 
 ### Exact versions (from working state)
 ```
