@@ -90,6 +90,42 @@ sentencepiece        0.2.1
 - **Was:** `GGUF_FILE = "Qwen-Image-2512-Q4_K_S.gguf"` → 404
 - **Fixed:** `GGUF_FILE = "qwen-image-2512-Q4_K_M.gguf"` → works
 
+## 🔴 LAYER 1 — GENERATED BUT WRONG (May 19, 2026 session #4)
+
+### What came out
+- Empty transparent space + single owl floating top-third (partially erased) + single rabbit floating bottom-third
+- NO tree branches, NO root, NO ground, NO moss, NO framing of any kind
+
+### Root cause analysis
+The generator's hardcoded suffix + negative prompt + rembg pipeline is fundamentally wrong for framing layers:
+
+1. **Appended suffix kills complexity:** Every prompt gets `"The subject is small and centered on a plain green screen background. Isolated subject. Studio lighting. Clean edges."` appended. "Isolated subject" (singular) + "small and centered" contradicts Layer 1's complex diorama with branches entering from edges, ground at bottom, multiple elements.
+
+2. **Negative prompt fights the framing:** `"busy background, cluttered, multiple objects, frame filling"` — Layer 1 IS "multiple objects" and "frame filling" by design! The model is told NOT to do what we want.
+
+3. **rembg eats the framing:** rembg is trained on product photography (single subject, clean background). It sees branches/roots/ground near green as "background noise" and strips them, leaving only the clearest isolated subjects (owl/rabbit).
+
+### Proposed fix: Green screen chroma-key instead of rembg AI
+
+**Strategy:** Generate with an explicit SOLID green screen in the CENTER (where layers behind show through), use simple PIL color-keying to make that green transparent, and KEEP all the complex framing. No AI background removal.
+
+```
+Layer 1 needs: [branches at edges] [GREEN CENTER] [ground at bottom]
+After keying:  [branches at edges] [TRANSPARENT CENTER] [ground at bottom]
+```
+
+**Changes needed to `src/generator.py`:**
+1. Remove the hardcoded suffix — let the prompt control everything
+2. Remove the hardcoded negative prompt
+3. Replace rembg with PIL color-keying (chroma key on green screen)
+4. OR: add a `layer_mode` parameter that switches between "rembg" (isolated subjects) and "chroma" (framing layers)
+
+**New pipeline for Layer 1:**
+1. Generate with Qwen at 768×576, 15 steps
+2. Prompt includes explicit "solid bright green screen in the center rectangle, no objects in center"
+3. PIL chroma-key: replace green pixels with alpha=0, keep everything else
+4. Save as RGBA PNG
+
 ## 🎉 LAYER 1 GENERATED! (May 19, 2026 session #4)
 
 **Layer 1 (20cm, foreground)** generated and saved: `src/output/layer1.png`
