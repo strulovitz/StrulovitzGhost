@@ -17,7 +17,8 @@ Layer 2 = mid-close (closer characters, far apart from each other, scale ~85%, b
 Layer 1 = closest (single nearest element at bottom edge, scale 100%, bright, no ground)
 
 CRITICAL RULES for EVERY layer:
-- NO backgrounds, NO ground, NO terrain — only isolated objects/characters
+- Layers 1-5: NO backgrounds, NO ground, NO terrain — only isolated objects/characters
+- Layer 6 EXCEPTION: upper half CAN be filled with night sky (stars, moon, clouds), lower half must be empty/transparent
 - EMPTY CENTER in every layer — objects at edges, top, or bottom, never in the middle
 - All characters must be BRIGHT and vivid
 - Characters get CLOSER TOGETHER with depth (layer 2 far apart, layer 4 together)
