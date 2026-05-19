@@ -148,8 +148,7 @@ sentencepiece        0.2.1
 | Model | Size | Status |
 |-------|------|--------|
 | `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~13 GB | ✅ Downloaded |
-| `unsloth/Qwen-Image-2512-GGUF` | ~13 GB | ✅ Downloaded (fixed filename: lowercase `qwen-image-2512-Q4_K_M.gguf`) |
-| `blanchon/Qwen-Image-Edit-2509-bnb-4bit` | ~14 GB | ✅ Downloaded |
+| `unsloth/Qwen-Image-2512-GGUF` | ~13 GB | ✅ Downloaded — only for ComfyUI path |
 | ComfyUI | ~2 GB | ✅ Present at `src/comfyui/main.py` |
 | Output PNGs | ~50 MB | ✅ 26 test images in `src/output/` |
 | C: drive free | 32 GB | After all 3 model downloads |
@@ -367,7 +366,7 @@ After keying:  [branches at edges] [TRANSPARENT CENTER] [ground at bottom]
 ## ✅ BLOCKER RESOLVED — Env Rebuilt (May 19, 2026 session #4)
 
 ### State (May 19, 2026 — SESSION #4 FINAL)
-- **All 3 AI models downloaded** (~40 GB total, 32 GB free on C:)
+- **All 2 AI models downloaded** (~26 GB total)
 - **Fresh `strulovitzghost` env CREATED** with Python 3.12
 - **All packages installed & VERIFIED WORKING:**
   - torch 2.12.0+cu126 ✅ — CUDA: True, Device: RTX 4070 Ti
@@ -493,7 +492,6 @@ All 3 models downloaded to `~/.cache/huggingface/hub/`. To verify:
 from downloader import check_model_cached
 print(check_model_cached("unsloth/Qwen-Image-2512-unsloth-bnb-4bit"))  # True
 print(check_model_cached("unsloth/Qwen-Image-2512-GGUF"))   # True
-print(check_model_cached("blanchon/Qwen-Image-Edit-2509-bnb-4bit"))  # True
 ```
 GGUF filename fixed in downloader.py: `qwen-image-2512-Q4_K_M.gguf` (lowercase!)
 
@@ -514,7 +512,6 @@ Full prompt in Layer Generation Pipeline section below.
 # Download models (one at a time, ~10-15 min each, from src/ directory)
 %USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "exec(open('downloader.py').read()); download_diffusers_4bit()"
 %USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "exec(open('downloader.py').read()); download_comfyui_gguf()"
-%USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "exec(open('downloader.py').read()); download_qwen_image_edit()"
 
 # Generate Layer 1 (when torch works)
 %USERPROFILE%miniconda3\envs\strulovitzghost\python.exe -c "from generator import generate_diffusers; generate_diffusers('PROMPT HERE', 'output/layer1.png', width=768, height=576, num_steps=15, remove_bg=True)"

@@ -134,7 +134,7 @@ The website runs on the DM's computer using **Python Flask**. It is the ONLY com
 
 **Database: SQLite** 🗄️ — chosen because it's embedded, zero-config, and perfect for single-DM setups. The schema and all database operations are designed through **SQLAlchemy ORM**, which means switching to **MySQL** (or PostgreSQL) in the future is a simple configuration change — change one connection string, and everything else works the same. No raw SQL queries anywhere in the codebase — all database access goes through SQLAlchemy models only.
 
-**Style Preservation** 🎨 — Every question can have an optional `style` field (e.g., "Ghibli animation", "oil painting", "pixel art"). This style is passed down the entire chain: from Client → Boss → Worker prompts → Qwen-Image generation → Boss merge with Qwen-Image-Edit. This ensures visual consistency across all 6 layers.
+**Style Preservation** 🎨 — Every question can have an optional `style` field (e.g., "Ghibli animation", "oil painting", "pixel art"). This style is passed down the entire chain: from Client → Boss → Worker prompts → Qwen-Image generation. This ensures visual consistency across all 6 layers.
 
 **Local LLM for Boss Splitting** 🧠 — The Boss uses a **local text LLM** (NOT a cloud AI) to break complex scene descriptions into 6 layer-specific prompts. 
 
@@ -299,38 +299,10 @@ All generated images MUST be **PNG with transparent backgrounds** (NOT JPG). Eac
 
 | Role | Software Needed | AI Model |
 |------|----------------|----------|
-| **DM's Computer** | Flask web server, PyQt6 GUI (Client/Boss mode), Cloudflared (for Public Mode), SQLite database, **Local LLM** (Ollama or LM Studio) | Local text LLM for splitting (Qwen3.6 quantized) + optionally Qwen-Image-Edit for merging |
+| **DM's Computer** | Flask web server, PyQt6 GUI (Client/Boss mode), Cloudflared (for Public Mode), SQLite database, **Local LLM** (Ollama or LM Studio), PIL combine for hierarchical merging | Local text LLM for splitting (Qwen3 quantized) |
 | **Player's Computer** | PyQt6 GUI (Worker mode) | **Qwen-Image-2512** (the heavy GPU model) |
 
 > In Stage 1 (single machine), one computer runs everything: Flask, PyQt6 in combined mode, and Qwen-Image-2512.
-
-### Additional AI: Qwen-Image-Edit 🖼️✂️
-
-For advanced versions where multiple sub-images need to be combined into a single layer (e.g., many individual flower PNGs merged into one flower patch PNG), the DM's computer can run **Qwen-Image-Edit**:
-
-- **Model**: [Qwen/Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit)
-- **Purpose**: Intelligently merge/overlay multiple images into a coherent whole
-- **Installation**: Same two methods as Qwen-Image-2512 — ComfyUI (GGUF) or Python Diffusers
-- **Hardware**: ~13.5+ GB combined RAM/VRAM with GGUF quantization
-- **Simpler alternative**: Python's Pillow library can mechanically overlay transparent PNGs (less intelligent, but zero GPU cost)
-
-```python
-# Qwen-Image-Edit basic usage (Python Diffusers)
-import torch
-from diffusers import DiffusionPipeline
-from diffusers.utils import load_image
-
-pipe = DiffusionPipeline.from_pretrained(
-    "Qwen/Qwen-Image-Edit",
-    dtype=torch.bfloat16,
-    device_map="cuda"
-)
-
-input_image = load_image("layer_base.png")
-prompt = "Merge these flowers naturally into the grass, soft lighting"
-image = pipe(image=input_image, prompt=prompt).images[0]
-image.save("layer_merged.png")
-```
 
 ### Environment: Miniconda 🐍
 
