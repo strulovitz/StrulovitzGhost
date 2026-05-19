@@ -52,7 +52,7 @@ Preserved context, decisions, and direction.
 
 8. **⏱️ TIME ESTIMATES FOR EVERY MICRO-STEP.** Before any action, tell Nir exactly how long each sub-step will take. Set short timeouts on all commands (5-10 sec for checks, 30-60 sec for generation, max 120 sec). Never let a command hang indefinitely — if it times out, report and discuss next steps with Nir.
 
-9. **🚫 NEVER USE rembg.** It is built for product photos (single isolated subject) and destroys complex framing — branches, ground, edges all get stripped. For transparency: use chroma-key on green screen (PIL color range) for framing layers; use Qwen-Image-Edit model for isolated character layers.
+9. ~~**🚫 NEVER USE rembg.**~~ **REVOKED May 19.** The "rembg destroyed Layer 1" diagnosis was wrong. The real cause was the generator's hardcoded suffix ("isolated subject, small and centered") + negative prompt ("busy background, multiple objects") which contradicted our prompt and told the model to erase all the framing we asked for. rembg just received already-broken output. With proper green screen prompts (Answer #1 from Google AI), rembg may work fine. The tool wasn't the problem — the prompt was.
 
 ### Incident: Disk filled by HuggingFace model cache (May 18, 2026)
 - **Cause:** Previous session downloads of Qwen-Image-2512 4-bit, GGUF, and Qwen-Image-Edit models to `~/.cache/huggingface/hub/`
