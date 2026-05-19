@@ -32,7 +32,9 @@ Preserved context, decisions, and direction.
 - Object scaling for depth illusion (100% near → 70% far)
 - Realistic D&D scene generation with distance-based prompt engineering
 
-### ⛔ CRITICAL RULES (May 18, 2026)
+### ⛔ CRITICAL RULES (May 18, 2026 — updated May 19)
+
+**9. NEVER USE rembg.** It destroyed Layer 1. It is built for product photos (single isolated subject) and strips all complex framing, branches, ground, and edges. Use chroma-key (PIL color range on green screen) instead for background removal on framing layers. For isolated character layers, use Qwen-Image-Edit model instead.
 
 1. **NEVER download models without explicit permission.** HuggingFace `snapshot_download` filled 47 GB disk. Models are downloaded via GUI buttons only, never automatically by any script or test. Before any download, report size and ask.
 
@@ -49,6 +51,8 @@ Preserved context, decisions, and direction.
 7. **⚖️ OFFER OPTIONS WITH PROS/CONS.** When there are multiple approaches, present them as choices with tradeoffs. Let Nir decide the path.
 
 8. **⏱️ TIME ESTIMATES FOR EVERY MICRO-STEP.** Before any action, tell Nir exactly how long each sub-step will take. Set short timeouts on all commands (5-10 sec for checks, 30-60 sec for generation, max 120 sec). Never let a command hang indefinitely — if it times out, report and discuss next steps with Nir.
+
+9. **🚫 NEVER USE rembg.** It is built for product photos (single isolated subject) and destroys complex framing — branches, ground, edges all get stripped. For transparency: use chroma-key on green screen (PIL color range) for framing layers; use Qwen-Image-Edit model for isolated character layers.
 
 ### Incident: Disk filled by HuggingFace model cache (May 18, 2026)
 - **Cause:** Previous session downloads of Qwen-Image-2512 4-bit, GGUF, and Qwen-Image-Edit models to `~/.cache/huggingface/hub/`
