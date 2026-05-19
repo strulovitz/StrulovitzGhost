@@ -90,16 +90,18 @@ sentencepiece        0.2.1
 - **Was:** `GGUF_FILE = "Qwen-Image-2512-Q4_K_S.gguf"` → 404
 - **Fixed:** `GGUF_FILE = "qwen-image-2512-Q4_K_M.gguf"` → works
 
-## BLOCKER — Torch broken, env corrupted (May 18 → May 19, 2026)
+## ✅ BLOCKER RESOLVED — Env Rebuilt (May 19, 2026 session #4)
 
-### State (May 19, 2026 — UPDATED May 19 session #3, ADMIN)
+### State (May 19, 2026 — SESSION #4 FINAL)
 - **All 3 AI models downloaded** (~40 GB total, 32 GB free on C:)
-- **ComfyUI present** at `src/comfyui/main.py`
-- **GGUF filename fixed** in `downloader.py` (lowercase)
-- **Step 1 (reboot) DONE** ✓ (May 18→19)
-- **Step 1.5 (admin reboot) DONE** ✓ — reopened OpenCode as Administrator
-- **Step 2: 95% complete** — only the locked DLL + 4 empty parent dirs remain (507 MB)
-- **One file STILL undeletable:** `strulovitzghost_OLD\Lib\site-packages\torch\lib\cublasLt64_12.dll.DELETE` (507 MB)
+- **Fresh `strulovitzghost` env CREATED** with Python 3.12
+- **All packages installed & VERIFIED WORKING:**
+  - torch 2.12.0+cu126 ✅ — CUDA: True, Device: RTX 4070 Ti
+  - diffusers 0.38.0 (stable, was 0.39.0.dev0 before)
+  - transformers 5.8.1, accelerate 1.13.0, bitsandbytes 0.49.2, sentencepiece 0.2.1 ✅
+  - flask, flask-sqlalchemy, pyqt6, requests, python-dotenv, rembg ✅
+- **Old env `strulovitzghost_OLD` still present** (507 MB locked DLL, 5 items) — worked around by using new env name
+- **Locked DLL:** `cublasLt64_12.dll.DELETE` survived reboot + PendingFileRenameOperations. NVIDIA kernel section mapping is permanent. Can only be deleted via Safe Mode or Linux live USB. Left orphaned for now — no impact on development.
 
 ### 🔴 SESSION #3 — ADMIN POWERS UNLEASHED (May 19, 2026)
 
@@ -187,22 +189,22 @@ cmd /c "C:\Users\nir_s\miniconda3\Scripts\conda.exe create -n strulovitzghost py
 ⚠️ DO NOT run any of these steps without Nir's explicit command. THIS IS NIR'S PC.
 ⚠️ DO NOT attempt Step 3+ until after reboot AND successful deletion of `strulovitzghost_OLD`.
 
-### Exact versions (from working state)
+### Exact versions (WORKING — May 19, 2026 session #4)
 ```
-torch                2.12.0+cu126
-torchvision          0.27.0+cu126
-diffusers            0.39.0.dev0
-transformers         5.8.1
-accelerate           1.13.0
-bitsandbytes         0.49.2
-sentencepiece        0.2.1
-flask                 (latest)
-flask-sqlalchemy      (latest)
-pyqt6                 (latest)
-pillow                (latest)
-requests              (latest)
-python-dotenv         (latest)
-rembg                 (latest)
+torch                2.12.0+cu126  ✅
+torchvision          0.27.0+cu126  ✅
+diffusers            0.38.0        (stable; 0.39.0.dev0 no longer available on PyPI)
+transformers         5.8.1         ✅
+accelerate           1.13.0        ✅
+bitsandbytes         0.49.2        ✅
+sentencepiece        0.2.1         ✅
+flask                3.1.3
+flask-sqlalchemy     3.1.1
+pyqt6                6.11.0
+pillow               12.2.0
+requests             2.34.2
+python-dotenv        1.2.2
+rembg                2.0.75
 ```
 
 ### Conda env Python path (CRITICAL — always use this)
