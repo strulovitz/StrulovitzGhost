@@ -129,16 +129,16 @@ def generate_diffusers(
         )
         image = result.images[0]
 
+        image.save(output_path)
+
         if remove_bg:
             if progress_callback:
                 progress_callback("Removing background...", 92)
             try:
-                from rembg import remove
-                image = remove(image)
+                from chroma_key import chroma_key
+                chroma_key(output_path, output_path, key_color="green")
             except Exception as e:
                 print(f"Background removal failed: {e}")
-
-        image.save(output_path)
         gen_time = tracker.get_total()
         if progress_callback:
             progress_callback(f"Done in {gen_time:.0f}s!", 100)

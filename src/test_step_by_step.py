@@ -50,17 +50,18 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-print("Step 5: Remove background...")
+print("Step 5: Remove background (chroma-key)...")
+out = os.path.join(os.path.dirname(__file__), "output", "test_step.png")
+os.makedirs(os.path.dirname(out), exist_ok=True)
+image.save(out)
 try:
-    from rembg import remove
-    image = remove(image)
-    print("   Background removed!")
+    from chroma_key import chroma_key
+    chroma_key(out, out, key_color="green")
+    print("   Background removed (chroma-key)!")
 except Exception as e:
     print(f"   FAIL: {e} (saving original)")
     traceback.print_exc()
 
-out = os.path.join(os.path.dirname(__file__), "output", "test_step.png")
-os.makedirs(os.path.dirname(out), exist_ok=True)
-image.save(out)
+image = Image.open(out)
 print(f"\nSUCCESS! Saved to {out}")
 print(f"Image mode: {image.mode}, size: {image.size}")

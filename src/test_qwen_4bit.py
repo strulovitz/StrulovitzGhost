@@ -3,18 +3,10 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import torch
 from diffusers import DiffusionPipeline
-from transformers import BitsAndBytesConfig
 
 try:
     print(f"GPU: {torch.cuda.get_device_name(0)}")
     print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
-
-    quant_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-    )
 
     print("Loading Qwen-Image-2512 with CPU offload (for 12GB GPUs)...")
     pipe = DiffusionPipeline.from_pretrained(
