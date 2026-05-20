@@ -23,8 +23,9 @@ IMPORTANT: If the input starts with "[GLOBAL NEGATIVE PROMPT: ...]", those are g
 
 If TYPE A (pre-structured layers):
 - Find the positive prompt and negative prompt for each layer.
-- CRITICAL: DO NOT SUMMARIZE, SHORTEN, OR REWRITE. Pass through the EXACT prompt text verbatim — every word of pose, clothing, position, color, lighting, art style, composition must be preserved. These are hand-crafted and must not be altered.
-- Use the section labels ("Prompt:", "Prompt to copy/paste:", "Negative prompt:") to identify which text belongs where — put the text after "Prompt:" into the prompt field, and the text after "Negative prompt:" into the negative_prompt field.
+- CRITICAL: DO NOT SUMMARIZE, SHORTEN, OR REWRITE. Pass through the EXACT prompt text verbatim — every word of pose, clothing, position, color, lighting, art style, composition must be preserved.
+- Use the section labels ("Prompt:", "Prompt to copy/paste:", "Negative prompt:") to identify which text belongs where — put the text from the positive section into the prompt field, and the text from the negative section into the negative_prompt field.
+- Remove ONLY the exact prefix "Transparent PNG layer. " (with the space after the period) if it appears at the start of a prompt. Keep all other text intact.
 - If a negative prompt says things like "no X, no Y" — convert to a clean comma-separated list: "X, Y"
 - If a layer is completely missing, generate it from the other layers' context
 
@@ -73,6 +74,7 @@ Scene: {scene}"""
 
 
 def split_scene_ollama(scene: str, style: str = "Ghibli animation", model: str = "qwen3") -> Optional[list]:
+    style = style or "Ghibli animation"
     prompt = SPLIT_PROMPT_TEMPLATE.format(style=style, scene=scene)
     print(f"[LLM] Sending to {model} ({len(scene)} chars scene, {len(prompt)} chars template)...", flush=True)
     try:
@@ -96,6 +98,7 @@ def split_scene_ollama(scene: str, style: str = "Ghibli animation", model: str =
 
 
 def split_scene_lmstudio(scene: str, style: str = "Ghibli animation", model: str = "auto") -> Optional[list]:
+    style = style or "Ghibli animation"
     prompt = SPLIT_PROMPT_TEMPLATE.format(style=style, scene=scene)
     print(f"[LLM] Sending to LM Studio ({len(scene)} chars scene)...", flush=True)
     try:
@@ -141,6 +144,7 @@ def _parse_json_response(text: str) -> Optional[list]:
 
 
 def split_scene(scene: str, style: str = "Ghibli animation", provider: str = "ollama", model: str = "qwen3") -> Optional[list]:
+    style = style or "Ghibli animation"
     if provider == "lmstudio":
         return split_scene_lmstudio(scene, style, model)
     return split_scene_ollama(scene, style, model)

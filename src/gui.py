@@ -133,7 +133,7 @@ class ClientWidget(QWidget):
         if not desc:
             self.status_label.setText("Please enter a description.")
             return
-        style = self.style_input.text().strip() or None
+        style = self.style_input.text().strip() or "Ghibli animation"
         global_neg = self.client_neg_input.toPlainText().strip()
         if global_neg:
             desc = f"[GLOBAL NEGATIVE PROMPT: {global_neg}]\n\n{desc}"
