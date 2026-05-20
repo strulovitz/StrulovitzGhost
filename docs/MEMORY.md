@@ -867,7 +867,7 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 | # | Task | Status |
 |---|------|--------|
 | 1 | Update README — says "Planning Phase" but V2 pipeline complete | ✅ DONE |
-| 2 | Image preview in GUI — user can't see generated result in-app | ⬜ TODO |
+| 2 | Image preview in GUI — user can't see generated result in-app | ✅ DONE |
 | 3 | Update tests for V2 pipeline (test_api.py, test_e2e_real.py) | ⬜ TODO |
 | 4 | ~~Remove Qwen-Image-Edit~~ | ✅ DONE |
 | 5 | ComfyUI path — exists in code but never tested end-to-end | ⬜ TODO |
