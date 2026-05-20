@@ -1,5 +1,8 @@
 import sys
 import os
+from logger import setup_logging
+setup_logging()
+
 import time
 import requests
 from PyQt6.QtWidgets import (

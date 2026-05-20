@@ -1,4 +1,7 @@
-import os
+import os, sys
+from logger import setup_logging
+setup_logging()
+
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.utils import secure_filename
