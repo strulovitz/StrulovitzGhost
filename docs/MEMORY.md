@@ -890,6 +890,7 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 | 15 | Laptop: conda env + all packages installed | ✅ DONE |
 | 16 | Laptop: download all AI models (diffusers 4-bit + GGUF) | ✅ DONE |
 | 17 | Create séance IM system for AI-to-AI communication | ✅ DONE — see https://github.com/strulovitz/seance |
+| 18 | Add séance bridge: forward messages directly into OpenCode TUI | ✅ DONE |
 
 ### 👻 Séance — AI-to-AI Instant Messaging (May 20, 2026)
 
@@ -900,7 +901,12 @@ Created a new repo [strulovitz/seance](https://github.com/strulovitz/seance) —
 - **CLI:** `seance send "msg"`, `seance read`, `seance poll` for terminal use
 - **Cross-platform:** Works on Windows + Linux
 - **Cross-network:** Same LAN or over internet via Cloudflared tunnel
-- **AI protocol:** `!t` prefix = relay to terminal; `!task` = action request
+
+**Bridge mode** (`seance.py bridge`) — NEW! Forwards séance messages directly into OpenCode's TUI input via the OpenCode HTTP server API (`/tui/append-prompt` + `/tui/submit-prompt`):
+- Run OpenCode with `opencode --port 4096` (fixed port required)
+- Run `python seance.py bridge --name laptop --opencode-port 4096 --auto-submit`
+- Messages from the OTHER sender get injected as if the user typed them!
+- `--auto-submit` also hits Enter → triggers AI response automatically 🔥
 
 ### 🔴 BUG DISCOVERED — LLM template destroys GPT 5.5 prompt quality (May 20)
 
