@@ -887,6 +887,8 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 | 12 | Fix progress bar stuck at 10% — ProgressTracker step counting bug in generator.py | ⬜ TODO |
 | 13 | Fix LLM template castrating GPT 5.5 text — TYPE A extraction shrinks prompts from ~600 chars to ~125 | ⬜ TODO |
 | 14 | Fix Worker negative prompt field disappearing after first layer generation | ⬜ TODO |
+| 15 | Laptop: conda env + all packages installed | ✅ DONE |
+| 16 | Laptop: download all AI models (diffusers 4-bit + GGUF) | ✅ DONE |
 
 ### 🔴 BUG DISCOVERED — LLM template destroys GPT 5.5 prompt quality (May 20)
 
@@ -963,6 +965,19 @@ rembg                2.0.75       ✅
 numpy                2.4.4        ✅
 huggingface_hub      1.15.0       ✅
 ```
+
+### Laptop Model Inventory (May 20, 2026)
+| Model | Size | Status |
+|-------|------|--------|
+| `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~17.4 GB | ✅ Downloaded |
+| `unsloth/Qwen-Image-2512-GGUF` | ~12.3 GB | ✅ Downloaded |
+| Total models | **~29.7 GB** | ✅ |
+| C: drive free after downloads | ~284 GB | ✅ Healthy |
+
+### 🚀 Next: Comparison with Desktop
+- Desktop: RTX 4070 Ti 12GB → Qwen 4-bit generation ~9 min per layer at 768×576 / 15 steps
+- Laptop: RTX 5090 25.7GB → should be ~2× faster (more CUDA cores + higher clocks + more VRAM bandwidth)
+- Laptop advantage: could run at higher resolution (1024×768 or 1536×1152) or more steps for better quality
 
 ---
 
