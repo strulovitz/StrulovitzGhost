@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 from PyQt6.QtCore import QTimer, Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QPixmap
 
 
 SERVER_URL = "http://localhost:5000"
@@ -463,6 +464,13 @@ class WorkerWidget(QWidget):
         self.progress.setVisible(False)
         active_layout.addWidget(self.progress)
 
+        self.image_preview = QLabel()
+        self.image_preview.setVisible(False)
+        self.image_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_preview.setMaximumHeight(300)
+        self.image_preview.setStyleSheet("border: 1px solid #333; border-radius: 6px; padding: 4px;")
+        active_layout.addWidget(self.image_preview)
+
         gen_row = QHBoxLayout()
         self.generate_btn = QPushButton("Generate with Qwen AI")
         self.generate_btn.clicked.connect(self.generate_image)
@@ -558,6 +566,7 @@ class WorkerWidget(QWidget):
                 self.generate_btn.setEnabled(True)
                 self.progress.setVisible(True)
                 self.progress.setValue(0)
+                self.image_preview.setVisible(False)
                 self.status_label.setText("Task claimed! Click Generate with Qwen AI.")
                 self.tasks_list.clear()
             else:
@@ -571,6 +580,7 @@ class WorkerWidget(QWidget):
             return
         method = self.method_combo.currentText()
         self.generate_btn.setEnabled(False)
+        self.image_preview.setVisible(False)
         self.status_label.setText(f"Generating with Qwen ({method})... this may take a few minutes")
         self.progress.setValue(0)
 
@@ -594,11 +604,17 @@ class WorkerWidget(QWidget):
         self.upload_btn.setEnabled(True)
         self.generate_btn.setEnabled(True)
         self.status_label.setText(f"Generated! ✅ Click Upload Result PNG.")
+        pixmap = QPixmap(path)
+        if not pixmap.isNull():
+            scaled = pixmap.scaledToWidth(500, Qt.TransformationMode.SmoothTransformation)
+            self.image_preview.setPixmap(scaled)
+            self.image_preview.setVisible(True)
 
     def on_gen_error(self, err):
         self.status_label.setText(f"Generation error: {err}")
         self.generate_btn.setEnabled(True)
         self.progress.setVisible(False)
+        self.image_preview.setVisible(False)
 
     def upload_result(self):
         filepath = self.generated_path
@@ -623,6 +639,7 @@ class WorkerWidget(QWidget):
                 self.upload_btn.setEnabled(False)
                 self.generate_btn.setEnabled(False)
                 self.progress.setVisible(False)
+                self.image_preview.setVisible(False)
             else:
                 err = r.json().get("error", r.text)
                 self.status_label.setText(f"Upload error: {err}")
