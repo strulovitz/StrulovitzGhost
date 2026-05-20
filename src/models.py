@@ -46,6 +46,7 @@ class Task(db.Model):
     question_id = db.Column(db.Integer, db.ForeignKey("questions.id"), nullable=False)
     layer_number = db.Column(db.Integer, nullable=False)
     prompt = db.Column(db.Text, nullable=False)
+    negative_prompt = db.Column(db.Text, nullable=True)
     status = db.Column(
         SAEnum(TaskStatus),
         default=TaskStatus.PENDING,

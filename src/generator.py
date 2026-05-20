@@ -26,6 +26,7 @@ def generate_diffusers(
     num_steps: int = 28,
     guidance_scale: float = 4.0,
     remove_bg: bool = True,
+    negative_prompt: Optional[str] = None,
     progress_callback=None,
 ) -> Optional[str]:
     try:
@@ -118,9 +119,16 @@ def generate_diffusers(
         tracker._last = time.time()
         tracker.start_time = time.time()
 
+        quality_negatives = "shadows on background, gradient background, studio lights, green screen stand, wrinkles, fabric texture, environment, wall texture, vignette, color bleeding, light spill, rim light, close-up shot, medium shot, zoomed-in view, subject filling the frame, centered composition, cropped subject, macro"
+        combined_negative = negative_prompt.strip() if negative_prompt else ""
+        if combined_negative:
+            combined_negative = combined_negative + ", " + quality_negatives
+        else:
+            combined_negative = quality_negatives
+
         result = pipe(
             prompt=full_prompt,
-            negative_prompt="shadows on background, gradient background, studio lights, green screen stand, wrinkles, fabric texture, environment, wall texture, vignette, color bleeding, light spill, rim light, close-up shot, medium shot, zoomed-in view, subject filling the frame, centered composition, cropped subject, macro",
+            negative_prompt=combined_negative,
             width=width,
             height=height,
             num_inference_steps=num_steps,
@@ -326,13 +334,14 @@ def generate_image(
     num_steps: int = 28,
     guidance_scale: float = 4.0,
     remove_bg: bool = True,
+    negative_prompt: Optional[str] = None,
     progress_callback=None,
 ) -> Optional[str]:
     if method == "comfyui":
         return generate_comfyui(prompt, output_path, width, height, num_steps, guidance_scale)
     return generate_diffusers(
         prompt, output_path, width, height, num_steps,
-        guidance_scale, remove_bg, progress_callback,
+        guidance_scale, remove_bg, negative_prompt, progress_callback,
     )
 
 

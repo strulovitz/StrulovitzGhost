@@ -328,13 +328,14 @@ class GenerateThread(QThread):
     finished_signal = pyqtSignal(str)
     error_signal = pyqtSignal(str)
 
-    def __init__(self, prompt, method, output_dir, num_steps=15, key_color="green"):
+    def __init__(self, prompt, method, output_dir, num_steps=15, key_color="green", negative_prompt=None):
         super().__init__()
         self.prompt = prompt
         self.method = method
         self.output_dir = output_dir
         self.num_steps = num_steps
         self.key_color = key_color
+        self.negative_prompt = negative_prompt
 
     def run(self):
         try:
@@ -355,7 +356,8 @@ class GenerateThread(QThread):
             result = generate_image(
                 self.prompt, green_path, method=self.method,
                 width=768, height=576, num_steps=self.num_steps,
-                remove_bg=False, progress_callback=progress_cb,
+                remove_bg=False, negative_prompt=self.negative_prompt,
+                progress_callback=progress_cb,
             )
             if not result:
                 self.error_signal.emit("Generation failed")
@@ -593,6 +595,7 @@ class WorkerWidget(QWidget):
         self.gen_thread = GenerateThread(
             self.active_task["prompt"], method, output_dir, num_steps=15,
             key_color=self.key_combo.currentText(),
+            negative_prompt=self.active_task.get("negative_prompt"),
         )
         self.gen_thread.progress_signal.connect(self.on_gen_progress)
         self.gen_thread.progress_msg_signal.connect(lambda m: self.status_label.setText(m))

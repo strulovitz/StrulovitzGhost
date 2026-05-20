@@ -27,21 +27,32 @@ CRITICAL RULES for EVERY layer:
 - Every object must be FULLY CONTAINED within the frame, not cut off
 - Individual objects only — no mass of trees, no mass of clouds
 
-For each layer, write a detailed image generation prompt following these rules.
-Style: {style}
-Scene: {scene}
+For each layer, write a detailed image generation prompt AND a negative prompt.
+The positive prompt describes what TO draw at that depth.
+The negative prompt describes what MUST NOT appear at that depth (things belonging to other layers).
+
+NEGATIVE PROMPT RULES per layer:
+- Layer 6 (backdrop): must exclude ALL ground, trees, characters, animals, objects, buildings
+- Layer 5 (far trees): must exclude sky, moon, stars, characters, animals, ground, mountains
+- Layers 4-1 (characters/objects): must exclude sky, moon, mountains, distant landscapes
+- All layers: exclude ground/terrain/floor except where explicitly needed
+- All layers: exclude things that belong to deeper or closer layers
+- Keep each negative prompt under 10 concepts to stay effective
 
 Respond ONLY with valid JSON in this exact format:
 {{
     "layers": [
-        {{"layer": 6, "prompt": "..."}},
-        {{"layer": 5, "prompt": "..."}},
-        {{"layer": 4, "prompt": "..."}},
-        {{"layer": 3, "prompt": "..."}},
-        {{"layer": 2, "prompt": "..."}},
-        {{"layer": 1, "prompt": "..."}}
+        {{"layer": 6, "prompt": "...", "negative_prompt": "..."}},
+        {{"layer": 5, "prompt": "...", "negative_prompt": "..."}},
+        {{"layer": 4, "prompt": "...", "negative_prompt": "..."}},
+        {{"layer": 3, "prompt": "...", "negative_prompt": "..."}},
+        {{"layer": 2, "prompt": "...", "negative_prompt": "..."}},
+        {{"layer": 1, "prompt": "...", "negative_prompt": "..."}}
     ]
-}}"""
+}}
+
+Style: {style}
+Scene: {scene}"""
 
 
 def split_scene_ollama(scene: str, style: str = "fantasy art", model: str = "qwen3") -> Optional[list]:

@@ -34,6 +34,7 @@ def question_to_dict(q):
                 "id": t.id,
                 "layer_number": t.layer_number,
                 "prompt": t.prompt,
+                "negative_prompt": t.negative_prompt,
                 "status": t.status.value,
                 "worker_id": t.worker_id,
                 "result_filename": t.result_filename,
@@ -114,6 +115,7 @@ def split_question(question_id):
                 question_id=question.id,
                 layer_number=layer_data["layer"],
                 prompt=layer_data["prompt"],
+                negative_prompt=layer_data.get("negative_prompt"),
             )
             db.session.add(task)
 
@@ -142,6 +144,7 @@ def create_tasks():
             question_id=question.id,
             layer_number=t["layer_number"],
             prompt=t["prompt"],
+            negative_prompt=t.get("negative_prompt"),
         )
         db.session.add(task)
         created.append(task)
@@ -164,6 +167,7 @@ def list_tasks():
                 "id": t.id,
                 "layer_number": t.layer_number,
                 "prompt": t.prompt,
+                "negative_prompt": t.negative_prompt,
                 "status": t.status.value,
             }
             for t in tasks
