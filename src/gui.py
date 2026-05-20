@@ -617,9 +617,22 @@ class WorkerWidget(QWidget):
 
     def on_gen_error(self, err):
         self.status_label.setText(f"Generation error: {err}")
-        self.generate_btn.setEnabled(True)
+        self.generate_btn.setEnabled(False)
+        self.upload_btn.setEnabled(False)
         self.progress.setVisible(False)
         self.image_preview.setVisible(False)
+        if self.active_task:
+            try:
+                requests.post(
+                    f"{self.get_server()}/api/task/{self.active_task['id']}/reset",
+                    timeout=5,
+                )
+            except Exception:
+                pass
+        self.active_task = None
+        self.generated_path = None
+        self.active_task_label.setText("No active task — failed task returned to queue")
+        self.poll_tasks()
 
     def upload_result(self):
         filepath = self.generated_path

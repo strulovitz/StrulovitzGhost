@@ -197,6 +197,28 @@ def claim_task(task_id):
     )
 
 
+@app.route("/api/task/<int:task_id>/reset", methods=["POST"])
+def reset_task(task_id):
+    task = Task.query.get_or_404(task_id)
+
+    if task.status == TaskStatus.COMPLETED:
+        return jsonify({"error": "completed tasks cannot be reset"}), 409
+
+    task.status = TaskStatus.PENDING
+    task.worker_id = None
+    task.claimed_at = None
+    db.session.commit()
+
+    return jsonify(
+        {
+            "id": task.id,
+            "layer_number": task.layer_number,
+            "prompt": task.prompt,
+            "status": task.status.value,
+        }
+    )
+
+
 @app.route("/api/task/<int:task_id>/result", methods=["POST"])
 def submit_result(task_id):
     task = Task.query.get_or_404(task_id)
