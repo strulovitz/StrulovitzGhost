@@ -86,8 +86,9 @@ class ClientWidget(QWidget):
 
         layout.addWidget(QLabel("Scene Description:"))
         self.desc_input = QTextEdit()
+        self.desc_input.setMinimumHeight(250)
         self.desc_input.setPlaceholderText("e.g. The group camps in a moonlit forest clearing. Stars fill the sky above snow-capped mountains. Ancient oak trees surround them. Tiefling sharpens her sword on a rock. Dragonborn studies his spellbook. Dwarf and Halfling argue over a crackling campfire. Elf and Human gossip on a fallen log, backs turned...")
-        layout.addWidget(self.desc_input)
+        layout.addWidget(self.desc_input, stretch=1)
 
         style_row = QHBoxLayout()
         style_row.addWidget(QLabel("Style (optional):"))
@@ -206,8 +207,11 @@ class BossWidget(QWidget):
 
         self.detail_group = QGroupBox("Question Detail")
         detail_layout = QVBoxLayout()
-        self.detail_text = QLabel("Select a question...")
-        self.detail_text.setWordWrap(True)
+        self.detail_text = QTextEdit()
+        self.detail_text.setReadOnly(True)
+        self.detail_text.setMinimumHeight(120)
+        self.detail_text.setMaximumHeight(200)
+        self.detail_text.setPlaceholderText("Select a question...")
         detail_layout.addWidget(self.detail_text)
         self.detail_group.setLayout(detail_layout)
         right.addWidget(self.detail_group)
@@ -283,7 +287,7 @@ class BossWidget(QWidget):
             return
         q = item.data(Qt.ItemDataRole.UserRole)
         self.current_question = q
-        self.detail_text.setText(
+        self.detail_text.setPlainText(
             f"#{q['id']} [{q['status']}]\nStyle: {q.get('style', 'none')}\n\n{q['description']}"
         )
         self.load_tasks(q)
@@ -467,8 +471,10 @@ class WorkerWidget(QWidget):
 
         active_group = QGroupBox("Active Task")
         active_layout = QVBoxLayout()
-        self.active_task_label = QLabel("No active task")
-        self.active_task_label.setWordWrap(True)
+        self.active_task_label = QTextEdit()
+        self.active_task_label.setReadOnly(True)
+        self.active_task_label.setMaximumHeight(120)
+        self.active_task_label.setPlaceholderText("No active task")
         active_layout.addWidget(self.active_task_label)
 
         self.neg_label = QLabel("Negative Prompt (editable):")
@@ -477,7 +483,8 @@ class WorkerWidget(QWidget):
         active_layout.addWidget(self.neg_label)
         self.neg_input = QTextEdit()
         self.neg_input.setPlaceholderText("No negative prompt — edit here to exclude things from this layer...")
-        self.neg_input.setMaximumHeight(80)
+        self.neg_input.setMinimumHeight(60)
+        self.neg_input.setMaximumHeight(120)
         self.neg_input.setVisible(False)
         active_layout.addWidget(self.neg_input)
 
@@ -581,7 +588,7 @@ class WorkerWidget(QWidget):
             if r.ok:
                 self.active_task = r.json()
                 neg = self.active_task.get("negative_prompt") or ""
-                self.active_task_label.setText(
+                self.active_task_label.setPlainText(
                     f"Task #{self.active_task['id']} — Layer {self.active_task['layer_number']}\n"
                     f"Prompt: {self.active_task['prompt']}"
                 )
@@ -656,7 +663,7 @@ class WorkerWidget(QWidget):
                 pass
         self.active_task = None
         self.generated_path = None
-        self.active_task_label.setText("No active task — failed task returned to queue")
+        self.active_task_label.setPlainText("No active task — failed task returned to queue")
         self.poll_tasks()
 
     def upload_result(self):
@@ -678,7 +685,7 @@ class WorkerWidget(QWidget):
                 self.status_label.setText("Uploaded! ✅")
                 self.active_task = None
                 self.generated_path = None
-                self.active_task_label.setText("No active task")
+                self.active_task_label.setPlainText("No active task")
                 self.upload_btn.setEnabled(False)
                 self.generate_btn.setEnabled(False)
                 self.progress.setVisible(False)

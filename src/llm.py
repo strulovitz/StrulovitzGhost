@@ -6,40 +6,56 @@ from typing import Optional
 OLLAMA_URL = "http://localhost:11434/api/generate"
 LMSTUDIO_URL = "http://localhost:1234/v1/chat/completions"
 
-SPLIT_PROMPT_TEMPLATE = """You are a scene analyzer for a multi-layer Pepper's Ghost illusion system.
-Break the following scene description into 6 depth layers, from farthest (layer 6) to closest (layer 1).
+SPLIT_PROMPT_TEMPLATE = """You are a scene analyzer for a 6-layer Pepper's Ghost display system.
+Your job: take the user's input and produce 6 layers (layer 6=farthest to layer 1=closest), each with a positive prompt (what to draw) and a negative prompt (what to exclude).
 
-Layer 6 = furthest backdrop (night sky, moon, stars, light clouds — upper portion only, lower portion empty)
-Layer 5 = far (a few individual trees, upper half only, self-contained, moonlit — no ground, no forest mass)
-Layer 4 = mid-far (distant characters, sitting together, small scale ~55%, bright, no ground)
-Layer 3 = mid (medium-distance characters, closer together than layer 2, small scale ~70%, bright, no ground)
-Layer 2 = mid-close (closer characters, far apart from each other, scale ~85%, bright, no ground)
-Layer 1 = closest (single nearest element at bottom edge, scale 100%, bright, no ground)
+--- STEP 1: DETECT THE INPUT FORMAT ---
 
-CRITICAL RULES for EVERY layer:
-- Layers 1-5: NO backgrounds, NO ground, NO terrain — only isolated objects/characters
-- Layer 6 (ABSOLUTE FARTHEST LAYER IN THE ENTIRE HIERARCHY): upper half CAN be filled with night sky (stars, moon, clouds) as this is the final backdrop behind everything. Lower half must be empty/transparent. This is the ONLY layer in the whole system that can have an opaque background — regardless of how many classrooms/schools/levels are in the hierarchy, only the single farthest-from-viewer layer gets this privilege.
-- EMPTY CENTER in every layer — objects at edges, top, or bottom, never in the middle
-- All characters must be BRIGHT and vivid
-- Characters get CLOSER TOGETHER with depth (layer 2 far apart, layer 4 together)
-- Deeper layers sit HIGHER on the canvas (vertical staggering)
-- Use spatial composition: describe the empty space FIRST, then the objects
-- Every object must be FULLY CONTAINED within the frame, not cut off
+The user's input could be one of two types:
+
+TYPE A — Pre-structured layers: The input already has sections labeled "Layer 1", "Layer 2", etc., each with a "Prompt:" and "Negative prompt:" section. Some layers may also have "Prompt to copy/paste:" labels. The structure may be messy — there might be introductory paragraphs, "Important:" notes, style descriptions, etc.
+
+TYPE B — Raw scene description: Just a paragraph or two describing a fantasy scene, with no per-layer breakdown.
+
+--- STEP 2: PROCESS ACCORDINGLY ---
+
+If TYPE A (pre-structured layers):
+- Extract the positive prompt and negative prompt for each layer
+- Remove any meta-instructions like "Important:", "Transparent PNG layer.", "Prompt to copy/paste:", "Draw only..." prefixed to the actual content
+- If a negative prompt section says things like "no X, no Y" — convert to a clean comma-separated list
+- If a layer is completely missing, generate it from the other layers' context
+- Preserve: style descriptions, art direction, specific character/creature details, composition notes
+- Strip: technical PNG instructions, "transparent background" requests (we handle that separately), "draw only" prefixes
+
+If TYPE B (raw scene description):
+- Analyze which objects/characters belong at which depth (farthest = background/sky/environment, closest = foreground framing)
+- Generate both positive and negative prompts per layer following these rules:
+
+Layer 6 = furthest backdrop (night sky, moon, stars, light clouds, mountains — upper portion only, lower empty)
+Layer 5 = far (trees, forest, architecture — upper half only, no ground, no characters)
+Layer 4 = mid-far (distant characters, together, scale ~55%, bright, no ground)
+Layer 3 = mid (medium characters, closer than layer 4, scale ~70%, bright, no ground)
+Layer 2 = mid-close (closer characters, far apart, scale ~85%, bright, no ground)
+Layer 1 = closest (single element at bottom edge, scale 100%, bright, no ground)
+
+V2 RULES for generated layers:
+- Layers 1-5: NO backgrounds, NO ground, NO terrain — isolated objects/characters only
+- Layer 6: ONLY layer with opaque backdrop (upper half); lower half empty/transparent
+- EMPTY CENTER in every layer — objects at edges/top/bottom, never middle
+- All characters BRIGHT and vivid
+- Deeper layers sit HIGHER on canvas (vertical staggering)
+- Every object FULLY CONTAINED within frame, not cut off
 - Individual objects only — no mass of trees, no mass of clouds
 
-For each layer, write a detailed image generation prompt AND a negative prompt.
-The positive prompt describes what TO draw at that depth.
-The negative prompt describes what MUST NOT appear at that depth (things belonging to other layers).
+NEGATIVE PROMPT RULES (both types):
+- Layer 6: exclude ground, trees, characters, animals, objects, buildings
+- Layer 5: exclude sky, moon, stars, characters, animals, ground
+- Layers 4-1: exclude sky, moon, mountains, distant landscapes, elements from other layers
+- Keep each negative prompt concise — combat the most likely hallucinations
 
-NEGATIVE PROMPT RULES per layer:
-- Layer 6 (backdrop): must exclude ALL ground, trees, characters, animals, objects, buildings
-- Layer 5 (far trees): must exclude sky, moon, stars, characters, animals, ground, mountains
-- Layers 4-1 (characters/objects): must exclude sky, moon, mountains, distant landscapes
-- All layers: exclude ground/terrain/floor except where explicitly needed
-- All layers: exclude things that belong to deeper or closer layers
-- Keep each negative prompt under 10 concepts to stay effective
+--- OUTPUT FORMAT ---
 
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON:
 {{
     "layers": [
         {{"layer": 6, "prompt": "...", "negative_prompt": "..."}},
