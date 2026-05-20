@@ -74,6 +74,7 @@ Scene: {scene}"""
 
 def split_scene_ollama(scene: str, style: str = "Ghibli animation", model: str = "qwen3") -> Optional[list]:
     prompt = SPLIT_PROMPT_TEMPLATE.format(style=style, scene=scene)
+    print(f"[LLM] Sending to {model} ({len(scene)} chars scene, {len(prompt)} chars template)...", flush=True)
     try:
         response = requests.post(
             OLLAMA_URL,
@@ -83,14 +84,20 @@ def split_scene_ollama(scene: str, style: str = "Ghibli animation", model: str =
         response.raise_for_status()
         data = response.json()
         text = data.get("response", "")
-        return _parse_json_response(text)
+        print(f"[LLM] Response: {len(text)} chars", flush=True)
+        result = _parse_json_response(text)
+        if result:
+            for l in result:
+                print(f"[LLM]   Layer {l['layer']}: prompt={len(l.get('prompt',''))}ch, neg={len(l.get('negative_prompt',''))}ch", flush=True)
+        return result
     except Exception as e:
-        print(f"Ollama error: {e}")
+        print(f"[LLM] Ollama error: {e}", flush=True)
         return None
 
 
 def split_scene_lmstudio(scene: str, style: str = "Ghibli animation", model: str = "auto") -> Optional[list]:
     prompt = SPLIT_PROMPT_TEMPLATE.format(style=style, scene=scene)
+    print(f"[LLM] Sending to LM Studio ({len(scene)} chars scene)...", flush=True)
     try:
         response = requests.post(
             LMSTUDIO_URL,
@@ -104,6 +111,7 @@ def split_scene_lmstudio(scene: str, style: str = "Ghibli animation", model: str
         response.raise_for_status()
         data = response.json()
         text = data["choices"][0]["message"]["content"]
+        print(f"[LLM] Response: {len(text)} chars", flush=True)
         return _parse_json_response(text)
     except Exception as e:
         print(f"LM Studio error: {e}")
