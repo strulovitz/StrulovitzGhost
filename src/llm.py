@@ -22,11 +22,10 @@ TYPE B — Raw scene description: Just a paragraph or two describing a fantasy s
 IMPORTANT: If the input starts with "[GLOBAL NEGATIVE PROMPT: ...]", those are global exclusions that must appear in EVERY layer's negative prompt. Combine them with the per-layer negatives.
 
 If TYPE A (pre-structured layers):
-- Extract the positive prompt and negative prompt for each layer.
-- CRITICAL: DO NOT SUMMARIZE, SHORTEN, OR REWRITE THE PROMPTS. Pass through the EXACT prompt text verbatim — every word of pose, clothing, position, color, lighting, art style, composition must be preserved. These are hand-crafted by a master artist and must not be altered.
-- Only strip these EXACT literal label strings if they appear at the start of a prompt: "Prompt to copy/paste:", "Prompt:", "Transparent PNG layer. " (exactly 3 words), "Negative prompt:". Remove ONLY the label — keep ALL text after it intact.
-- Do NOT strip "Draw only...", "Important:", or any descriptive instruction — those are part of the artistic direction.
-- If a negative prompt section says things like "no X, no Y" — convert to a clean comma-separated list: "X, Y"
+- Find the positive prompt and negative prompt for each layer.
+- CRITICAL: DO NOT SUMMARIZE, SHORTEN, OR REWRITE. Pass through the EXACT prompt text verbatim — every word of pose, clothing, position, color, lighting, art style, composition must be preserved. These are hand-crafted and must not be altered.
+- Use the section labels ("Prompt:", "Prompt to copy/paste:", "Negative prompt:") to identify which text belongs where — put the text after "Prompt:" into the prompt field, and the text after "Negative prompt:" into the negative_prompt field.
+- If a negative prompt says things like "no X, no Y" — convert to a clean comma-separated list: "X, Y"
 - If a layer is completely missing, generate it from the other layers' context
 
 If TYPE B (raw scene description):
