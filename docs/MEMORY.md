@@ -958,3 +958,35 @@ Known since earlier session. The ProgressTracker in generator.py never fires pro
 **CRITICAL RULE:** Do NOT use device_map='auto' — CPU offloading kills speed by 90%+. Model must fit entirely in VRAM. Use FlashAttention-2 to save ~2GB VRAM.
 
 **Platform:** Diffusers or ComfyUI only — NOT Ollama.
+
+---
+
+## 🧠 Qwen-Image-Layered — Deep Knowledge (from Google AI, May 20)
+
+### Architecture
+- **RGBA-VAE:** Projects RGB and RGBA into shared latent space — transparency is native, not post-processed
+- **VLD-MMDiT:** Variable Layers Decomposition Multi-Modal Diffusion Transformer — analyzes image latents and separates into variable stack of layers
+- **Training:** Real Photoshop PSD documents (not synthetic) — learned how professional designers organize scenes
+
+### How It Decides
+- **Semantic disentanglement:** Groups pixels by meaning (person, car, sky) — understands ENTIRE object boundaries even when blocked
+- **Optical/depth clues:** Shadow directions, lighting falloff, occlusions, edge blending to infer stacking order
+- **Can run prompt-less** — auto-determines layer count, stacking order, inpaints backgrounds
+
+### What We Control
+- Variable layer target (3-8 layers)
+- Text prompts to guide semantic grouping
+- Recursive decomposition: feed a layer back in to split further
+- Export: PSD, ZIP PNGs, PPTX
+
+### Transparency — THE KEY FACTS
+- **GENUINE reconstruction** behind foreground objects — NOT just cutouts with holes
+- **Self-contained layers:** Move foreground without exposing blank underneath
+- **Alpha edges:** Soft, natural, production-ready — handles hair, smoke, glass, shadows with gradient alpha
+- **No fringing:** Resolves color bleeding from background onto foreground edges
+- **Native RGBA output** — alpha is fundamental dimension of the diffusion process, not a post-processed mask
+
+### Prompt Techniques for Clean Transparency
+- Explicitly name layers: ""A foreground boy, midground street, background brick wall""
+- Enforce material properties: ""semi-transparent glass refraction, soft diffuse shadow""
+- Isolate text/graphics: ""Foreground text overlay isolated from subject and backdrop""
