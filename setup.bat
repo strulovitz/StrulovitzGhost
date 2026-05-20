@@ -13,9 +13,9 @@ if %errorlevel% neq 0 (
 )
 
 echo [2/4] Installing Python packages...
-call conda run -n strulovitzghost pip install flask flask-sqlalchemy pyqt6 pillow requests python-dotenv
+call conda run -n strulovitzghost pip install flask flask-sqlalchemy pyqt6 pillow requests python-dotenv numpy huggingface_hub
 call conda run -n strulovitzghost pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
-call conda run -n strulovitzghost pip install diffusers transformers accelerate sentencepiece bitsandbytes
+call conda run -n strulovitzghost pip install "diffusers>=0.38.0" transformers accelerate sentencepiece bitsandbytes
 
 echo [3/4] Installing ComfyUI...
 if not exist "src\comfyui" (
