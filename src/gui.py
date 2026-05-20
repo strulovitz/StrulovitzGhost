@@ -220,7 +220,7 @@ class BossWidget(QWidget):
         self.llm_combo.addItems(["ollama", "lmstudio"])
         llm_row.addWidget(self.llm_combo)
         llm_row.addWidget(QLabel("Model:"))
-        self.llm_model = QLineEdit("llama3.2:3b")
+        self.llm_model = QLineEdit("qwen3:14b")
         llm_row.addWidget(self.llm_model)
         split_layout.addLayout(llm_row)
 

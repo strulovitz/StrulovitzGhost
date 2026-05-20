@@ -16,5 +16,5 @@ OUTPUT_DIR = os.path.join(BASEDIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
-LLM_MODEL = os.getenv("LLM_MODEL", "llama3.2:3b")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:14b")
 LLM_SPLIT_ENABLED = os.getenv("LLM_SPLIT_ENABLED", "true").lower() == "true"
