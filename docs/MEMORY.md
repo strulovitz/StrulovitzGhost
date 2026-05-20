@@ -942,3 +942,19 @@ Known since earlier session. The ProgressTracker in generator.py never fires pro
 - Exact GGUF quantized size for 12GB fit?
 - Does Ollama support Qwen-Image-Layered or diffusers-only?
 - Generation speed for 6-layer decomposition on both GPUs?
+## ðŸŽ¨ Fine Art Decomposition — Quantization Details (from Google AI, May 20)
+
+**Desktop (RTX 4070 Ti 12GB):**
+- INT4 quantization (BitsAndBytes load_in_4bit=True)
+- Max 512x512 resolution
+- 2-3 layers per pass, sequential for 6 layers
+- VRAM after model: ~4-5GB free
+
+**Laptop (RTX 5090 24GB):**
+- INT8 (load_in_8bit=True) or FP16 native
+- INT8: 1024x1024, up to 8 layers single pass
+- FP16: 512x512 for max layers to avoid VAE padding crashes
+
+**CRITICAL RULE:** Do NOT use device_map='auto' — CPU offloading kills speed by 90%+. Model must fit entirely in VRAM. Use FlashAttention-2 to save ~2GB VRAM.
+
+**Platform:** Diffusers or ComfyUI only — NOT Ollama.
