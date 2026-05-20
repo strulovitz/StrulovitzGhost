@@ -917,13 +917,52 @@ Known since earlier session. The ProgressTracker in generator.py never fires pro
 ### Laptop — Lenovo Legion Gaming Laptop
 - **OS:** Windows 11 (dual-boot: Linux Debian 13)
 - **RAM:** 64 GB
-- **GPU:** RTX 5090 — **24 GB VRAM**
-- **Current role:** To be set up with OpenCode + StrulovitzGhost for parallel experiments
-- **Advantage:** 24GB VRAM fits full Qwen-Image-Layered model (unquantized needs ~24-35GB)
+- **GPU:** RTX 5090 Laptop — **~25.7 GB VRAM** (Blackwell, CC 12.0)
+- **Current role:** Active development — conda env + all packages installed ✅ (May 20, 2026)
+- **Advantage:** 24GB+ VRAM fits full Qwen-Image-Layered model; ~2× faster generation than desktop
+- **⚠️ PyTorch note:** Requires `torch==2.11.0+cu128` (CUDA 12.8) — Blackwell needs newer CUDA than Ada Lovelace
 
 ### OpenCode Setup
-- Both machines will run DeepSeek V4 Pro (high settings)
-- Laptop needs OpenCode installed — to be done later
+- Both machines run DeepSeek V4 Pro (high settings)
+- Laptop OpenCode installed ✅
+
+### ⚠️ CRITICAL: PyTorch version DIFFERS between machines (May 20, 2026)
+
+**Desktop (RTX 4070 Ti — Ada Lovelace, CC 8.9):**
+- `torch==2.12.0+cu126` (CUDA 12.6, from `https://download.pytorch.org/whl/cu126`)
+- Works fine — CC 8.9 is fully supported
+
+**Laptop (RTX 5090 Laptop — Blackwell, CC 12.0):**
+- `torch==2.11.0+cu128` (CUDA 12.8, from `https://download.pytorch.org/whl/cu128`)
+- **Blackwell requires CUDA 12.8+** — any PyTorch built for ≤CUDA 12.6 will compile but fail at runtime with "no kernel image is available for execution on the device"
+- `torch==2.12.0+cu126` ❌ — CUDA true but kernel images missing for sm_120
+- `torch==2.12.0` (from cu128 index) ❌ — CPU-only (123 MB wheel, no CUDA)
+- `torch==2.11.0+cu128` ✅ — works perfectly, no warnings
+
+### Laptop conda env setup (May 20, 2026)
+- **Python:** 3.12.13 ✅
+- **Env path:** `%USERPROFILE%\miniconda3\envs\strulovitzghost\python.exe`
+- **VRAM:** 25.7 GB detected ✅
+
+**Working package versions on laptop:**
+```
+torch                2.11.0+cu128 ✅  (Blackwell-compatible)
+torchvision          0.26.0+cu128 ✅
+diffusers            0.38.0       ✅
+transformers         5.9.0        ✅  (newer than desktop's 5.8.1)
+accelerate           1.13.0       ✅
+bitsandbytes         0.49.2       ✅
+sentencepiece        0.2.1        ✅
+flask                3.1.3        ✅
+flask-sqlalchemy     3.1.1        ✅
+pyqt6                6.11.0       ✅
+pillow               12.2.0       ✅
+requests             2.34.2       ✅
+python-dotenv        1.2.2        ✅
+rembg                2.0.75       ✅
+numpy                2.4.4        ✅
+huggingface_hub      1.15.0       ✅
+```
 
 ---
 
