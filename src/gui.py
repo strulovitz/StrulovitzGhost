@@ -292,7 +292,9 @@ class BossWidget(QWidget):
         self.tasks_list.clear()
         if q.get("tasks"):
             for t in q["tasks"]:
-                text = f"Layer {t['layer_number']}: [{t['status']}] {t['prompt'][:60]}..."
+                neg = t.get("negative_prompt", "")
+                neg_str = f" | ❌ {neg[:40]}..." if neg else ""
+                text = f"Layer {t['layer_number']}: [{t['status']}] {t['prompt'][:60]}...{neg_str}"
                 self.tasks_list.addItem(text)
 
     def auto_split(self):
@@ -466,7 +468,19 @@ class WorkerWidget(QWidget):
         active_group = QGroupBox("Active Task")
         active_layout = QVBoxLayout()
         self.active_task_label = QLabel("No active task")
+        self.active_task_label.setWordWrap(True)
         active_layout.addWidget(self.active_task_label)
+
+        self.neg_label = QLabel("Negative Prompt (editable):")
+        self.neg_label.setStyleSheet("color: #e94560; font-size: 11px; margin-top: 6px;")
+        self.neg_label.setVisible(False)
+        active_layout.addWidget(self.neg_label)
+        self.neg_input = QTextEdit()
+        self.neg_input.setPlaceholderText("No negative prompt — edit here to exclude things from this layer...")
+        self.neg_input.setMaximumHeight(80)
+        self.neg_input.setVisible(False)
+        active_layout.addWidget(self.neg_input)
+
         self.progress = QProgressBar()
         self.progress.setVisible(False)
         active_layout.addWidget(self.progress)
@@ -566,15 +580,19 @@ class WorkerWidget(QWidget):
             )
             if r.ok:
                 self.active_task = r.json()
+                neg = self.active_task.get("negative_prompt") or ""
                 self.active_task_label.setText(
                     f"Task #{self.active_task['id']} — Layer {self.active_task['layer_number']}\n"
                     f"Prompt: {self.active_task['prompt']}"
                 )
+                self.neg_label.setVisible(True)
+                self.neg_input.setPlainText(neg)
+                self.neg_input.setVisible(True)
                 self.generate_btn.setEnabled(True)
                 self.progress.setVisible(True)
                 self.progress.setValue(0)
                 self.image_preview.setVisible(False)
-                self.status_label.setText("Task claimed! Click Generate with Qwen AI.")
+                self.status_label.setText("Task claimed! Edit negative prompt if needed, then Generate.")
                 self.tasks_list.clear()
             else:
                 err = r.json().get("error", r.text)
@@ -587,6 +605,8 @@ class WorkerWidget(QWidget):
             return
         method = self.method_combo.currentText()
         self.generate_btn.setEnabled(False)
+        self.neg_input.setVisible(False)
+        self.neg_label.setVisible(False)
         self.image_preview.setVisible(False)
         self.status_label.setText(f"Generating with Qwen ({method})... this may take a few minutes")
         self.progress.setValue(0)
@@ -595,7 +615,7 @@ class WorkerWidget(QWidget):
         self.gen_thread = GenerateThread(
             self.active_task["prompt"], method, output_dir, num_steps=15,
             key_color=self.key_combo.currentText(),
-            negative_prompt=self.active_task.get("negative_prompt"),
+            negative_prompt=self.neg_input.toPlainText().strip() or None,
         )
         self.gen_thread.progress_signal.connect(self.on_gen_progress)
         self.gen_thread.progress_msg_signal.connect(lambda m: self.status_label.setText(m))
@@ -624,6 +644,8 @@ class WorkerWidget(QWidget):
         self.upload_btn.setEnabled(False)
         self.progress.setVisible(False)
         self.image_preview.setVisible(False)
+        self.neg_input.setVisible(False)
+        self.neg_label.setVisible(False)
         if self.active_task:
             try:
                 requests.post(
@@ -661,6 +683,8 @@ class WorkerWidget(QWidget):
                 self.generate_btn.setEnabled(False)
                 self.progress.setVisible(False)
                 self.image_preview.setVisible(False)
+                self.neg_input.setVisible(False)
+                self.neg_label.setVisible(False)
             else:
                 err = r.json().get("error", r.text)
                 self.status_label.setText(f"Upload error: {err}")

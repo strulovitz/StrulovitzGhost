@@ -195,6 +195,7 @@ def claim_task(task_id):
             "id": task.id,
             "layer_number": task.layer_number,
             "prompt": task.prompt,
+            "negative_prompt": task.negative_prompt,
             "status": task.status.value,
             "worker_id": task.worker_id,
         }
