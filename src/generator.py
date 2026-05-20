@@ -1,5 +1,6 @@
 import os
 import sys
+import gc
 import json
 import time
 import subprocess
@@ -143,6 +144,11 @@ def generate_diffusers(
         if progress_callback:
             progress_callback(f"Done in {gen_time:.0f}s!", 100)
         print(f"Generated in {gen_time:.0f}s, saved: {output_path}")
+
+        del pipe
+        torch.cuda.empty_cache()
+        gc.collect()
+
         return output_path
 
     except Exception as e:
@@ -151,6 +157,12 @@ def generate_diffusers(
         traceback.print_exc()
         if progress_callback:
             progress_callback(f"Error: {e}", -1)
+        try:
+            del pipe
+        except Exception:
+            pass
+        torch.cuda.empty_cache()
+        gc.collect()
         return None
 
 

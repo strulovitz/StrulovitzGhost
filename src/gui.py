@@ -79,9 +79,14 @@ class ClientWidget(QWidget):
         super().__init__()
         layout = QVBoxLayout(self)
 
+        info = QLabel("Paste the FULL scene description below as one paragraph. The Boss will auto-split it into 6 depth layers using AI.")
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #888; font-size: 11px; padding-bottom: 8px;")
+        layout.addWidget(info)
+
         layout.addWidget(QLabel("Scene Description:"))
         self.desc_input = QTextEdit()
-        self.desc_input.setPlaceholderText("Paste the DM's scene description here...")
+        self.desc_input.setPlaceholderText("e.g. The group camps in a moonlit forest clearing. Stars fill the sky above snow-capped mountains. Ancient oak trees surround them. Tiefling sharpens her sword on a rock. Dragonborn studies his spellbook. Dwarf and Halfling argue over a crackling campfire. Elf and Human gossip on a fallen log, backs turned...")
         layout.addWidget(self.desc_input)
 
         style_row = QHBoxLayout()
@@ -92,7 +97,7 @@ class ClientWidget(QWidget):
         layout.addLayout(style_row)
 
         btn_row = QHBoxLayout()
-        self.submit_btn = QPushButton("Submit Question")
+        self.submit_btn = QPushButton("Submit New Scene")
         self.submit_btn.clicked.connect(self.submit_question)
         btn_row.addWidget(self.submit_btn)
         btn_row.addStretch()
@@ -101,7 +106,7 @@ class ClientWidget(QWidget):
         self.status_label = QLabel("")
         layout.addWidget(self.status_label)
 
-        layout.addWidget(QLabel("Your Questions:"))
+        layout.addWidget(QLabel("Your Scenes:"))
         self.question_list = QListWidget()
         self.question_list.itemDoubleClicked.connect(self.open_question)
         layout.addWidget(self.question_list)
@@ -215,7 +220,7 @@ class BossWidget(QWidget):
         self.llm_combo.addItems(["ollama", "lmstudio"])
         llm_row.addWidget(self.llm_combo)
         llm_row.addWidget(QLabel("Model:"))
-        self.llm_model = QLineEdit("qwen3")
+        self.llm_model = QLineEdit("llama3.2:3b")
         llm_row.addWidget(self.llm_model)
         split_layout.addLayout(llm_row)
 
@@ -448,10 +453,10 @@ class WorkerWidget(QWidget):
         self.status_label = QLabel("Not polling")
         layout.addWidget(self.status_label)
 
-        tasks_group = QGroupBox("Available Tasks")
+        tasks_group = QGroupBox("Available Tasks (click to claim)")
         tasks_layout = QVBoxLayout()
         self.tasks_list = QListWidget()
-        self.tasks_list.itemDoubleClicked.connect(self.claim_task)
+        self.tasks_list.itemClicked.connect(self.claim_task)
         tasks_layout.addWidget(self.tasks_list)
         tasks_group.setLayout(tasks_layout)
         layout.addWidget(tasks_group)
