@@ -990,3 +990,36 @@ Known since earlier session. The ProgressTracker in generator.py never fires pro
 - Explicitly name layers: ""A foreground boy, midground street, background brick wall""
 - Enforce material properties: ""semi-transparent glass refraction, soft diffuse shadow""
 - Isolate text/graphics: ""Foreground text overlay isolated from subject and backdrop""
+
+---
+
+## 📋 Appendix C: Google AI — Qwen-Image-Layered Deep Dive (May 20, 2026)
+
+### Query #1: Prompt syntax, style preservation, hallucination prevention
+
+> **Question:** When prompting Qwen-Image-Layered to decompose a painting into depth layers (farthest to closest: sky, mountains, village, trees, foreground), what's the exact prompt syntax? Does it understand "layer 1 = sky, layer 2 = mountains" or does it need natural language? How do I ensure it preserves the original art style and doesn't hallucinate new content that wasn't in the painting?
+
+> **Answer:** To decompose a painting into explicit layers using Qwen-Image-Layered, you should use standard natural language. The model is built on top of a multimodal large language model (LLM) text encoder and responds best to clear, descriptive conversational instructions rather than rigid "layer 1 = sky" variable syntax.
+>
+> The Exact Prompt Syntax: You should explicitly list the layers you want, from the background (bottom) to the foreground (top).
+> Recommended Prompt: "Decompose this painting into 5 independent RGBA layers: the sky background, the distant mountains, the village, the trees, and the immediate foreground."
+>
+> Key Parameters to Enforce: While the text prompt specifies what content goes where, the depth division itself is controlled via model parameters. You must set the num_layers parameter to 5 in your API or UI settings. The text prompt simply helps the model assign the correct semantic elements to those 5 slots.
+>
+> Best Practices to Maintain Style and Prevent Hallucinations: Because Qwen-Image-Layered is a diffusion-based decomposer (built on a VLD-MMDiT architecture), it generates the hidden details behind objects (e.g., drawing the rest of the mountain hidden behind the village). To make sure it doesn't hallucinate brand-new objects or alter the painting's art style, follow these guidelines:
+> - Use Low Classifier-Free Guidance (CFG): Keep the cfg_scale relatively low (typically between 2.0 and 4.0). High CFG values force the model to over-interpret your text prompt, which prompts it to inject new, hallucinated details.
+> - Leverage Negative Prompts: Use a strong negative prompt to restrict creative freedom. Negative Prompt Example: "new objects, modifications to art style, changing brushstrokes, modern elements, altering original colors."
+> - Rely on Recursive Decomposition: If the model struggles to cleanly separate all 5 layers at once, use recursive decomposition. First, prompt the model to split the image into 2 layers (num_layers=2): the sky/mountains (background) and the village/trees/foreground. Then, pass the background layer back through the model to split the sky from the mountains. This minimizes errors and preserves the painting's structural integrity.
+> - Do Not Describe Art Styles in the Prompt: Avoid adding stylistic terms like "in a watercolor style" or "impressionistic brushstrokes" to your decomposition prompt. Describing the style can accidentally trigger the diffusion model to regenerate the assets using its own interpretation of that style, rather than mathematically isolating the exact pixels of the original canvas.
+
+### Query #2: Fine art paintings, painterly textures, style preservation
+
+> **Question:** I want to decompose famous fine art paintings (Van Gogh, Monet — pointillism, impressionism, visible brushstrokes) into 6 depth layers. Can Qwen-Image-Layered handle painterly textures or does it hallucinate smooth new content? Does it preserve the original art style? What's the exact prompt syntax to tell it which layer gets what — does it understand "layer 1 = sky, layer 2 = mountains"?
+
+> **Answer:** Qwen-Image-Layered does not require or even understand a specific prompt syntax like "layer 1 = sky" for its layer mapping. Because it is a unified end-to-end diffusion model built to physically isolate components, it automatically dictates layer ordering semantically based on the inherent visual structure and occlusion of the image.
+>
+> Texture Handling & Hallucinations: It preserves painterly textures. Qwen-Image-Layered functions via a dedicated Variable Layer Diffusion and Merging Model (VLDMM) that operates on diffusion mechanics, meaning it does not flatly clip paths like a vectorizer or background eraser. It generates full RGBA layers with native alpha transparency channels and soft edges. It inpaints rather than flattening. When elements overlap (e.g., a tree in front of the sky in The Starry Night), it does not leave a blank hole or produce modern smooth patches. Instead, it intelligently reconstructs the hidden background content using the global context. This results in hidden parts being filled out with the same pointillist or impressionistic brushstrokes, matching the surrounding texture style.
+>
+> Preserving Fine Art Style: The original art style remains intact. Because it generates independent layers mimicking the original style's raw aesthetic, you can perform scaling, positioning, or minor edits to single layers while preserving the overarching painterly strokes. However, very intricate impasto (heavy, raised 3D paint textures) may lose some unique directional edge lighting during the inpainting of occluded layers, as the model treats them primarily as 2D semantic strokes.
+>
+> Exact Configuration & API Syntax: You control the separation by passing a natural text description of the image content along with a specific parameter for your requested number of layers. The model supports variable decomposition natively. To get your 6 depth layers, you set the num_layers parameter to 6.
