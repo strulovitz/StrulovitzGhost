@@ -97,6 +97,12 @@ class ClientWidget(QWidget):
         style_row.addWidget(self.style_input)
         layout.addLayout(style_row)
 
+        layout.addWidget(QLabel("Global Negative Prompt (optional, applies to all layers):"))
+        self.client_neg_input = QTextEdit()
+        self.client_neg_input.setPlaceholderText("e.g. no text, no watermarks, no nudity, no modern objects, no cars...")
+        self.client_neg_input.setMaximumHeight(80)
+        layout.addWidget(self.client_neg_input)
+
         btn_row = QHBoxLayout()
         self.submit_btn = QPushButton("Submit New Scene")
         self.submit_btn.clicked.connect(self.submit_question)
@@ -125,6 +131,9 @@ class ClientWidget(QWidget):
             self.status_label.setText("Please enter a description.")
             return
         style = self.style_input.text().strip() or None
+        global_neg = self.client_neg_input.toPlainText().strip()
+        if global_neg:
+            desc = f"[GLOBAL NEGATIVE PROMPT: {global_neg}]\n\n{desc}"
         try:
             r = requests.post(
                 f"{self.get_server()}/api/question",
@@ -136,6 +145,7 @@ class ClientWidget(QWidget):
                 self.status_label.setText(f"Submitted! ID: {data['id']} ✅")
                 self.desc_input.clear()
                 self.style_input.clear()
+                self.client_neg_input.clear()
                 self.refresh()
             else:
                 self.status_label.setText(f"Error: {r.json().get('error', r.text)}")

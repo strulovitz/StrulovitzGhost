@@ -19,6 +19,8 @@ TYPE B — Raw scene description: Just a paragraph or two describing a fantasy s
 
 --- STEP 2: PROCESS ACCORDINGLY ---
 
+IMPORTANT: If the input starts with "[GLOBAL NEGATIVE PROMPT: ...]", those are global exclusions that must appear in EVERY layer's negative prompt. Combine them with the per-layer negatives.
+
 If TYPE A (pre-structured layers):
 - Extract the positive prompt and negative prompt for each layer
 - Remove any meta-instructions like "Important:", "Transparent PNG layer.", "Prompt to copy/paste:", "Draw only..." prefixed to the actual content
