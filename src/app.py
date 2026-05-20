@@ -224,6 +224,20 @@ def reset_task(task_id):
     )
 
 
+@app.route("/api/task/<int:task_id>", methods=["PUT"])
+def update_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    data = request.get_json(silent=True) or {}
+
+    if "prompt" in data:
+        task.prompt = data["prompt"]
+    if "negative_prompt" in data:
+        task.negative_prompt = data["negative_prompt"]
+
+    db.session.commit()
+    return jsonify({"id": task.id, "prompt": task.prompt, "negative_prompt": task.negative_prompt})
+
+
 @app.route("/api/task/<int:task_id>/result", methods=["POST"])
 def submit_result(task_id):
     task = Task.query.get_or_404(task_id)

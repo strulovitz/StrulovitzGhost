@@ -250,7 +250,25 @@ class BossWidget(QWidget):
         tasks_group = QGroupBox("Layer Tasks")
         tasks_layout = QVBoxLayout()
         self.tasks_list = QListWidget()
+        self.tasks_list.itemClicked.connect(self.on_task_select)
         tasks_layout.addWidget(self.tasks_list)
+
+        self.boss_neg_label = QLabel("Edit Negative Prompt (click a task first):")
+        self.boss_neg_label.setStyleSheet("color: #e94560; font-size: 11px; margin-top: 4px;")
+        tasks_layout.addWidget(self.boss_neg_label)
+        self.boss_neg_input = QTextEdit()
+        self.boss_neg_input.setMaximumHeight(80)
+        self.boss_neg_input.setPlaceholderText("Select a task to edit its negative prompt...")
+        tasks_layout.addWidget(self.boss_neg_input)
+
+        boss_btn_row = QHBoxLayout()
+        self.boss_update_btn = QPushButton("Update Task")
+        self.boss_update_btn.clicked.connect(self.update_task)
+        self.boss_update_btn.setEnabled(False)
+        boss_btn_row.addWidget(self.boss_update_btn)
+        boss_btn_row.addStretch()
+        tasks_layout.addLayout(boss_btn_row)
+
         tasks_group.setLayout(tasks_layout)
         right.addWidget(tasks_group)
 
@@ -304,12 +322,46 @@ class BossWidget(QWidget):
 
     def load_tasks(self, q):
         self.tasks_list.clear()
+        self.boss_neg_input.clear()
+        self.boss_update_btn.setEnabled(False)
         if q.get("tasks"):
             for t in q["tasks"]:
                 neg = t.get("negative_prompt", "")
                 neg_str = f" | ❌ {neg[:40]}..." if neg else ""
                 text = f"Layer {t['layer_number']}: [{t['status']}] {t['prompt'][:60]}...{neg_str}"
-                self.tasks_list.addItem(text)
+                item = QListWidgetItem(text)
+                item.setData(Qt.ItemDataRole.UserRole, t)
+                self.tasks_list.addItem(item)
+
+    def on_task_select(self, item):
+        t = item.data(Qt.ItemDataRole.UserRole)
+        if not t:
+            return
+        self.boss_neg_input.setPlainText(t.get("negative_prompt") or "")
+        self.boss_update_btn.setEnabled(True)
+
+    def update_task(self):
+        item = self.tasks_list.currentItem()
+        if not item:
+            return
+        t = item.data(Qt.ItemDataRole.UserRole)
+        if not t:
+            return
+        tid = t["id"]
+        new_neg = self.boss_neg_input.toPlainText().strip() or ""
+        try:
+            r = requests.put(
+                f"{self.get_server()}/api/task/{tid}",
+                json={"negative_prompt": new_neg},
+                timeout=10,
+            )
+            if r.ok:
+                self.split_status.setText(f"Layer {t['layer_number']} negative prompt updated ✅")
+                self.refresh()
+            else:
+                self.split_status.setText(f"Update error: {r.json().get('error', r.text)}")
+        except Exception as e:
+            self.split_status.setText(f"Update error: {e}")
 
     def auto_split(self):
         if not self.current_question:
