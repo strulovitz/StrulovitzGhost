@@ -866,13 +866,13 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Update README — says "Planning Phase" but V2 pipeline complete | ⬜ TODO |
+| 1 | Update README — says "Planning Phase" but V2 pipeline complete | ✅ DONE |
 | 2 | Image preview in GUI — user can't see generated result in-app | ⬜ TODO |
 | 3 | Update tests for V2 pipeline (test_api.py, test_e2e_real.py) | ⬜ TODO |
 | 4 | ~~Remove Qwen-Image-Edit~~ | ✅ DONE |
 | 5 | ComfyUI path — exists in code but never tested end-to-end | ⬜ TODO |
 | 6 | Hierarchical architecture (classroom→school→county scaling) | ⬜ TODO |
-| 7 | Update setup.bat for V2 dependencies | ⬜ TODO |
+| 7 | Update setup.bat for V2 dependencies | ✅ DONE |
 | 8 | 3-color chroma-key feature in GUI (red/green/blue selector) | ✅ DONE |
 | 9 | combine.py for hierarchical layer stacking | ✅ DONE |
 | 10 | LLM splitter updated with V2 principles | ✅ DONE |
