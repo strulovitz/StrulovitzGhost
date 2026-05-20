@@ -18,6 +18,7 @@ Strulovitz Ghost is a **multi-layer Pepper's Ghost** effect: instead of one refl
 ### Software
 
 - **AI generates 6 PNG images** (one per layer), each with transparent background
+- **V2 Pipeline:** Qwen-Image-2512 generates on flat green screen → PIL chroma-key → RGBA with alpha
 - Each PNG opens in its own window — user drags to correct position
 - Like a **3D diorama / custom illustrated book page** — not real-time action
 
@@ -79,14 +80,15 @@ run_gui.bat
 | Web Server | Flask (central hub) |
 | Database | SQLite via SQLAlchemy (easy switch to MySQL for scale) |
 | Text LLM | Ollama / LM Studio (local Qwen3.6 quantized) |
-| Image AI | [Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) (local, free) |
-| Image Merge | [Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit) (DM's computer) |
+| Image AI | [Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512) (local, 4-bit quantized, free) |
+| Image Keying | PIL chroma-key + despill (green/red/blue) |
+| Image Merge | PIL alpha_composite (combine.py) |
 | Public Tunnel | [Cloudflared](https://github.com/cloudflare/cloudflared) (no firewall ports needed) |
 | Environment | Miniconda (isolated, one-click install) |
 
 ## Status
 
-🚧 **Planning / Design Phase** — All specifications being documented. Code development not yet started.
+🔄 **Active Development** — All 6 layers generated end-to-end. V2 green-screen chroma-key pipeline working. Flask server + PyQt6 GUI functional. See [docs/MEMORY.md](docs/MEMORY.md) for full development history.
 
 ## License
 
