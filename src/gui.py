@@ -93,7 +93,7 @@ class ClientWidget(QWidget):
         style_row = QHBoxLayout()
         style_row.addWidget(QLabel("Style (optional):"))
         self.style_input = QLineEdit()
-        self.style_input.setPlaceholderText("e.g. Ghibli animation, oil painting, pixel art...")
+        self.style_input.setPlaceholderText("Ghibli animation (default) — change for oil painting, pixel art, etc...")
         style_row.addWidget(self.style_input)
         layout.addLayout(style_row)
 

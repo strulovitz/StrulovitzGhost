@@ -99,7 +99,7 @@ def generate_diffusers(
 
             def __call__(self, pipeline, step_idx, timestep, callback_kwargs):
                 now = time.time()
-                if self.step_times:
+                if hasattr(self, '_last'):
                     self.step_times.append(now - self._last)
                 self._last = now
                 if progress_callback and self.step_times:

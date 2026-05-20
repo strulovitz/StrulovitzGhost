@@ -22,12 +22,12 @@ TYPE B — Raw scene description: Just a paragraph or two describing a fantasy s
 IMPORTANT: If the input starts with "[GLOBAL NEGATIVE PROMPT: ...]", those are global exclusions that must appear in EVERY layer's negative prompt. Combine them with the per-layer negatives.
 
 If TYPE A (pre-structured layers):
-- Extract the positive prompt and negative prompt for each layer
-- Remove any meta-instructions like "Important:", "Transparent PNG layer.", "Prompt to copy/paste:", "Draw only..." prefixed to the actual content
-- If a negative prompt section says things like "no X, no Y" — convert to a clean comma-separated list
+- Extract the positive prompt and negative prompt for each layer.
+- CRITICAL: DO NOT SUMMARIZE, SHORTEN, OR REWRITE THE PROMPTS. Pass through the EXACT prompt text verbatim — every word of pose, clothing, position, color, lighting, art style, composition must be preserved. These are hand-crafted by a master artist and must not be altered.
+- Only strip these EXACT literal label strings if they appear at the start of a prompt: "Prompt to copy/paste:", "Prompt:", "Transparent PNG layer. " (exactly 3 words), "Negative prompt:". Remove ONLY the label — keep ALL text after it intact.
+- Do NOT strip "Draw only...", "Important:", or any descriptive instruction — those are part of the artistic direction.
+- If a negative prompt section says things like "no X, no Y" — convert to a clean comma-separated list: "X, Y"
 - If a layer is completely missing, generate it from the other layers' context
-- Preserve: style descriptions, art direction, specific character/creature details, composition notes
-- Strip: technical PNG instructions, "transparent background" requests (we handle that separately), "draw only" prefixes
 
 If TYPE B (raw scene description):
 - Analyze which objects/characters belong at which depth (farthest = background/sky/environment, closest = foreground framing)
@@ -73,7 +73,7 @@ Style: {style}
 Scene: {scene}"""
 
 
-def split_scene_ollama(scene: str, style: str = "fantasy art", model: str = "qwen3") -> Optional[list]:
+def split_scene_ollama(scene: str, style: str = "Ghibli animation", model: str = "qwen3") -> Optional[list]:
     prompt = SPLIT_PROMPT_TEMPLATE.format(style=style, scene=scene)
     try:
         response = requests.post(
@@ -90,7 +90,7 @@ def split_scene_ollama(scene: str, style: str = "fantasy art", model: str = "qwe
         return None
 
 
-def split_scene_lmstudio(scene: str, style: str = "fantasy art", model: str = "auto") -> Optional[list]:
+def split_scene_lmstudio(scene: str, style: str = "Ghibli animation", model: str = "auto") -> Optional[list]:
     prompt = SPLIT_PROMPT_TEMPLATE.format(style=style, scene=scene)
     try:
         response = requests.post(
@@ -133,7 +133,7 @@ def _parse_json_response(text: str) -> Optional[list]:
         return None
 
 
-def split_scene(scene: str, style: str = "fantasy art", provider: str = "ollama", model: str = "qwen3") -> Optional[list]:
+def split_scene(scene: str, style: str = "Ghibli animation", provider: str = "ollama", model: str = "qwen3") -> Optional[list]:
     if provider == "lmstudio":
         return split_scene_lmstudio(scene, style, model)
     return split_scene_ollama(scene, style, model)
