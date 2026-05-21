@@ -14,17 +14,17 @@ COMFY_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
 STEPS = 50
 CFG = 4.0
-LAYERS = 6
+LAYERS = 8
 SEED = 42
 SHIFT = 1.0
-PREFIX = "great_wave_v4"  # Change this for each painting
+PREFIX = "great_wave_v5"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
-    """Resize any painting to 640px and convert to RGBA."""
+    """Resize any painting to 512px and convert to RGBA."""
     img = Image.open(input_path)
-    img.thumbnail((640, 640), Image.LANCZOS)   # Preserve aspect ratio
-    img = img.convert("RGBA")                   # Add alpha channel
+    img.thumbnail((512, 512), Image.LANCZOS)   # Lower res to reduce VRAM offload corruption
+    img = img.convert("RGBA")
     prepared_path = os.path.join(os.path.dirname(input_path), "prepared_input.png")
     img.save(prepared_path, "PNG")
     print(f"Resized: {img.size} -> {prepared_path}")
