@@ -1848,6 +1848,42 @@ Prompt: EXACT 6 comma-separated objects, foreground first
 
 ---
 
+## 🧠 Google AI — Q7, Q8 Answers (May 21, 2026) 🔥 KEY INSIGHTS
+
+### Q7: Why Only ONE Good Layer?
+
+**Observation confirmed:** "The last layer is always good because it processes last." This is a known ComfyUI conflict.
+
+**Three causes:**
+
+1. **SageAttention/FlashAttention corruption** — These attention backends create NaN values in Qwen's multi-latent slices. Result: black layers for corrupted slices, only the final slice survives. Fix: ensure `--use-sage-attention` and `--fast` are NOT in startup command.
+
+2. **Latent batch splitting misconfiguration** — The +1 composite channel needs special handling.
+
+3. **VRAM offloading corruption** — ComfyUI's dynamic VRAM manager may be offloading earlier layers during generation to make room for the final one. "Because the highest-numbered layer is the last to process, the model dumps or corrupts prior layers." Fix: lower resolution or lower quantization.
+
+### Q8: Understanding Output Shape
+
+**The +1 channel explained:**
+- Latent shape: [B, 16, L+1, H, W]
+- The +1 = **original composite image** (baseline reference, NOT a decomposition)
+- The L = the actual decomposition layers
+- Layer order: foreground first (layer 0 = closest), background last (layer L-1 = farthest)
+- Final slice (position L) = composite reference
+
+**THE TRUTH ABOUT OUR "ONE GOOD LAYER":**
+With layers=6, output is 7 slices. The 7th (last) is the +1 composite — it's "good" because it's literally just the original image reconstructed, not a decomposition. The 6 actual decomposition layers are failing.
+
+**LatentCutToBatch is correct:** It slices along the `t` dimension, which maps to L+1. It produces (L+1) individual latents ready for VAE decoding.
+
+### Fixes to Try
+
+1. **Kill SageAttention:** Start ComfyUI with `--disable-sage-attention`
+2. **Lower resolution:** 512 instead of 640 (less VRAM pressure = less offloading corruption)
+3. **Filter composite:** After decoding, skip the last slice (it's the composite, not a layer)
+
+---
+
 ## 🧠 OpenRouter Expert Answers — Qwen-Image-Layered Setup (May 21, 2026)
 
 Three models consulted: Claude Opus 4.7, Gemini 3.1 Pro Preview, GPT-5.5
