@@ -17,7 +17,7 @@ CFG = 4.0
 LAYERS = 4
 SEED = 42
 SHIFT = 1.0
-PREFIX = "boris_bg_np"  # Background NO prompt
+PREFIX = "incal_bg"
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
