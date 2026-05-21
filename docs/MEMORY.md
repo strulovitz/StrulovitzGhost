@@ -1812,3 +1812,127 @@ All RGBA mode, 640x504 pixels.
 - Image pre-uploaded to ComfyUI `input/` directory
 
 **Next steps:** Inspect layers visually, composite back to verify reconstruction
+
+---
+
+## 🏆 WINNING RECIPE — What Actually Worked (May 21, 2026)
+
+After 6+ hours, 5 approaches tested, 4 AIs consulted — ONE pipeline succeeded.
+
+### THE ONLY WORKING APPROACH: ComfyUI BF16
+
+**Diffusers failed** because `enable_model_cpu_offload()` causes device mismatch freeze on this model.
+**T5B FP8 failed** because the repo has no `model_index.json` or `config.json` — just raw safetensors.
+**Google AI hallucinated** everything about diffusers code, parameter names, and FP8 support.
+
+### Exact Hardware
+
+- **GPU:** NVIDIA GeForce RTX 5090 Laptop GPU, 24463 MB VRAM
+- **RAM:** 64957 MB
+- **OS:** Windows 11
+- **PyTorch:** 2.11.0+cu128 (Blackwell requires CUDA 12.8+)
+- **Python:** 3.12.13 (conda env `qwen-layered`)
+
+### Exact Model Files (3 files required)
+
+All placed in `C:\Users\nir_s\ComfyUI\models\`:
+
+| Component | File | Source Repo | Size | Directory |
+|---|---|---|---|---|
+| UNET (Diffusion Model) | `qwen_image_layered_bf16.safetensors` | `Comfy-Org/Qwen-Image-Layered_ComfyUI` → `split_files/diffusion_models/` | 40.86 GB | `models/diffusion_models/` |
+| CLIP (Text Encoder) | `qwen_2.5_vl_7b_fp8_scaled.safetensors` | `f5aiteam/CLIP` | 9.38 GB | `models/text_encoders/` |
+| VAE | `qwen_image_layered_vae.safetensors` | `Comfy-Org/Qwen-Image-Layered_ComfyUI` → `split_files/vae/` | 0.25 GB | `models/vae/` |
+
+**Total download:** ~50.5 GB
+**All three are required.** None are optional. UNET is BF16 (full precision, no quantization).
+CLIP is FP8 (text encoder can be quantized without quality loss). VAE is BF16.
+
+### Exact Commands to Reproduce
+
+**1. Download model files:**
+```python
+from huggingface_hub import snapshot_download, hf_hub_download
+
+# UNET (40.86 GB)
+snapshot_download('Comfy-Org/Qwen-Image-Layered_ComfyUI',
+    allow_patterns=['*diffusion_models/qwen_image_layered_bf16*',
+                    '*vae/qwen_image_layered_vae*'])
+
+# CLIP text encoder (9.38 GB)
+snapshot_download('f5aiteam/CLIP',
+    allow_patterns='*qwen_2.5_vl_7b_fp8_scaled*')
+```
+
+**2. Place files in ComfyUI directories:**
+```
+Copy qwen_image_layered_bf16.safetensors → ComfyUI/models/diffusion_models/
+Copy qwen_2.5_vl_7b_fp8_scaled.safetensors → ComfyUI/models/text_encoders/
+Copy qwen_image_layered_vae.safetensors → ComfyUI/models/vae/
+```
+
+**3. Install ComfyUI:**
+```bash
+git clone https://github.com/comfyanonymous/ComfyUI.git
+cd ComfyUI
+pip install -r requirements.txt
+```
+
+**4. Start ComfyUI server:**
+```bash
+python main.py --port 8188
+```
+Server detects GPU: "Total VRAM 24463 MB" and enables "async weight offloading with 2 streams" and "DynamicVRAM".
+
+### Exact ComfyUI Node Workflow
+
+Built-in blueprint: `blueprints/Image to Layers(Qwen-Image-Layered).json`
+
+**Nodes in order:**
+1. **UNETLoader** (node 37): `unet_name="qwen_image_layered_bf16.safetensors"`, `weight_dtype="default"`
+2. **CLIPLoader** (node 38): `clip_name="qwen_2.5_vl_7b_fp8_scaled.safetensors"`, `type="qwen_image"`, `device="default"`
+3. **VAELoader** (node 39): `vae_name="qwen_image_layered_vae.safetensors"`
+4. **CLIPTextEncode** (node 6, positive): text describing layer content
+5. **CLIPTextEncode** (node 7, negative): empty string
+6. **LoadImage** (node 27): loads input image from `input/` directory
+7. **GetImageSize** (node 78): reads width/height from image
+8. **EmptyQwenImageLayeredLatentImage** (node 83): `layers=6`, `batch_size=1`
+9. **VAEEncode** (node 71): encodes image to latent space
+10. **ReferenceLatent** ×2 (nodes 69, 70): conditions positive/negative on encoded latent
+11. **ModelSamplingAuraFlow** (node 66): `shift=1.0`
+12. **KSampler** (node 3): `seed=42`, `steps=20`, `cfg=4.0`, `sampler="euler"`, `scheduler="simple"`
+13. **LatentCutToBatch** (node 76): `dim="t"`, `slice_size=1`
+14. **VAEDecode** (node 8): decodes latent to image
+15. **SaveImage** (node 9): saves output PNGs
+
+### Exact Inference Parameters
+
+```python
+steps = 20          # Sampling steps (50 works but slower)
+cfg = 4.0           # CFG guidance scale
+layers = 6          # Requested 6, pipeline outputs 7 (includes composite/base)
+seed = 42           # Fixed seed for reproducibility
+resolution = auto   # From input image (640x507 → 640x504 after bucket rounding)
+```
+
+### What Failed Before This
+
+| Approach | Failure Mode |
+|---|---|
+| Diffusers + CPU offload | Device mismatch freeze — `input_ids` on CUDA, model on CPU |
+| Diffusers + T5B FP8 | Missing `model_index.json`, no `config.json` — not a pipeline |
+| Diffusers + BitsAndBytes 4-bit | Not attempted (community says "not usable" on 24GB) |
+| Google AI code | Hallucinated parameter names: `num_layers`, `layer_mode`, `preserve_strokes` |
+| OpenRouter experts | Claude/Gemini hallucinated pipeline classes and parameters |
+
+### Why ComfyUI Succeeded
+
+ComfyUI uses **async weight offloading** (2 streams) + **DynamicVRAM** — its own memory manager, not diffusers' generic `enable_model_cpu_offload()`. The 40 GB UNET is split across CPU RAM and GPU VRAM automatically. Components are loaded/unloaded per inference step without device mismatch.
+
+### Output
+
+7 RGBA PNG files at 640x504 pixels. All have alpha (transparency) channels.
+Layer order: 01 = backmost (background/sky) → 07 = frontmost (foreground/highlights).
+
+### How Long It Took
+
+Job completed in approximately 2-3 minutes for 20 steps at 640px with 6+1 layers.
