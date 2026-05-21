@@ -1553,36 +1553,7 @@ ComfyUI installed at `C:\Users\nir_s\ComfyUI\`.
 
 ### 🧠 Google AI — ComfyUI Image Decomposition Workflow (May 21, 2026)
 
-#### Loader Nodes
-1. **Load Diffusion Model** → select `qwen_image_layered_fp8_e4m3fn.safetensors`
-2. **Load CLIP** → select `qwen_2.5_vl_7b_fp8_scaled.safetensors`
-3. **Load VAE** → select `qwen_image_vae.safetensors`
-
-#### Workflow Wiring
-1. **Load Image** node → upload source painting
-2. **ImageScaleToMaxDimension** → 1024 (quality) or 640 (speed)
-3. Optional: **CLIP Text Encoder** with prompt like `"background, character, foreground props"` to guide separation
-4. **KSampler** (or SamplerCustomAdvanced):
-   - `steps`: 50
-   - `cfg`: 4.0
-   - Connect diffusion model output to `model` input
-   - Connect CLIP to `positive` input
-5. **VAE Encode** (for inpainting) or Qwen Image Decomposition node
-6. **VAE Decode** using qwen_image_vae
-7. **Save Image** — outputs a stack of RGBA layers
-
-#### Layer Control & Export
-- **Layer count:** `layers` parameter in Qwen-Image-Layered Sampler node (3-4 for simple, 6-8 for complex)
-- **Resolution:** ImageScaleToMaxDimension node (640 recommended, 1024 for quality)
-- **Export individual layers:** Image Batch to List node → separate Save Image nodes (PNG format preserves alpha)
-- **Alternative:** Eric Qwen Layer Nodes package to save as layered PSD
-
-#### Key Settings
-- Steps: 50
-- CFG: 4.0
-- Resolution: 1024 (we have 24GB)
-- Layers: 6 (for our use case)
-- Format: PNG (preserves alpha/transparency)
+...
 
 ---
 
@@ -1671,3 +1642,63 @@ pipeline = QwenImageLayeredPipeline.from_pretrained("T5B/Qwen-Image-Layered-FP8"
 | No `resolution` parameter | `resolution=640` (or 1024) |
 | 32GB VRAM | 640px fits 24GB |
 | Astronaut prompt | Feed a painting image, not a prompt
+
+---
+
+## 🎯 FULL QUALITY TESTING PLAN — May 21, 2026
+
+**Goal:** Test both approaches that preserve full BF16 quality (no quantization, preserves brushstrokes/impasto).
+
+**Truth:** Both require CPU offloading. ComfyUI is built-in and proven. SageAttention may be faster.
+
+### Test A: ComfyUI BF16 (Built-in Blueprint)
+
+**Files needed:**
+
+| File | HuggingFace Source | Path | Est. Size | Status |
+|---|---|---|---|---|
+| UNET | From `Comfy-Org/Qwen-Image-Layered_ComfyUI` → `split_files/diffusion_models/qwen_image_layered_bf16.safetensors` | `models/diffusion_models/` | ~40 GB | ❌ Need download |
+| CLIP | `f5aiteam/CLIP` → `qwen_2.5_vl_7b_fp8_scaled.safetensors` | `models/text_encoders/` | 9.4 GB | ✅ Downloaded |
+| VAE | From `Comfy-Org/Qwen-Image-Layered_ComfyUI` → `split_files/vae/qwen_image_layered_vae.safetensors` | `models/vae/` | ~0.25 GB | ❌ Need download |
+
+**Steps:**
+1. Download UNET and VAE from `Comfy-Org/Qwen-Image-Layered_ComfyUI`
+2. Place in ComfyUI model directories
+3. Open ComfyUI, load blueprint: `Image to Layers (Qwen-Image-Layered)`
+4. Configure: layers=6, cfg=2.5, steps=20
+5. Feed a test painting (e.g., Starry Night)
+6. Run and measure: VRAM peak, time, layer quality
+7. Save individual RGBA PNGs per layer
+
+**Expected:** ComfyUI handles CPU offloading automatically. Full BF16 quality.
+
+### Test B: SageAttention + Triton + Base Model (Diffusers)
+
+**Files needed:**
+
+| Component | Source | Status |
+|---|---|---|
+| Base model | `Qwen/Qwen-Image-Layered` | ✅ Downloaded (53 GB) |
+| `sageattention` pip package | `pip install sageattention` | ❌ Not installed |
+| `triton` pip package | `pip install triton` | ❌ Not installed |
+| Diffusers (git) | Already installed 0.39.0.dev0 | ✅ |
+
+**Steps:**
+1. Install `sageattention` and `triton` in `qwen-layered` env
+2. Load base model with `QwenImageLayeredPipeline`
+3. Apply SageAttention backend
+4. Enable `enable_model_cpu_offload()`
+5. Feed same test painting as Test A
+6. Run and measure: VRAM peak, time, layer quality
+7. Save individual RGBA PNGs per layer
+
+**Expected:** SageAttention speeds up attention kernels. Full BF16 quality.
+
+### Comparison Criteria
+
+| | ComfyUI BF16 | SageAttention BF16 |
+|---|---|---|
+| Quality | Full (BF16) | Full (BF16) |
+| Offloading | Built-in (automatic) | enable_model_cpu_offload() |
+| Setup | Download 2 files + use built-in blueprint | Install 2 pip packages + custom code |
+| Risk | 40 GB UNET may be tight | SageAttention Windows support uncertain |
