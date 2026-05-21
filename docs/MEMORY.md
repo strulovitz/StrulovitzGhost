@@ -1990,41 +1990,106 @@ The desktop has half the VRAM. ComfyUI will offload far more aggressively. Expec
 - If OOM occurs, drop resolution to 512 or steps to 15
 
 
-## 🔄 RECURSIVE DECOMPOSITION — Multiple Computers Working Together
+## 🔄 RECURSIVE DECOMPOSITION — Via the Flask Website (Correct Architecture)
 
 ### The Vision
-Each computer takes ONE image and splits it into 2 RGBA layers. Then sends each layer to another computer, which splits it further. Like a tree — root splits to branches, branches split to leaves.
+Each computer takes ONE image and splits it into 2 RGBA layers. Those 2 layers become new Tasks on the website. Other workers claim those tasks, split each into 2 more. Repeat until we have enough layers.
 
-### Architecture
+### No Direct Communication — Everything Through the Website
+Workers NEVER talk to each other. They don't use OpenCode, DeepSeek, séance, or GitHub. They only talk to the Flask website (the central hub), just like the existing D&D scene pipeline.
+
+### The Recursive Flow (Website-Mediated)
+
 ```
-              [Master Computer: Layer 1+2]
-                     /           \
-        [Desktop A: L1→2]    [Desktop B: L2→2]
-           /      \              /      \
-      [C: L1a,b] [D: L1c,d] [E: L2a,b] [F: L2c,d]
+1. Boss creates Question: "Split Starry Night into 2 layers"
+2. Boss uses LLM to create 1 Task: {"prompt": "...", "layers": 2, "depth": 0, "max_depth": 3}
+3. Worker A polls website → claims Task
+4. Worker A downloads source image from website → runs ComfyUI with layers=2
+5. Worker A gets 2 RGBA layers → uploads BOTH back to website
+6. Website receives 2 layers → creates 2 NEW Tasks (child tasks):
+   Task B: {"prompt": "...", "layers": 2, "depth": 1, "parent_image": "layer_0.png"}
+   Task C: {"prompt": "...", "layers": 2, "depth": 1, "parent_image": "layer_1.png"}
+7. Worker B claims Task B → splits layer_0 into 2 → uploads → website creates 2 more tasks
+8. Worker C claims Task C → splits layer_1 into 2 → uploads → website creates 2 more tasks
+9. Continue until depth = max_depth (no more child tasks created)
+10. When all tasks at max_depth are done → website combines layers (8→6 algorithm)
 ```
 
-### How One Split Works
-Set `layers=2` in the Qwen-Image-Layered node. Each run produces 2 RGBA layers from 1 input image. Send each output to a different computer for the next split.
+### That's It
+No séance. No GitHub. No OpenCode. Just workers polling the same Flask website they already poll for D&D scenes. The website is the only mediator.
+
+### Required Code Changes
+
+**In `src/models.py`:** Add fields to Task model:
+```python
+class Task(db.Model):
+    # ... existing fields ...
+    layers = db.Column(db.Integer, default=1)           # How many layers to output (2 for recursive)
+    depth = db.Column(db.Integer, default=0)             # Current recursion depth
+    max_depth = db.Column(db.Integer, default=3)         # How deep to recurse
+    parent_task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=True)  # Who spawned this task
+    input_image = db.Column(db.String(256), nullable=True)  # Source image filename to split
+    result_filenames = db.Column(db.Text, nullable=True)  # Comma-separated: "layer_0.png,layer_1.png"
+    child_tasks = db.relationship("Task", backref=db.backref("parent", remote_side=[id]))
+```
+
+**In `src/app.py`:** Modify upload endpoint to handle multi-file upload and child task creation:
+```python
+@app.route("/api/tasks/<int:task_id>/upload", methods=["POST"])
+def upload_task_result(task_id):
+    task = db.session.get(Task, task_id)
+    # Accept multiple files
+    files = request.files.getlist("files")
+    saved = []
+    for i, file in enumerate(files):
+        filename = f"task_{task_id}_layer_{i}.png"
+        file.save(os.path.join(OUTPUT_DIR, filename))
+        saved.append(filename)
+    
+    task.status = TaskStatus.COMPLETED
+    task.result_filenames = ",".join(saved)
+    task.completed_at = datetime.now(timezone.utc)
+    
+    # If recursive: create child tasks for next depth
+    if task.layers > 1 and task.depth < task.max_depth:
+        for i, filename in enumerate(saved):
+            child = Task(
+                question_id=task.question_id,
+                layers=2,
+                depth=task.depth + 1,
+                max_depth=task.max_depth,
+                parent_task_id=task.id,
+                input_image=filename,
+                prompt=f"Decompose this layer further (depth {task.depth + 1}/{task.max_depth})",
+                status=TaskStatus.PENDING,
+            )
+            db.session.add(child)
+    
+    db.session.commit()
+    return jsonify({"status": "ok", "saved": saved, "children_created": len(saved) if task.depth < task.max_depth else 0})
+```
+
+**In `src/generator.py`:** Support `layers > 1` parameter:
+```python
+def generate_layers(image_path, output_dir, layers=2, steps=20, cfg=4.0):
+    # Calls ComfyUI API with layers=N
+    # Returns list of output filenames
+    # (Uses same run_comfy_decomp.py pattern)
+```
+
+### What the Worker Does
+1. Poll `/api/tasks/pending` → get a task
+2. Claim it: POST `/api/tasks/<id>/claim`
+3. Download `input_image` from website: GET `/api/images/<filename>`
+4. Run ComfyUI: layers=task.layers (2 for recursive)
+5. Upload all resulting layers: POST `/api/tasks/<id>/upload` with multiple files
+6. Repeat
 
 ### Why This Scales
-- Any computer with ≥12 GB VRAM can participate
-- Each computer only processes its own piece — no coordination needed during generation
-- séance (already built) handles the messaging between computers
-- GitHub handles the large file transfer (push layer PNGs, send link via séance)
-
-### Communication Flow
-1. Master splits image → 2 layers
-2. Master saves layers to GitHub
-3. Master sends séance message to Desktop A: "github.com/strulovitz/.../layer_1.png"
-4. Desktop A downloads, splits, saves results
-5. Desktop A sends séance to Desktops C and D with links to their pieces
-6. Continue until enough layers
-
-### Minimum Hardware Requirements
-- 12 GB VRAM (RTX 4070 Ti or better)
-- 64 GB system RAM (for offloading)
-- ComfyUI installed with the 3 model files
+- Any computer with 12+ GB VRAM can be a worker
+- No coordination between workers — they just poll and claim
+- Works over LAN or internet (Cloudflared tunnel for public mode)
+- Same architecture as existing D&D scene pipeline — just layers=N instead of layers=1
 
 
 ## 🧩 8→6 LAYER COMBINING — Preserving Parallax
