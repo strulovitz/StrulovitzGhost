@@ -17,7 +17,7 @@ CFG = 4.0
 LAYERS = 4
 SEED = 42
 SHIFT = 1.0
-PREFIX = "boris_vallejo"
+PREFIX = "boris_fg"  # Foreground further decomposition
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -85,7 +85,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": "the warrior woman figure in foreground, the dragon creature, the rocky landscape background", "clip": ["38", 0]}
+        "inputs": {"text": "the warrior woman, the smoking pipe, the butterfly she sits on", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
