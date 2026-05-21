@@ -1330,3 +1330,44 @@ pipe.to("cuda")
 # torch.cuda.set_per_process_memory_fraction(0.95)
 # pipe.enable_model_cpu_offload()
 ```
+
+---
+
+## 🧠 Google AI Answer — Loading T5B FP8 Code (May 21, 2026)
+
+### Question:
+> I have an RTX 5090 with 24GB VRAM. How do I use the model T5B/Qwen-Image-Layered-FP8 from HuggingFace with Python diffusers? What code do I write to load it and run it?
+
+### Install
+
+```bash
+pip install -U diffusers transformers accelerate torch
+```
+
+### Code
+
+```python
+import torch
+from diffusers import DiffusionPipeline
+
+pipe = DiffusionPipeline.from_pretrained(
+    "T5B/Qwen-Image-Layered-FP8",
+    dtype=torch.bfloat16,
+    device_map="cuda"
+)
+
+prompt = "Astronaut in a jungle, cold color palette, muted colors, detailed, 8k"
+output = pipe(prompt)
+
+# Extract layers — loops through output.images for individual RGBA layers
+image = output.images[0]
+image.save("qwen_layered_output.png")
+```
+
+### Notes from Answer
+
+- Claims RTX 5090 has 32GB VRAM ❌ (wrong — laptop is 24GB)
+- Uses `dtype=` not `torch_dtype=` — might be wrong parameter name
+- FP8 drops model from ~60GB down to ~20GB
+- Output contains multiple RGBA layers accessible via `output.images`
+- Example shows text-to-image, not image-to-image decomposition — may be incorrect usage
