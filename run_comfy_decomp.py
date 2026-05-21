@@ -14,10 +14,10 @@ COMFY_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
 STEPS = 50
 CFG = 4.0
-LAYERS = 8
+LAYERS = 6
 SEED = 42
-SHIFT = 12.0     # Critical! Default 1.0 causes black layers
-PREFIX = "great_wave_v3"  # Change this for each painting
+SHIFT = 1.0
+PREFIX = "great_wave_v4"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -85,7 +85,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": "A dramatic ocean wave with white foam crests crashing in the foreground. Below the wave, smaller breaking waves and sea spray at the very front. In the distance, a calm sea horizon. Behind everything, Mount Fuji rising clearly in the background under a separate bright sky.", "clip": ["38", 0]}
+        "inputs": {"text": "white foam crest at very front, the great wave body with claw-like tips, smaller foreground breaking waves, calm sea horizon in the distance, Mount Fuji in the background, sky with clouds", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
