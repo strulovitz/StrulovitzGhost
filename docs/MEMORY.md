@@ -1390,6 +1390,109 @@ Google AI gave the identical loading-code answer again. No information about:
 
 ---
 
+## 🧠 Community Research — HF Discussions, GitHub, Quantization Tree (May 21, 2026) 🔥
+
+### ALL Quantized Models for Qwen-Image-Layered
+
+From HuggingFace model tree: **5 quantizations exist**
+
+| Model | Downloads | Likes | Format | Diffusers? |
+|---|---|---|---|---|
+| `unsloth/Qwen-Image-Layered-GGUF` | 3,140 | 53 | GGUF Q4/Q5/Q8 | ❌ ComfyUI only |
+| `T5B/Qwen-Image-Layered-FP8` | 305 | 4 | FP8 safetensors | ✅ We have this |
+| `Disty0/Qwen-Image-Layered-SDNQ-uint4-svd-r32` | 31 | 5 | UINT4 SDNQ | ⚠️ |
+| `zimengxiong/Qwen-Image-Layered-6bit` | 2 | 0 | 6-bit | ⚠️ |
+| `llmrobot/qwen-image-layered-int8-sdnq` | 4 | 0 | INT8 SDNQ | ⚠️ |
+
+**Community favorite:** Unsloth GGUF (3.1k downloads, 53 likes) — but it's ComfyUI, not diffusers.
+
+---
+
+### HF Discussion #8: "Code for running <= 24GB cards" (Dec 24, 2025)
+
+**Posted by rvorias** — tested on RTX 5000 24GB. This is the REAL working code for ≤24GB.
+
+#### Method A: BitsAndBytes 4-bit + CPU Offload (rvorias)
+
+```python
+from diffusers import QwenImageTransformer2DModel
+import torch
+from PIL import Image
+from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
+from transformers import Qwen2_5_VLForConditionalGeneration
+from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
+from diffusers import QwenImageLayeredPipeline
+
+model_id = "Qwen/Qwen-Image-Layered"
+torch_dtype = torch.bfloat16
+
+# 4-bit quantize transformer
+quantization_config = DiffusersBitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    llm_int8_skip_modules=["transformer_blocks.0.img_mod"],
+)
+transformer = QwenImageTransformer2DModel.from_pretrained(
+    model_id, subfolder="transformer",
+    quantization_config=quantization_config,
+    torch_dtype=torch_dtype,
+).to("cpu")
+
+# 4-bit quantize text encoder
+quantization_config = TransformersBitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
+text_encoder = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    model_id, subfolder="text_encoder",
+    quantization_config=quantization_config,
+    torch_dtype=torch_dtype,
+).to("cpu")
+
+pipeline = QwenImageLayeredPipeline.from_pretrained(
+    model_id, transformer=transformer, text_encoder=text_encoder,
+    torch_dtype=torch_dtype,
+)
+pipeline.enable_model_cpu_offload()
+# ... same inputs dict as before
+```
+
+**Verdict:** "slow" on RTX 5000. "Not usable" per rvorias.
+
+#### Method B: SageAttention + Triton — FULL BF16 on 10GB! (rzgar)
+
+**This changes everything.** rzgar claims with SageAttention + Triton:
+- RTX 3080 (10GB?): ~7s/it, full BF16, NO quantization
+- RTX 5080: ~4.5s/it, full BF16
+- Works with CPU offload — model + text encoder fully in VRAM, offloading minimal
+- First run is slower, then improves ~30%
+- Ubuntu works well, Windows can crash
+- "KJ diffusion loader" for ComfyUI
+
+**Implication for RTX 5090 24GB:**
+- Full BF16 should fit entirely in VRAM WITHOUT offloading!
+- Expect significantly faster than 4.5s/it (5080 speed) — maybe 2-3s/it
+- No quantization = no quality loss. Perfect for preserving art brushstrokes.
+- Need: `pip install sageattention triton`
+
+### The Two Viable Approaches for RTX 5090 24GB
+
+| Approach | Quality | Speed | Downloads Needed | Complexity |
+|---|---|---|---|---|
+| **A: BB 4-bit + offload** | Degraded (4-bit) | Slow | Base model (53.8 GB) | Medium |
+| **B: Sage + Triton BF16** | Full quality | Fast (2-4s/it) | Base model (53.8 GB) | Low |
+| **C: T5B FP8 direct** | Good (FP8) | Fast | T5B FP8 ✅ (already have) | Low (just try it) |
+
+### 🎯 ACTION: Try T5B FP8 First
+
+The T5B FP8 is already cached. Before downloading anything, try loading it with `QwenImageLayeredPipeline`. If it works, we're done. If not, try Method B (SageAttention + full BF16 — requires re-downloading the base model we deleted).
+
+**We need the base `Qwen/Qwen-Image-Layered` model for both Methods A and B.** The T5B FP8 is the only approach that uses our existing cache.
+
+---
+
 ## 🧠 HuggingFace Direct — OFFICIAL Qwen/Qwen-Image-Layered Documentation (May 21, 2026) 🔥
 
 **Source:** https://huggingface.co/Qwen/Qwen-Image-Layered — THE ACTUAL MODEL CARD
