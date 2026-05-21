@@ -16,6 +16,7 @@ STEPS = 20
 CFG = 4.0
 LAYERS = 6
 SEED = 42
+PREFIX = "monet_layers"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -25,7 +26,7 @@ def prepare_image(input_path):
     img = img.convert("RGBA")                   # Add alpha channel
     prepared_path = os.path.join(os.path.dirname(input_path), "prepared_input.png")
     img.save(prepared_path, "PNG")
-    print(f"Resized: {img.size} → {prepared_path}")
+    print(f"Resized: {img.size} -> {prepared_path}")
     return prepared_path
 
 # Use command-line argument or default
@@ -79,7 +80,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": "background sky, stars, village, mountains, cypress tree, foreground brushwork", "clip": ["38", 0]}
+        "inputs": {"text": PREFIX.replace("_", " ") + " layers: water lilies, pond surface, reflections, bridge, weeping willow, sky", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
@@ -134,7 +135,7 @@ prompt_nodes = {
     },
     "9": {
         "class_type": "SaveImage",
-        "inputs": {"images": ["8", 0], "filename_prefix": "starry_layers"}
+        "inputs": {"images": ["8", 0], "filename_prefix": PREFIX}
     }
 }
 
