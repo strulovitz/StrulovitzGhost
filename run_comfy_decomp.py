@@ -17,7 +17,7 @@ CFG = 4.0
 LAYERS = 4
 SEED = 42
 SHIFT = 1.0
-PREFIX = "mona_lisa"
+PREFIX = "boris_vallejo"
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -85,7 +85,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": "the woman in foreground, her folded hands, the dark dress and veil, the distant landscape background", "clip": ["38", 0]}
+        "inputs": {"text": "the warrior woman figure in foreground, the dragon creature, the rocky landscape background", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
