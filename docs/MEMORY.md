@@ -1385,3 +1385,5 @@ Google AI gave the identical loading-code answer again. No information about:
 - What arguments `pipe()` accepts (image? prompt? num_layers? cfg? steps?)
 - What `output` object contains (number of images, alpha channels, metadata?)
 - Image-to-image vs text-to-image usage
+
+### ⚠️ Google repeated the SAME answer a THIRD time (Q1 retry) — identical loading code, astronaut prompt, still claims 32GB VRAM
