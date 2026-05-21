@@ -1701,4 +1701,57 @@ pipeline = QwenImageLayeredPipeline.from_pretrained("T5B/Qwen-Image-Layered-FP8"
 | Quality | Full (BF16) | Full (BF16) |
 | Offloading | Built-in (automatic) | enable_model_cpu_offload() |
 | Setup | Download 2 files + use built-in blueprint | Install 2 pip packages + custom code |
-| Risk | 40 GB UNET may be tight | SageAttention Windows support uncertain |
+| Risk | 40 GB UNET may be tight | SageAttention Windows support uncertain | 
+
+---
+
+## 🧠 OpenRouter Expert Answers — Qwen-Image-Layered Setup (May 21, 2026)
+
+Three models consulted: Claude Opus 4.7, Gemini 3.1 Pro Preview, GPT-5.5
+
+### Claude Opus 4.7
+
+- Recommends `DiffusionPipeline.from_pretrained()` with `variant="bf16"` (likely wrong pipeline class — should be `QwenImageLayeredPipeline`)
+- Claims `num_layers=6`, `layer_mode="rgba_transparent"`, `preserve_strokes=True` — these parameter names are unverified, likely hallucinated
+- **Good advice:** bfloat16, VAE tiling, attention_slicing("max"), CPU offload fallback
+- Recommends 40-60 steps, CFG 3.5-5.0
+- Suggests sanity check: composite layers back → should match source
+
+### Gemini 3.1 Pro Preview
+
+- Uses `AutoModelForCausalLM` and `AutoProcessor` — WRONG approach for image diffusion model
+- Hallucinates model ID `Qwen-Image-Layered-Large` which doesn't exist
+- Correctly identifies bfloat16, 24GB sufficiency without quantization
+- Good defringing post-process suggestion using OpenCV
+
+### GPT-5.5 (most thorough)
+
+- **Recommends WSL2 Ubuntu 24.04** over native Windows (Triton/FlashAttention support)
+- PyTorch cu128 mandatory for Blackwell RTX 5090
+- Clone official Qwen repo from GitHub, not just pip install
+- **Settings:** BF16, batch 1, 1024x1024, CPU offload on, VAE tiling on, SDPA attention
+- Prompt formula for brushwork preservation (do not repaint/smooth/simplify)
+- Layer ordering: background wash → underpainting → midground → forms → strokes → highlights
+- Alpha compositing reconstruction check with `Image.alpha_composite()`
+- `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` for memory
+
+### Consensus Across All Three
+
+| Topic | Agreement |
+|---|---|
+| **Precision** | BF16 (not FP16, not FP8, not 4-bit) |
+| **Resolution** | 1024x1024 starting point |
+| **Offloading** | CPU offload required |
+| **VAE** | Tiling on |
+| **Attention** | SDPA or sliced |
+| **Output** | RGBA PNG straight-alpha |
+| **Validation** | Composite layers back → compare to original |
+| **Batch size** | 1 |
+
+### Disagreements
+
+| Topic | Claude | Gemini | GPT-5.5 |
+|---|---|---|---|
+| Pipeline class | DiffusionPipeline ❌ | AutoModelForCausalLM ❌ | Official repo needed |
+| Max resolution | 1536² | 1512² | 1024-1536 |
+| Windows vs Linux | Windows OK | Windows OK | WSL2 preferred |
