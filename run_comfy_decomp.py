@@ -12,11 +12,12 @@ from PIL import Image
 
 COMFY_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
-STEPS = 8
-CFG = 1.0
-LAYERS = 6
+STEPS = 50
+CFG = 4.0
+LAYERS = 8
 SEED = 42
-PREFIX = "great_wave_v2"  # Change this for each painting
+SHIFT = 12.0     # Critical! Default 1.0 causes black layers
+PREFIX = "great_wave_v3"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -84,7 +85,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": "Decompose this woodblock print into 6 depth layers from back to front: 1) sky and distant Mount Fuji, 2) far ocean horizon, 3) mid-distance waves, 4) the great wave crest with foam, 5) smaller foreground waves breaking, 6) closest wave spray and foam at the very front. Preserve the flat colors, clean edges, and woodblock print texture.", "clip": ["38", 0]}
+        "inputs": {"text": "A dramatic ocean wave with white foam crests crashing in the foreground. Below the wave, smaller breaking waves and sea spray at the very front. In the distance, a calm sea horizon. Behind everything, Mount Fuji rising clearly in the background under a separate bright sky.", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
@@ -112,7 +113,7 @@ prompt_nodes = {
     },
     "66": {
         "class_type": "ModelSamplingAuraFlow",
-        "inputs": {"model": ["37", 0], "shift": 1.0}
+        "inputs": {"model": ["37", 0], "shift": SHIFT}
     },
     "3": {
         "class_type": "KSampler",
