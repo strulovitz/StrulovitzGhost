@@ -17,7 +17,7 @@ CFG = 4.0
 LAYERS = 4
 SEED = 42
 SHIFT = 1.0
-PREFIX = "boris_fg"  # Foreground further decomposition
+PREFIX = "boris_bg_np"  # Background NO prompt
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -85,7 +85,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": "the warrior woman, the smoking pipe, the butterfly she sits on", "clip": ["38", 0]}
+        "inputs": {"text": "", "clip": ["38", 0]}  # NO PROMPT — let model decide
     },
     "7": {
         "class_type": "CLIPTextEncode",
