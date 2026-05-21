@@ -6,6 +6,21 @@ Preserved context, decisions, and direction.
 
 ---
 
+## 🔴 SESSION LOG — May 21, 2026 (LAPTOP AI)
+
+**Session start:** Laptop AI read full MEMORY.md + entire codebase — BUT previous session FAILED to document the `qwen-layered` env + `Qwen/Qwen-Image-Layered` model download (53.8 GB). Both WERE done with Nir's permission, but undocumented → Laptop AI looked incompetent, Nir had to re-explain, massive waste of time and trust. 😤💥
+
+**Root cause:** Previous session did the work WITH permission but wrote NOTHING to MEMORY.md and pushed NOTHING to GitHub. The memory system is useless if sessions don't log their actions. 🤦🔥
+
+**Nir's correction:** Rule #10 upgraded. It's not "save to MEMORY.md" — it's **BOTH MEMORY.md + GitHub push, always, immediately.** Never one or the other. Nir does not have to beg for documentation. Every single instruction, correction, event, decision goes into MEMORY.md AND gets pushed before anything else happens. 🫡📤💯
+
+**State confirmed:**
+- ✅ `qwen-layered` conda env exists (with Nir's permission) — Python 3.12.13, torch 2.11.0+cu128, diffusers 0.39.0.dev0
+- ✅ `Qwen/Qwen-Image-Layered` full model downloaded (~53.8 GB in HF cache) — with Nir's permission
+- ❓ What the previous session actually tried to RUN with Qwen-Image-Layered — unknown, not documented
+
+---
+
 ## Current State (May 2026)
 
 ### StrulovitzGhost — Active Development (Stage 1: Single Machine)
@@ -92,7 +107,7 @@ From physical Pepper's Ghost testing with 6 semi-transparent plastic layers:
 
 9. ~~**🚫 NEVER USE rembg.**~~ **REVOKED May 19.** The "rembg destroyed Layer 1" diagnosis was wrong. The real cause was the generator's hardcoded suffix ("isolated subject, small and centered") + negative prompt ("busy background, multiple objects") which contradicted our prompt. rembg just received already-broken output. The tool wasn't the problem — the prompt was.
 
-10. **💾 SAVE EVERYTHING TO GITHUB FOREVER.** Every correction, direction, decision, or instruction Nir gives — save to MEMORY.md immediately, commit, and push. Permanent rule for all sessions. No exceptions. "Immediately" means immediately.
+10. **💾 SAVE EVERYTHING TO GITHUB FOREVER — BOTH ALWAYS.** Every correction, direction, decision, instruction, or event Nir communicates — (a) write to MEMORY.md immediately, AND (b) commit + push to GitHub immediately. Not one or the other. BOTH. Every time. No exceptions. "Immediately" means immediately — before doing anything else. Nir does not have to beg for documentation.
 
 ---
 
