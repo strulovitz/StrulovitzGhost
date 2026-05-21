@@ -1280,3 +1280,53 @@ The T5B FP8 model (~38 GB cached) may be the **wrong format** for diffusers. The
 2. Plus the Nunchaku FP4 transformer (~13-20 GB, not yet downloaded)
 
 We may need to re-download the base model. The T5B FP8 might only work in ComfyUI.
+
+### ⚠️ CONTRADICTION — Two different Google AI answers about T5B FP8 + diffusers
+
+**Answer A (Nunchaku):** T5B FP8 is ComfyUI-only. Diffusers needs base `Qwen/Qwen-Image-Layered` + `MIT-HAN-LAB/Qwen-Image-Layered-Nunchaku` FP4 transformer. Cannot use T5B directly.
+
+**Answer B (below):** T5B FP8 works directly with diffusers via `DiffusionPipeline.from_pretrained("T5B/Qwen-Image-Layered-FP8")`. No Nunchaku needed.
+
+These two answers are mutually exclusive. Only one can be correct.
+
+---
+
+## 🧠 Google AI Answer — Pre-Quantized Models for Diffusers (May 21, 2026) ⚠️ CONTRADICTS PREVIOUS
+
+### Question:
+> I have an RTX 5090 24GB. For Qwen-Image-Layered with Python diffusers, what pre-quantized models exist and where do I download them from HuggingFace?
+
+### Pre-Quantized Models
+
+| Model | HuggingFace Repo | Diffusers Compatible? |
+|---|---|---|
+| **FP8** | `T5B/Qwen-Image-Layered-FP8` | ✅ Yes — directly via `DiffusionPipeline.from_pretrained()` |
+| **GGUF** | `unsloth/Qwen-Image-Layered-GGUF` | ❌ No — requires third-party hooks, works out of box in ComfyUI |
+| **INT8 SDNQ** | `llmrobot/qwen-image-layered-int8-sdnq` | ⚠️ Specialized, ultra-compressed, low-resource |
+| **6-bit** | `zimengxiong/Qwen-Image-Layered-6bit` | ⚠️ Specialized, ultra-compressed, low-resource |
+
+### Recommended for RTX 5090 24GB + Diffusers
+
+**`T5B/Qwen-Image-Layered-FP8`** — directly loadable, no Nunchaku needed.
+
+Install:
+```bash
+pip install --upgrade git+https://github.com/huggingface/diffusers transformers accelerate torch
+```
+
+Code:
+```python
+import torch
+from diffusers import DiffusionPipeline
+
+pipe = DiffusionPipeline.from_pretrained(
+    "T5B/Qwen-Image-Layered-FP8",
+    torch_dtype=torch.float16,
+    use_safetensors=True
+)
+pipe.to("cuda")
+
+# Optional VRAM safety:
+# torch.cuda.set_per_process_memory_fraction(0.95)
+# pipe.enable_model_cpu_offload()
+```
