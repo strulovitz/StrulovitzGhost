@@ -1551,6 +1551,39 @@ ComfyUI installed at `C:\Users\nir_s\ComfyUI\`.
 
 **NOTE:** This workflow describes text-to-image. We need image-to-image decomposition. Need to determine correct nodes for feeding a painting image and getting RGBA layers back.
 
+### 🧠 Google AI — ComfyUI Image Decomposition Workflow (May 21, 2026)
+
+#### Loader Nodes
+1. **Load Diffusion Model** → select `qwen_image_layered_fp8_e4m3fn.safetensors`
+2. **Load CLIP** → select `qwen_2.5_vl_7b_fp8_scaled.safetensors`
+3. **Load VAE** → select `qwen_image_vae.safetensors`
+
+#### Workflow Wiring
+1. **Load Image** node → upload source painting
+2. **ImageScaleToMaxDimension** → 1024 (quality) or 640 (speed)
+3. Optional: **CLIP Text Encoder** with prompt like `"background, character, foreground props"` to guide separation
+4. **KSampler** (or SamplerCustomAdvanced):
+   - `steps`: 50
+   - `cfg`: 4.0
+   - Connect diffusion model output to `model` input
+   - Connect CLIP to `positive` input
+5. **VAE Encode** (for inpainting) or Qwen Image Decomposition node
+6. **VAE Decode** using qwen_image_vae
+7. **Save Image** — outputs a stack of RGBA layers
+
+#### Layer Control & Export
+- **Layer count:** `layers` parameter in Qwen-Image-Layered Sampler node (3-4 for simple, 6-8 for complex)
+- **Resolution:** ImageScaleToMaxDimension node (640 recommended, 1024 for quality)
+- **Export individual layers:** Image Batch to List node → separate Save Image nodes (PNG format preserves alpha)
+- **Alternative:** Eric Qwen Layer Nodes package to save as layered PSD
+
+#### Key Settings
+- Steps: 50
+- CFG: 4.0
+- Resolution: 1024 (we have 24GB)
+- Layers: 6 (for our use case)
+- Format: PNG (preserves alpha/transparency)
+
 ---
 
 ## 🧠 HuggingFace Direct — OFFICIAL Qwen/Qwen-Image-Layered Documentation (May 21, 2026) 🔥
