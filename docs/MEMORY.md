@@ -1889,6 +1889,29 @@ Q5 said "comma-separated list matching layer count." Q9 says "single text string
 
 ---
 
+## 🧠 GOOGLE Q10 — Why Background Works, Foreground Fails (May 21, 2026)
+
+### Latent Tensor Structure
+
+Shape: [N+1, channels, H, W]
+- **Slices 0 to N-1:** Individual RGBA layers (foreground → background)
+- **Slice N-1 (last non-composite):** The BACKGROUND layer — fully opaque, no transparency
+- **Slice N:** The composite RGB image
+
+### Why Only the Background Works
+
+The background layer (slice N-1) is fully opaque — its alpha channel is solid. Standard VAE decoding handles opaque RGB images perfectly. That's why the sky-removed layer is always clean.
+
+**Foreground layers (slices 0 to N-2) fail because they contain transparency.** The VAE must decode a 4-channel RGBA latent. If the decode treats them as standard 3-channel RGB, transparent regions become noise, black, or white blocks.
+
+### Combined Fix (Q9 + Q10)
+
+1. **Multiline prompt** (Q9): One line per layer, foreground first, commas at line ends
+2. **Proper RGBA decode** (Q10): The `qwen_image_layered_vae.safetensors` handles 4-channel alpha — but the decoding path must preserve it. `LatentCutToBatch` + `VAEDecode` should work if the VAE is correct (ours is).
+3. **Layer order:** foreground = slice 0, background = slice N-1. The "last good one" is slice N-1 (background, fully opaque).
+
+---
+
 ## 🧠 Google AI — Q7, Q8 Answers (May 21, 2026) 🔥 KEY INSIGHTS
 
 ### Q7: Why Only ONE Good Layer?
