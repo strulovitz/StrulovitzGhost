@@ -1936,3 +1936,145 @@ Layer order: 01 = backmost (background/sky) → 07 = frontmost (foreground/highl
 ### How Long It Took
 
 Job completed in approximately 2-3 minutes for 20 steps at 640px with 6+1 layers.
+
+---
+
+## 🖥️ DESKTOP SETUP — RTX 4070 Ti 12 GB (May 21, 2026)
+
+The exact same ComfyUI setup works on the desktop, but it's slower due to 12 GB VRAM.
+
+### Desktop Hardware
+- **GPU:** RTX 4070 Ti, 12 GB VRAM
+- **RAM:** 64 GB
+- **GPU offloading:** Much more aggressive than laptop — smaller VRAM means more CPU↔GPU transfers per step
+- **Speed estimate:** 3-4× slower than laptop (expect 8-12 minutes for a 20-step decomposition)
+
+### Step-by-Step Desktop Installation
+
+**Step 1: Create a fresh conda environment**
+```
+conda create -n comfyui python=3.11 -y
+conda activate comfyui
+```
+The desktop uses `torch 2.12.0+cu126` (Ada Lovelace), NOT `torch 2.11.0+cu128` (Blackwell laptop).
+
+**Step 2: Install PyTorch for desktop**
+```
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+```
+Verify: `python -c "import torch; print(torch.cuda.get_device_name(0))"` → RTX 4070 Ti
+
+**Step 3: Clone ComfyUI**
+```
+git clone https://github.com/comfyanonymous/ComfyUI.git
+cd ComfyUI
+pip install -r requirements.txt
+```
+
+**Step 4: Download the same 3 model files**
+Same HuggingFace commands as laptop section. Total ~50.5 GB download. Place in same directories:
+- `models/diffusion_models/qwen_image_layered_bf16.safetensors`
+- `models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors`
+- `models/vae/qwen_image_layered_vae.safetensors`
+
+**Step 5: Start and use exactly like laptop**
+```
+python main.py --port 8188
+```
+Then use the same `run_comfy_decomp.py` script (changing only the output directory).
+
+### Key Difference: VRAM Pressure
+The desktop has half the VRAM. ComfyUI will offload far more aggressively. Expect:
+- First run: 2-3x the laptop time as offloading pattern is established
+- Subsequent runs: ~3-4× slower than laptop
+- If OOM occurs, drop resolution to 512 or steps to 15
+
+
+## 🔄 RECURSIVE DECOMPOSITION — Multiple Computers Working Together
+
+### The Vision
+Each computer takes ONE image and splits it into 2 RGBA layers. Then sends each layer to another computer, which splits it further. Like a tree — root splits to branches, branches split to leaves.
+
+### Architecture
+```
+              [Master Computer: Layer 1+2]
+                     /           \
+        [Desktop A: L1→2]    [Desktop B: L2→2]
+           /      \              /      \
+      [C: L1a,b] [D: L1c,d] [E: L2a,b] [F: L2c,d]
+```
+
+### How One Split Works
+Set `layers=2` in the Qwen-Image-Layered node. Each run produces 2 RGBA layers from 1 input image. Send each output to a different computer for the next split.
+
+### Why This Scales
+- Any computer with ≥12 GB VRAM can participate
+- Each computer only processes its own piece — no coordination needed during generation
+- séance (already built) handles the messaging between computers
+- GitHub handles the large file transfer (push layer PNGs, send link via séance)
+
+### Communication Flow
+1. Master splits image → 2 layers
+2. Master saves layers to GitHub
+3. Master sends séance message to Desktop A: "github.com/strulovitz/.../layer_1.png"
+4. Desktop A downloads, splits, saves results
+5. Desktop A sends séance to Desktops C and D with links to their pieces
+6. Continue until enough layers
+
+### Minimum Hardware Requirements
+- 12 GB VRAM (RTX 4070 Ti or better)
+- 64 GB system RAM (for offloading)
+- ComfyUI installed with the 3 model files
+
+
+## 🧩 8→6 LAYER COMBINING — Preserving Parallax
+
+### The Parallax Principle
+In Nir's Pepper's Ghost physical setup, Nir looks from slightly above.
+- **Close layers** (20 cm): Big parallax — objects shift visibly when you move your head. MUST keep separate.
+- **Far layers** (sky, mountains): Tiny parallax — almost no shift. Can combine without losing the 3D feel.
+
+### The Algorithm: Pair from Farthest
+
+Given 8 layers, numbered 1 (farthest/sky) to 8 (closest/foreground):
+
+```
+Combine: Layer 8 + Layer 7 → New Layer 6 (farthest combined)
+Combine: Layer 6 + Layer 5 → New Layer 5
+Combine: Layer 4 + Layer 3 → New Layer 4
+Keep:    Layer 2          → New Layer 3
+Keep:    Layer 1          → New Layer 2
+Keep:    [closest unused] → New Layer 1
+```
+
+Wait — we want 8→6, so we only need 2 combines. The principle is:
+**Always combine the two FARTHEST layers first. Never combine close layers.**
+
+```
+Step 1: Combine L8 + L7 → one merged layer (they're far, parallax is minimal)
+Step 2: Combine L6 + L5 → one merged layer (still relatively far)
+Step 3: Keep L4 as-is (mid-range, some parallax)
+Step 4: Keep L3 as-is
+Step 5: Keep L2 as-is (close, strong parallax)
+Step 6: Keep L1 as-is (closest, strongest parallax — NEVER combine this)
+```
+
+Total: 8 layers → 6 layers, only combining the 4 farthest layers into 2.
+
+### Combining Code (PIL)
+```python
+from PIL import Image
+
+def combine_layers(back_layer_path, front_layer_path, output_path):
+    back = Image.open(back_layer_path).convert("RGBA")
+    front = Image.open(front_layer_path).convert("RGBA")
+    # Alpha composite: front over back
+    combined = Image.alpha_composite(back, front)
+    combined.save(output_path, "PNG")
+```
+
+### Why NOT Combine Close Layers
+Combining layer 2 and layer 1 would mush together two objects at different depths (e.g., cypress tree at 20 cm + rabbit at 3 m). The parallax between them is large — your head movement would no longer reveal the depth difference. The 3D illusion breaks.
+
+### The General Rule
+**Always combine from farthest to closest. Stop when you hit the layers where parallax matters.** For Pepper's Ghost, that's roughly the closest 3-4 layers.
