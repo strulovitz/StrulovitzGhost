@@ -1705,6 +1705,43 @@ pipeline = QwenImageLayeredPipeline.from_pretrained("T5B/Qwen-Image-Layered-FP8"
 
 ---
 
+## 🧠 Google AI — Fixing Bad Outputs (Black Layers / Duplicates) — May 21, 2026
+
+### Problem
+Several layers are the original image, several are solid black. Model fails to separate.
+
+### Root Causes (from Google AI)
+
+1. **CFG too high, Steps too many** — We used CFG 4.0 with 20-50 steps. Google says CFG 1.0-1.5, Steps 4-8. Higher values "burn out" into flat colors/black.
+
+2. **SageAttention conflicts** — Qwen models have native attention that conflicts with SageAttention. Use `--disable-sage-attention` in ComfyUI startup. (We don't use SageAttention in ComfyUI so this may not apply.)
+
+3. **`--fast` flag** — Causes NaN/black blocks. Don't use it. (We don't.)
+
+### Correct Settings Per Google AI
+
+| Parameter | We Were Using | Google AI Says |
+|---|---|---|
+| CFG | 4.0 | **1.0 – 1.5** |
+| Steps | 20-50 | **4 – 8** |
+| Layers | 6 | 5+ (already correct) |
+| Prompt | Explicit layer list | Explicit layer list (already doing) |
+
+### Why Low Steps/CGF
+The model is a decomposition tool, not a generator. High CFG forces it to "create" content, causing hallucination. High steps over-process and destroy edges. Low CFG + low steps = analytical mode.
+
+### Updated Settings to Try
+```
+CFG: 1.0
+Steps: 8
+Layers: 6
+Resolution: 640
+Negative prompt: " "
+Seed: 42
+```
+
+---
+
 ## 🧠 OpenRouter Expert Answers — Qwen-Image-Layered Setup (May 21, 2026)
 
 Three models consulted: Claude Opus 4.7, Gemini 3.1 Pro Preview, GPT-5.5
