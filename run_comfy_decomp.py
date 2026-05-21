@@ -16,7 +16,7 @@ STEPS = 20
 CFG = 4.0
 LAYERS = 6
 SEED = 42
-PREFIX = "monet_layers"  # Change this for each painting
+PREFIX = "monet_lilies"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -44,9 +44,13 @@ boundary = "----FormBoundary7MA4YWxkTrZu0gW"
 with open(INPUT_IMAGE, "rb") as f:
     img_bytes = f.read()
 
+# Use unique filename based on painting name
+import uuid
+unique_name = f"{PREFIX}_{uuid.uuid4().hex[:6]}.png"
+
 body = (
     f"--{boundary}\r\n"
-    f'Content-Disposition: form-data; name="image"; filename="input.png"\r\n'
+    f'Content-Disposition: form-data; name="image"; filename="{unique_name}"\r\n'
     f"Content-Type: image/png\r\n\r\n"
 ).encode() + img_bytes + f"\r\n--{boundary}--\r\n".encode()
 
@@ -56,7 +60,7 @@ req = urllib.request.Request(
     headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
 )
 resp = json.loads(urllib.request.urlopen(req).read())
-image_name = resp["name"]
+image_name = resp["name"]   # Get the ACTUAL name ComfyUI assigned
 print(f"Uploaded image: {image_name}")
 
 # Build prompt using the blueprint's node structure
@@ -64,7 +68,7 @@ print(f"Uploaded image: {image_name}")
 prompt_nodes = {
     "27": {
         "class_type": "LoadImage",
-        "inputs": {"image": "input.png"}
+        "inputs": {"image": image_name}
     },
     "37": {
         "class_type": "UNETLoader",
