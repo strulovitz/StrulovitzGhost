@@ -17,7 +17,7 @@ CFG = 4.0
 LAYERS = 4
 SEED = 42
 SHIFT = 1.0
-PREFIX = "fish_bg"
+PREFIX = "eagle"
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
