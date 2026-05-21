@@ -51,6 +51,7 @@ class LayerWindow_(QWidget):
             )
             self.setMinimumSize(150, 100)
 
+            from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene
             self.view = QGraphicsView()
             self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -78,6 +79,7 @@ class LayerWindow_(QWidget):
                 self.setWindowTitle(f"Layer {layer_index + 1} (not found)")
 
             self.rotation = 0
+            self.zoom_level = 1.0
             self.restore_state(saved_state)
             self._loading = False
 
@@ -93,7 +95,7 @@ class LayerWindow_(QWidget):
         if not state:
             self.resize(500, 400)
             self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-            self.zoom_level = self.view.transform().m11()
+            self.zoom_level = 1.0
             return
         if "x" in state and "y" in state:
             self.move(state["x"], state["y"])
@@ -124,7 +126,7 @@ class LayerWindow_(QWidget):
     def wheelEvent(self, event):
         factor = 1.1 if event.angleDelta().y() > 0 else 0.9
         self.view.scale(factor, factor)
-        self.zoom_level = self.view.transform().m11()
+        self.zoom_level *= factor
         self.schedule_save()
         event.accept()
 

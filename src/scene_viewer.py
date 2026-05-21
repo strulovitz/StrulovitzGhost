@@ -82,7 +82,7 @@ class LayerWindow(QWidget):
         if not state:
             self.resize(500, 400)
             self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-            self.zoom_level = self.view.transform().m11()
+            self.zoom_level = 1.0
             return
 
         if "x" in state and "y" in state:
@@ -139,7 +139,7 @@ class LayerWindow(QWidget):
     def wheelEvent(self, event):
         factor = 1.1 if event.angleDelta().y() > 0 else 0.9
         self.view.scale(factor, factor)
-        self.zoom_level = self.view.transform().m11()
+        self.zoom_level *= factor
         self.schedule_save()
         event.accept()
 
