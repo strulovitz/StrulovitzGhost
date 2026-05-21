@@ -1943,8 +1943,7 @@ With layers=6, output is 7 slices. The 7th (last) is the +1 composite — it's "
 ### Fixes to Try
 
 1. **Kill SageAttention:** Start ComfyUI with `--disable-sage-attention`
-2. **Lower resolution:** 512 instead of 640 (less VRAM pressure = less offloading corruption)
-3. **Filter composite:** After decoding, skip the last slice (it's the composite, not a layer)
+2. **Filter composite:** After decoding, skip the last slice (it's the composite, not a layer)
 
 ---
 
