@@ -12,11 +12,11 @@ from PIL import Image
 
 COMFY_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
-STEPS = 20
+STEPS = 50
 CFG = 4.0
 LAYERS = 6
 SEED = 42
-PREFIX = "monet_ryerson"  # Change this for each painting
+PREFIX = "monet_v2"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -84,7 +84,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": PREFIX.replace("_", " ") + " layers: water lilies, pond surface, reflections, bridge, weeping willow, sky", "clip": ["38", 0]}
+        "inputs": {"text": "Decompose this impressionist painting into 6 depth layers from back to front: 1) far sky and trees, 2) far water surface with reflections, 3) mid-distance water with lily pads, 4) closer water with larger lily pads and flowers, 5) nearest water surface with foreground flowers, 6) closest lily pads and blooms at the very front. Preserve Monet brushwork, soft edges, and impressionist texture.", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
