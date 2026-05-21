@@ -999,21 +999,40 @@ numpy                2.4.4        ✅
 huggingface_hub      1.15.0       ✅
 ```
 
-### Laptop Model Inventory (May 20, 2026 — Updated May 21)
+### Laptop Model Inventory (May 21, 2026 — UPDATED)
+
 | Model | Size | Status |
 |-------|------|--------|
 | `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~17.4 GB | ✅ Downloaded |
 | `unsloth/Qwen-Image-2512-GGUF` | ~12.3 GB | ✅ Downloaded |
-| `Qwen/Qwen-Image-Layered` (full) | ~53.8 GB | ✅ Downloaded |
-| Total models | **~83.5 GB** | ✅ |
-| C: drive free after downloads | ~230 GB | ⚠️ Watch disk |
+| `Qwen/Qwen-Image-Layered` (full fp16) | ~53.8 GB | 🔴 TO DELETE — waste, can't fit 24GB VRAM anyway |
+| Total current | **~83.5 GB** | ⚠️ |
+
+### 🔄 Qwen-Image-Layered — Switch to Pre-Quantized FP8 (May 21, 2026)
+
+**Problem:** Previous session downloaded the full `Qwen/Qwen-Image-Layered` fp16 (53.8 GB). That's ALL precision variants. For Qwen-Image-2512 we used the pre-quantized `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` (17 GB, done). For Qwen-Image-Layered we should do the same — pre-quantized download, not full fp16 + load-time quantization.
+
+**Google AI answer — model comparison:**
+
+| Model | Precision | Download Size | VRAM Base | VRAM @640px | VRAM @1024px | 24GB Fit? | Production? |
+|-------|-----------|---------------|-----------|-------------|--------------|-----------|-------------|
+| `T5B/Qwen-Image-Layered-FP8` 🔥 | FP8 (E4M3FN/E5M2) | ~20.5 GB | ~20.5 GB | ~22 GB | ~23.3 GB | ✅ Yes | ✅ YES — RTX 5090 has native FP8 tensor cores |
+| `unsloth/Qwen-Image-Layered-GGUF` | INT4/INT5 GGUF | ~13.5 GB | ~13.5 GB | ~17.5 GB | ~21 GB | ✅ Yes | ❌ No — ComfyUI/llama.cpp only, not diffusers Python |
+| `mzbac/Qwen-Image-Layered-8bit` | INT8 (BitsAndBytes) | N/A | ~27 GB | N/A | N/A | ❌ No | ❌ Doesn't exist / OOM |
+
+**Why FP8 wins:** RTX 5090 has dedicated FP8 Tensor Cores → native hardware acceleration. FP8 preserves activation layers better than INT8. 1024px fits in 23.3 GB peak — tight but safe. ~33 GB disk savings vs full fp16.
+
+**Plan:**
+1. 🔴 Delete `Qwen/Qwen-Image-Layered` full fp16 from HF cache (~53.8 GB)
+2. 🟢 Download `T5B/Qwen-Image-Layered-FP8` (~20.5 GB) — pre-quantized, direct load
+3. 💾 Net disk savings: ~33 GB freed
 
 ### Laptop Dedicated Qwen-Layered Env (May 21, 2026)
 - **Env name:** `qwen-layered` (`%USERPROFILE%\miniconda3\envs\qwen-layered\python.exe`)
 - **Purpose:** Clean isolated env for Qwen-Image-Layered testing (separate from StrulovitzGhost main env)
 - **Python:** 3.12.13 ✅
 - **Key packages:** torch 2.11.0+cu128, diffusers 0.39.0.dev0, transformers 5.9.0, accelerate 1.13.0, bitsandbytes 0.49.2, python-pptx 1.0.2 (PSD/PPTX export), huggingface_hub 1.15.0
-- **Note:** No Flask/PyQt6 — pure AI research env. `diffusers 0.39.0.dev0` (dev version — has features needed for Qwen-Image-Layered pipeline) |
+- **Note:** No Flask/PyQt6 — pure AI research env. `diffusers 0.39.0.dev0` (dev version — has features needed for Qwen-Image-Layered pipeline)
 
 ### 🚀 Next: Comparison with Desktop
 - Desktop: RTX 4070 Ti 12GB → Qwen 4-bit generation ~9 min per layer at 768×576 / 15 steps
