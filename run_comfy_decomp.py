@@ -14,18 +14,10 @@ COMFY_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
 STEPS = 50
 CFG = 4.0
-LAYERS = 6
+LAYERS = 4
 SEED = 42
 SHIFT = 1.0
-PREFIX = "great_wave_multi"  # Change this for each painting
-
-# Multiline prompt — one line per layer, foreground first, background last
-MULTI_PROMPT = """a very close small wave and a close fishing boat on the right with only half visible,
-a lower wave that stretches across from left to right,
-a fishing boat at medium distance on the left with only half visible,
-the great wave very tall on the left side and a far away fishing boat on the right side,
-far away Mount Fuji slightly to the right and downward from the center,
-beige colored sky,"""
+PREFIX = "mona_lisa"
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -93,7 +85,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": MULTI_PROMPT, "clip": ["38", 0]}
+        "inputs": {"text": "the woman in foreground, her folded hands, the dark dress and veil, the distant landscape background", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
