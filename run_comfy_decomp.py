@@ -1,18 +1,41 @@
 """
 Submit Qwen-Image-Layered decomposition to running ComfyUI server.
+Automatically resizes input image to 640px and converts to RGBA.
+Usage: python run_comfy_decomp.py <path_to_painting.jpg>
 """
 import json
 import urllib.request
 import time
 import os
+import sys
+from PIL import Image
 
 COMFY_URL = "http://127.0.0.1:8188"
-INPUT_IMAGE = "C:/Users/nir_s/StrulovitzGhost/src/output/starry_night_640.png"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
 STEPS = 20
 CFG = 4.0
 LAYERS = 6
 SEED = 42
+
+# ----- Auto-resize input image -----
+def prepare_image(input_path):
+    """Resize any painting to 640px and convert to RGBA."""
+    img = Image.open(input_path)
+    img.thumbnail((640, 640), Image.LANCZOS)   # Preserve aspect ratio
+    img = img.convert("RGBA")                   # Add alpha channel
+    prepared_path = os.path.join(os.path.dirname(input_path), "prepared_input.png")
+    img.save(prepared_path, "PNG")
+    print(f"Resized: {img.size} → {prepared_path}")
+    return prepared_path
+
+# Use command-line argument or default
+if len(sys.argv) > 1:
+    INPUT_IMAGE = sys.argv[1]
+else:
+    INPUT_IMAGE = "C:/Users/nir_s/StrulovitzGhost/src/output/starry_night_640.png"
+
+# Always resize (idempotent — won't upscale if already smaller)
+INPUT_IMAGE = prepare_image(INPUT_IMAGE)
 
 # ----- Upload image via multipart -----
 import io
