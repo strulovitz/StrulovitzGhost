@@ -1807,6 +1807,47 @@ Prompt: Structural description, not layer assignment
 
 ---
 
+## 🧠 Google AI — Q5, Q6 Answers (May 21, 2026)
+
+### Q5: Why Black + Original Pattern Persists
+
+**Root cause:** This is a PROMPT FORMATTING failure, not a settings issue.
+
+The prompt MUST list exactly as many distinct objects as the layer count. If `layers=8` but the prompt only describes 3-4 things, the remaining 4-5 layers will be black because the model has no semantic content to assign to those slots.
+
+**Correct prompt format:** Comma-separated list from foreground to background, exactly matching layer count.
+
+Example for 8 layers:
+```
+"white foam crest at very front, smaller breaking waves, the great wave body, sea spray and mist, calm sea horizon, distant Mount Fuji, bright sky background, sun and clouds"
+```
+
+**Rules:**
+- No aesthetic words ("high quality", "masterpiece", "4k")
+- Comma-separated, exactly matching layer count
+- Foreground first, background last
+- Leave negative prompt COMPLETELY EMPTY (not a space character)
+
+### Q6: The Correct Node Workflow
+
+We DO have the correct node graph (matches the built-in blueprint). The issue is not a missing node — it's the prompt format.
+
+The `ReferenceLatent` node already embeds the image into the conditioning correctly. No special "QwenImageLayeredConditioning" node needed (that node doesn't exist — Google hallucinated the name).
+
+### Next Settings to Try
+
+```
+Shift: 1.0 (back to default — Q5/Q6 don't mention shift)
+CFG: 4.0
+Steps: 50
+Layers: 6
+Resolution: 640
+Negative prompt: "" (empty!)
+Prompt: EXACT 6 comma-separated objects, foreground first
+```
+
+---
+
 ## 🧠 OpenRouter Expert Answers — Qwen-Image-Layered Setup (May 21, 2026)
 
 Three models consulted: Claude Opus 4.7, Gemini 3.1 Pro Preview, GPT-5.5
