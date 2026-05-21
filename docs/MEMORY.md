@@ -1387,3 +1387,91 @@ Google AI gave the identical loading-code answer again. No information about:
 - Image-to-image vs text-to-image usage
 
 ### ⚠️ Google repeated the SAME answer a THIRD time (Q1 retry) — identical loading code, astronaut prompt, still claims 32GB VRAM
+
+---
+
+## 🧠 HuggingFace Direct — OFFICIAL Qwen/Qwen-Image-Layered Documentation (May 21, 2026) 🔥
+
+**Source:** https://huggingface.co/Qwen/Qwen-Image-Layered — THE ACTUAL MODEL CARD
+
+### CRITICAL: Google AI was WRONG about everything
+
+Google AI said: `DiffusionPipeline`, `pipe(prompt)`, single image output. All wrong.
+
+### Correct Pipeline Class
+
+**`QwenImageLayeredPipeline`** — NOT `DiffusionPipeline`!
+
+### Install
+
+```bash
+pip install git+https://github.com/huggingface/diffusers
+pip install python-pptx
+```
+
+Requires `transformers>=4.51.3`.
+
+### Official Code (from model card)
+
+```python
+from diffusers import QwenImageLayeredPipeline
+import torch
+from PIL import Image
+
+pipeline = QwenImageLayeredPipeline.from_pretrained("Qwen/Qwen-Image-Layered")
+pipeline = pipeline.to("cuda", torch.bfloat16)
+pipeline.set_progress_bar_config(disable=None)
+
+image = Image.open("asserts/test_images/1.png").convert("RGBA")
+inputs = {
+    "image": image,
+    "generator": torch.Generator(device='cuda').manual_seed(777),
+    "true_cfg_scale": 4.0,
+    "negative_prompt": " ",
+    "num_inference_steps": 50,
+    "num_images_per_prompt": 1,
+    "layers": 4,                # ← LAYER COUNT! Change to 6
+    "resolution": 640,          # 640 or 1024. 640 recommended
+    "cfg_normalize": True,
+    "use_en_prompt": True,      # Auto caption if user doesn't provide
+}
+
+with torch.inference_mode():
+    output = pipeline(**inputs)
+    output_image = output.images[0]    # ← LIST of per-layer images!
+
+for i, image in enumerate(output_image):
+    image.save(f"{i}.png")
+```
+
+### Key Parameters
+
+| Parameter | Value | Notes |
+|---|---|---|
+| `layers` | 4 (2-8) | Number of output RGBA layers |
+| `resolution` | 640 or 1024 | 640 recommended by Qwen team |
+| `true_cfg_scale` | 4.0 | CFG guidance |
+| `num_inference_steps` | 50 | Sampling steps |
+| `cfg_normalize` | True | CFG normalization |
+| `use_en_prompt` | True | Auto-generates English caption |
+
+### T5B FP8 Usage
+
+The T5B FP8 page shows the generic `DiffusionPipeline` snippet (astronaut prompt) — but that's just HuggingFace's auto-generated template, NOT the real API. The correct way:
+
+```python
+pipeline = QwenImageLayeredPipeline.from_pretrained("T5B/Qwen-Image-Layered-FP8")
+# Same inputs dict as above
+```
+
+### What Google AI Got Wrong
+
+| Google AI Said | Reality |
+|---|---|
+| `DiffusionPipeline` | `QwenImageLayeredPipeline` |
+| `pipe(prompt)` text-to-image | `pipeline(**inputs)` image-to-image |
+| `output.images[0]` = single image | `output.images[0]` = LIST of per-layer images |
+| No `layers` parameter | `layers=4` controls count (2-8) |
+| No `resolution` parameter | `resolution=640` (or 1024) |
+| 32GB VRAM | 640px fits 24GB |
+| Astronaut prompt | Feed a painting image, not a prompt
