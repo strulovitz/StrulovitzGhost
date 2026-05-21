@@ -1212,3 +1212,71 @@ background sky, distant mountains, midground buildings, main subject character, 
 2. **Edge Bleed & Transparency Halos:** Fine elements like stray hair, smoke, or complex lighting effects leave color halos on background layers. Almost always requires post-processing (Photoshop) to matte out fringe edges.
 
 3. **Nondeterministic Splitting:** Because it runs on a diffusion framework, identical inputs can group assets differently if seed is randomized. Must use **fixed seed** when dialing in target layer breakdown.
+
+---
+
+## 🧠 Google AI Answer — Diffusers Pipeline & Exact Model (May 21, 2026)
+
+### Question:
+> For Qwen-Image-Layered on RTX 5090 24GB using Python diffusers only — which exact quantization and HuggingFace repo works? What model ID do I pass to the pipeline?
+
+### Answer: Nunchaku FP4 (NOT T5B FP8!)
+
+**CRITICAL:** The T5B FP8 model we have cached is likely for ComfyUI GGUF workflows, NOT Python diffusers. For diffusers, the pipeline requires the **base model** + **Nunchaku FP4 transformer**.
+
+Because the RTX 5090 is Blackwell architecture with native 5th-gen Tensor Cores that hardware-accelerate FP4, the optimized solution is the **Nunchaku backend** (not bitsandbytes, not the T5B safetensors files).
+
+### Required Repos
+
+| Component | HuggingFace Repo | Purpose |
+|---|---|---|
+| **Base model** | `Qwen/Qwen-Image-Layered` | Main pipeline (architecture, VAE, text encoders) |
+| **FP4 Transformer** | `MIT-HAN-LAB/Qwen-Image-Layered-Nunchaku` | Blackwell-optimized FP4 transformer component |
+
+### Install
+
+```bash
+pip install -U diffusers transformers accelerate nunchaku
+```
+
+### Code Pattern
+
+```python
+import torch
+from diffusers import DiffusionPipeline
+from nunchaku import NunchakuQwenImageTransformer2DModel
+
+transformer = NunchakuQwenImageTransformer2DModel.from_pretrained(
+    "MIT-HAN-LAB/Qwen-Image-Layered-Nunchaku",
+    torch_dtype=torch.bfloat16
+)
+pipe = DiffusionPipeline.from_pretrained(
+    "Qwen/Qwen-Image-Layered",
+    transformer=transformer,
+    torch_dtype=torch.bfloat16
+).to("cuda")
+
+output = pipe(prompt="...", image=input_image).images
+```
+
+### Alternative (bitsandbytes fallback, less optimized)
+
+```python
+from diffusers import PipelineQuantizationConfig
+quant_config = PipelineQuantizationConfig(
+    quant_backend="bitsandbytes_4bit",
+    components_to_quantize=["transformer"]
+)
+pipe = DiffusionPipeline.from_pretrained(
+    "Qwen/Qwen-Image-Layered",
+    quantization_config=quant_config
+)
+```
+
+### ⚠️ IMPLICATION
+
+The T5B FP8 model (~38 GB cached) may be the **wrong format** for diffusers. The Nunchaku approach requires:
+1. Base model `Qwen/Qwen-Image-Layered` — which we DELETED (was 53.8 GB fp16) 🔴
+2. Plus the Nunchaku FP4 transformer (~13-20 GB, not yet downloaded)
+
+We may need to re-download the base model. The T5B FP8 might only work in ComfyUI.
