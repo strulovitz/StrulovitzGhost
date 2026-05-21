@@ -1951,6 +1951,22 @@ The exact same ComfyUI setup works on the desktop, but it's slower due to 12 GB 
 
 ### Step-by-Step Desktop Installation
 
+**Step 0: Resize Your Painting (BEFORE running ComfyUI)**
+```python
+from PIL import Image
+# Load your painting (any format: JPG, PNG, etc.)
+img = Image.open("your_painting.jpg")
+# Resize so the longest side is 640 pixels (preserves aspect ratio)
+img.thumbnail((640, 640), Image.LANCZOS)
+# Convert to RGBA (adds alpha channel for transparency support)
+img = img.convert("RGBA")
+img.save("resized_painting.png", "PNG")
+```
+
+Why 640: The Qwen-Image-Layered pipeline has resolution buckets at 640 and 1024. Using 640 is safer for 12 GB VRAM — it fits better in memory and runs faster. At 1024px the desktop may run out of VRAM even with offloading. If you want to try 1024, test 640 first.
+
+Place the resized PNG in ComfyUI's `input/` directory before starting.
+
 **Step 1: Create a fresh conda environment**
 ```
 conda create -n comfyui python=3.11 -y
