@@ -1371,3 +1371,17 @@ image.save("qwen_layered_output.png")
 - FP8 drops model from ~60GB down to ~20GB
 - Output contains multiple RGBA layers accessible via `output.images`
 - Example shows text-to-image, not image-to-image decomposition — may be incorrect usage
+
+### ⚠️ Google repeated the same answer for Q2 — no new info about inference arguments
+
+---
+
+## 🧠 Google AI Answer — Q2 (May 21, 2026) — GOT SAME ANSWER AGAIN
+
+### Question:
+> I have an RTX 5090 with 24GB VRAM. What arguments does the T5B/Qwen-Image-Layered-FP8 diffusers pipeline accept during inference, and what does it return?
+
+Google AI gave the identical loading-code answer again. No information about:
+- What arguments `pipe()` accepts (image? prompt? num_layers? cfg? steps?)
+- What `output` object contains (number of images, alpha channels, metadata?)
+- Image-to-image vs text-to-image usage
