@@ -1742,6 +1742,71 @@ Seed: 42
 
 ---
 
+## 🧠 Google AI — Q2, Q3, Q4 Answers (May 21, 2026)
+
+### Q2 Answer: More Settings That Affect Quality
+
+**SHIFT — CRITICAL PARAMETER WE MISSED:**
+The `ModelSamplingAuraFlow` node has a `shift` parameter. Default is 1.0. Google says raise to **12.0 or 13.0**. Low shift causes black layers and failed generation.
+
+**Resolution:**
+Must match native MMDiT training dimensions. 640px is baseline. Non-square aspect ratios may cause artifacts. Try: 1104x1472 or 1584x1056 (MMDiT native ratios).
+
+**VAE:**
+Must use dedicated Qwen RGBA-VAE (we are — `qwen_image_layered_vae.safetensors` is correct). Standard SDXL/FLUX VAEs break transparency.
+
+**Sampler:**
+euler + simple is correct. Avoid ancestral samplers (euler_ancestral) and aggressive schedulers (karras, sgm_uniform).
+
+**Prompt:**
+Does NOT control 1-to-1 layer assignment! Prompt only provides global context for inpainting occluded areas. We've been using wrong prompt strategy.
+
+### Q3 Answer: Prompt Strategy
+
+**The prompt does NOT map to specific layers.** The model decides autonomously based on depth, occlusion, and semantic boundaries.
+
+**Correct prompt strategy:** Structural description, not layer commands.
+- BAD: "Put the wave on layer 1, mountain on layer 2"
+- GOOD: "A dramatic ocean wave crashing in the foreground with a distinct, clear mountain range far in the background under a separate blue sky"
+
+**Alternative:** "Qwen-Image-Layered-Control" from DiffSynth-Studio allows prompt-driven layer selection (fine-tuned version).
+
+### Q4 Answer: Fixing Black Cutouts & Wrong Grouping
+
+**Black cutouts:** VAE underflow in BF16.
+- Fix: Use `VAE Decode (VAE Utils)` node instead of standard `VAEDecode`
+- Or: Set VAE decoding to FP32 mode
+
+**Wrong-layer grouping:** Spatial attention overlap.
+- Fix: Increase target layers to 8
+- Use recursive decomposition (feed problematic layer back in)
+- Increase steps to 60-70
+- CFG 3.5-4.5
+
+### ⚠️ Contradiction Between Answers
+
+| | Q1 | Q2 | Q4 |
+|---|---|---|---|
+| CFG | 1.0-1.5 | 4.0 | 3.5-4.5 |
+| Steps | 4-8 | 40-50 | 60-70 |
+| Shift | not mentioned | 12-13 | not mentioned |
+
+Q2+Q4 consistently say higher CFG + steps. Q1's low values made things slightly better but still broken.
+
+### New Settings to Try (Synthesized from Q2+Q4)
+
+```
+Shift: 12.0 (WAS 1.0 — THIS IS THE BIG CHANGE)
+CFG: 4.0
+Steps: 50
+Layers: 8
+Resolution: 640
+Negative prompt: "" (leave blank per Q2)
+Prompt: Structural description, not layer assignment
+```
+
+---
+
 ## 🧠 OpenRouter Expert Answers — Qwen-Image-Layered Setup (May 21, 2026)
 
 Three models consulted: Claude Opus 4.7, Gemini 3.1 Pro Preview, GPT-5.5
