@@ -1172,3 +1172,43 @@ The Qwen-Image-Layered model is a diffusion-based framework designed to decompos
   - Use `--vae-use-tiling` (breaks VAE into micro-tiles)
   - Use `--vae-use-slicing` (reduces batch pressure during RGBA reconstruction)
 - **Generation time at 4K FP8:** ~35-55 seconds per image on RTX 5090
+
+---
+
+## 🧠 Google AI Answer — Pipeline, Layer Control, CFG, Gotchas (May 21, 2026)
+
+### Question:
+> What's the proper pipeline for Qwen-Image-Layered — diffusers or ComfyUI? With the right quantized version, how do I control the number of output layers (targeting 6)? What CFG prevents hallucination while preserving the original artist's style? Any gotchas or known failure modes with this model?
+
+### Pipeline: ComfyUI vs Diffusers
+
+**ComfyUI is the recommended pipeline.** It has dedicated standardized workflow templates and custom structural nodes for layer decomposition, alpha channel export, and recursive splitting.
+
+HuggingFace diffusers has a modular Python option via `QwenImageLayeredAutoBlocks` pipeline, but ComfyUI is the community standard for visually interacting with, isolating, and exporting generated alpha channels.
+
+### Controlling Layer Count (Targeting 6)
+
+Qwen-Image-Layered uses a **Variable Layer Diffusion and Merging Model (VLDMM)** — no rigid slider for exact layer count. Control is via **prompt-guided conditioning**.
+
+**The prompt strategy:** Pass a comma-separated semantic breakdown into the conditioning node:
+```
+background sky, distant mountains, midground buildings, main subject character, foreground foliage, lighting effects/overlays
+```
+
+**Recursive Gotcha:** If the model clumps into 4 layers instead of 6, don't force it with sampling steps. Use a **recursive workflow**: extract the clustered midground layer and route it back into the Qwen decomposition node to break it down further.
+
+### CFG & Sampling Parameters
+
+| Parameter | Value | Purpose |
+|---|---|---|
+| **CFG Scale** | 3.5 – 4.5 | High enough to obey layer text prompt, low enough to avoid generating new artificial objects |
+| **Steps** | 40 – 50 | Essential for clean alpha masks and soft edges. Below 30 ruins transparency gradients |
+| **Resolution** | 640px – 736px | Model was natively trained at this scale. Forcing 1024px+ causes artifacting and style degradation |
+
+### Critical Gotchas & Failure Modes
+
+1. **Generative Inpainting Hallucination:** When Qwen separates an object, it doesn't just cut it out — it actively inpaints and reconstructs the background behind it. On complex backgrounds, covered parts can look fictionalized and messy. Performs better on illustrations/2D digital art than real photos.
+
+2. **Edge Bleed & Transparency Halos:** Fine elements like stray hair, smoke, or complex lighting effects leave color halos on background layers. Almost always requires post-processing (Photoshop) to matte out fringe edges.
+
+3. **Nondeterministic Splitting:** Because it runs on a diffusion framework, identical inputs can group assets differently if seed is randomized. Must use **fixed seed** when dialing in target layer breakdown.
