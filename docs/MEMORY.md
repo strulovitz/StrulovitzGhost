@@ -1138,3 +1138,37 @@ huggingface_hub      1.15.0       ✅
 > Preserving Fine Art Style: The original art style remains intact. Because it generates independent layers mimicking the original style's raw aesthetic, you can perform scaling, positioning, or minor edits to single layers while preserving the overarching painterly strokes. However, very intricate impasto (heavy, raised 3D paint textures) may lose some unique directional edge lighting during the inpainting of occluded layers, as the model treats them primarily as 2D semantic strokes.
 >
 > Exact Configuration & API Syntax: You control the separation by passing a natural text description of the image content along with a specific parameter for your requested number of layers. The model supports variable decomposition natively. To get your 6 depth layers, you set the num_layers parameter to 6.
+
+---
+
+## 🧠 Google AI Answer — Quantization & Hardware Fit (May 21, 2026 — Session)
+
+### Question:
+> I have an NVIDIA RTX 5090 with 24GB VRAM. I want to use Qwen-Image-Layered to decompose famous paintings into multiple RGBA layers preserving brushwork and art style. What specific quantized versions exist (FP8, INT4, INT8, etc.) and where exactly do I find them on HuggingFace? Which quantization fits 24GB VRAM and what resolution can I expect?
+
+### Available Quantized Versions and HuggingFace Locations
+
+The Qwen-Image-Layered model is a diffusion-based framework designed to decompose a single flat RGB image into multiple transparent, independent RGBA layers with inpainted backgrounds.
+
+| Quantization | HuggingFace Repo | Notes |
+|---|---|---|
+| **FP8** (E5M2 & E4M3FN) | `T5B/Qwen-Image-Layered-FP8` | Main layers FP8, sensitive weights (norm layers, embeddings, biases) kept BF16 for texture fidelity |
+| **INT8** (SVD & SDNQ) | `llmrobot/qwen-image-layered-int8-sdnq` | 8-bit with specialized activation/weight matrix factorization |
+| **GGUF** (Q4, Q5, Q8) | `unsloth/Qwen-Image-Layered-GGUF` | For ComfyUI GGUF nodes only — NOT Python diffusers |
+
+### Best Fit for 24GB VRAM (RTX 5090)
+
+**FP8 is the optimal choice.** 🔥
+
+- Native BF16 requires >24GB alongside text encoders and VAE — would OOM without aggressive offloading
+- FP8 cuts model footprint almost in half
+- FP8 preserves intricate brushwork, impasto, paint textures better than 4-bit (Q4_K), which exhibits "blurry" or AI-flattened artifacts on fine art
+- Blackwell RTX 5090 has **native dual-issue FP8 Tensor Cores** — maximum hardware acceleration, no compute bottleneck
+
+### Expected Resolution
+
+- **Standard (comfortable):** 1024×1024 to 2048×2048 — no OOM risk
+- **Maximum (with VAE optimizations):** up to 3820×2160 (16:9) or 4096×4096 square
+  - Use `--vae-use-tiling` (breaks VAE into micro-tiles)
+  - Use `--vae-use-slicing` (reduces batch pressure during RGBA reconstruction)
+- **Generation time at 4K FP8:** ~35-55 seconds per image on RTX 5090
