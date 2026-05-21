@@ -984,13 +984,21 @@ numpy                2.4.4        ✅
 huggingface_hub      1.15.0       ✅
 ```
 
-### Laptop Model Inventory (May 20, 2026)
+### Laptop Model Inventory (May 20, 2026 — Updated May 21)
 | Model | Size | Status |
 |-------|------|--------|
 | `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~17.4 GB | ✅ Downloaded |
 | `unsloth/Qwen-Image-2512-GGUF` | ~12.3 GB | ✅ Downloaded |
-| Total models | **~29.7 GB** | ✅ |
-| C: drive free after downloads | ~284 GB | ✅ Healthy |
+| `Qwen/Qwen-Image-Layered` (full) | ~53.8 GB | ✅ Downloaded |
+| Total models | **~83.5 GB** | ✅ |
+| C: drive free after downloads | ~230 GB | ⚠️ Watch disk |
+
+### Laptop Dedicated Qwen-Layered Env (May 21, 2026)
+- **Env name:** `qwen-layered` (`%USERPROFILE%\miniconda3\envs\qwen-layered\python.exe`)
+- **Purpose:** Clean isolated env for Qwen-Image-Layered testing (separate from StrulovitzGhost main env)
+- **Python:** 3.12.13 ✅
+- **Key packages:** torch 2.11.0+cu128, diffusers 0.39.0.dev0, transformers 5.9.0, accelerate 1.13.0, bitsandbytes 0.49.2, python-pptx 1.0.2 (PSD/PPTX export), huggingface_hub 1.15.0
+- **Note:** No Flask/PyQt6 — pure AI research env. `diffusers 0.39.0.dev0` (dev version — has features needed for Qwen-Image-Layered pipeline) |
 
 ### 🚀 Next: Comparison with Desktop
 - Desktop: RTX 4070 Ti 12GB → Qwen 4-bit generation ~9 min per layer at 768×576 / 15 steps
