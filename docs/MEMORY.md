@@ -1508,6 +1508,25 @@ pipeline.transformer = transformer
 
 **Next: Complete the base model download, then retry with T5B FP8 transformer swap.**
 
+### 🔴 T5B FP8 — VERDICT: DOES NOT WORK with diffusers (May 21, 2026)
+
+Tried 4 different loading methods, all failed:
+
+| Attempt | Method | Error |
+|---|---|---|
+| 1 | `QwenImageLayeredPipeline.from_pretrained("T5B/...")` | `model_index.json` 404 |
+| 2 | Load base pipeline + swap transformer with `subfolder="transformer"` | `transformer/config.json` 404 |
+| 3 | Load base pipeline + swap transformer without subfolder | `config.json` 404 |
+| 4 | `QwenImageTransformer2DModel.from_single_file(safetensors_path)` | Tries to find SD 1.5 config |
+
+**Root cause:** T5B FP8 repo has only raw safetensors — no `config.json`, no `model_index.json`, no pipeline structure. It's a component-level weights dump, not a loadable model. The FP8 format also seems unsupported by the standard `from_single_file` loader (it falls back to SD 1.5 config).
+
+**The base model (`Qwen/Qwen-Image-Layered`) is now fully downloaded (30 files, ~53 GB).**
+
+### 🎯 NEXT: Use the base model with BitsAndBytes 4-bit (rvorias method)
+
+This is the ONLY method confirmed working on 24GB cards by the community.
+
 ---
 
 ## 🧠 HuggingFace Direct — OFFICIAL Qwen/Qwen-Image-Layered Documentation (May 21, 2026) 🔥
