@@ -1848,6 +1848,47 @@ Prompt: EXACT 6 comma-separated objects, foreground first
 
 ---
 
+## 🔥 GOOGLE Q9 — WHY ONLY THE LAST LAYER WORKS (May 21, 2026)
+
+### THE CULPRIT: Single Text Prompt
+
+When you pass ONE text string (even comma-separated), Qwen-Image-Layered interprets it as instructions for a SINGLE layer. It applies it to the last layer, does it well (sky removed = clean), and fills the remaining earlier layers with empty slots → black/white/original duplicates.
+
+**"The model receives a single text string and assumes a 1-layer target decomposition."**
+
+The last layer works because the model applies the prompt to the FINAL index position. All earlier positions get fallback data.
+
+### THE FIX: Multiline Prompt
+
+Use a **PrimitiveStringMultiline** node instead of standard text input. Each line = one layer's instructions.
+
+**Format (6 layers, one per line, comma-separated per line):**
+```
+white foam crest at very front,
+the great wave body with claw-like tips,
+smaller foreground breaking waves,
+calm sea horizon in the distance,
+distant Mount Fuji in the background,
+sky with clouds,
+```
+
+**Rules:**
+- One line per layer
+- Each line ends with a comma (preserves comma-separation pattern)
+- Number of lines MUST equal the layers parameter
+- Foreground first, background last
+
+### Additional Notes from Q9
+- **VAE must be `qwen_image_layered_vae.safetensors`** — we have this ✅
+- **Standard VAE destroys alpha** → black/white frames
+- **Remove `--fast` from ComfyUI startup** — we don't use it ✅
+- **Use dedicated Qwen Layer Selection/Refinement node** to extract individual layers (may not be needed if LatentCutToBatch is working)
+
+### ⚠️ CONTRADICTION WITH Q5/Q6
+Q5 said "comma-separated list matching layer count." Q9 says "single text string breaks it." Both could be true: a comma list in ONE text box may not be the same as MULTILINE per-layer prompts. The fix: use multiline input.
+
+---
+
 ## 🧠 Google AI — Q7, Q8 Answers (May 21, 2026) 🔥 KEY INSIGHTS
 
 ### Q7: Why Only ONE Good Layer?
