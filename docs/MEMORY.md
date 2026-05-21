@@ -1489,7 +1489,24 @@ pipeline.enable_model_cpu_offload()
 
 The T5B FP8 is already cached. Before downloading anything, try loading it with `QwenImageLayeredPipeline`. If it works, we're done. If not, try Method B (SageAttention + full BF16 — requires re-downloading the base model we deleted).
 
-**We need the base `Qwen/Qwen-Image-Layered` model for both Methods A and B.** The T5B FP8 is the only approach that uses our existing cache.
+---
+
+### 🔴 T5B FP8 Test — May 21, 2026
+
+**Attempt 1:** `QwenImageLayeredPipeline.from_pretrained("T5B/Qwen-Image-Layered-FP8")` → **FAILED**
+- Error: `model_index.json` 404 Not Found
+- T5B FP8 is just weights (safetensors), not a full pipeline. Missing pipeline config.
+
+**Attempt 2:** Load base pipeline + swap in T5B FP8 transformer
+```python
+pipeline = QwenImageLayeredPipeline.from_pretrained("Qwen/Qwen-Image-Layered")
+transformer = QwenImageTransformer2DModel.from_pretrained("T5B/Qwen-Image-Layered-FP8", subfolder="transformer")
+pipeline.transformer = transformer
+```
+- Requires downloading full base model `Qwen/Qwen-Image-Layered` (~53 GB) for pipeline structure
+- Cache has partial files (16.9 GB) — need to complete download
+
+**Next: Complete the base model download, then retry with T5B FP8 transformer swap.**
 
 ---
 
