@@ -1990,106 +1990,100 @@ The desktop has half the VRAM. ComfyUI will offload far more aggressively. Expec
 - If OOM occurs, drop resolution to 512 or steps to 15
 
 
-## 🔄 RECURSIVE DECOMPOSITION — Via the Flask Website (Correct Architecture)
+## 🔄 RECURSIVE DECOMPOSITION — Boss-Orchestrated, Website as Storage
 
 ### The Vision
-Each computer takes ONE image and splits it into 2 RGBA layers. Those 2 layers become new Tasks on the website. Other workers claim those tasks, split each into 2 more. Repeat until we have enough layers.
+Each computer takes ONE image and splits it into 2 RGBA layers. The Boss decides when to split further and creates new Tasks. Workers just execute. The website is pure storage — it never makes decisions.
 
-### No Direct Communication — Everything Through the Website
-Workers NEVER talk to each other. They don't use OpenCode, DeepSeek, séance, or GitHub. They only talk to the Flask website (the central hub), just like the existing D&D scene pipeline.
+### Correct Roles
+- **Website (Flask):** Storage only. Stores Questions, Tasks, and images. Serves them when asked. Never creates anything on its own — no auto-creating child tasks, no decision logic.
+- **Boss:** The brain. Creates the initial Question. Decides depth. Creates new Tasks when a parent task is done. Runs the 8→6 combining algorithm at the end.
+- **Worker:** Polls for tasks. Claims one. Downloads input image from website. Runs ComfyUI with `layers=2`. Uploads both output layers to website. Marks task complete. That's it — never talks to Boss directly.
 
-### The Recursive Flow (Website-Mediated)
+### The Recursive Flow (Boss-Orchestrated)
 
 ```
-1. Boss creates Question: "Split Starry Night into 2 layers"
-2. Boss uses LLM to create 1 Task: {"prompt": "...", "layers": 2, "depth": 0, "max_depth": 3}
-3. Worker A polls website → claims Task
-4. Worker A downloads source image from website → runs ComfyUI with layers=2
-5. Worker A gets 2 RGBA layers → uploads BOTH back to website
-6. Website receives 2 layers → creates 2 NEW Tasks (child tasks):
-   Task B: {"prompt": "...", "layers": 2, "depth": 1, "parent_image": "layer_0.png"}
-   Task C: {"prompt": "...", "layers": 2, "depth": 1, "parent_image": "layer_1.png"}
-7. Worker B claims Task B → splits layer_0 into 2 → uploads → website creates 2 more tasks
-8. Worker C claims Task C → splits layer_1 into 2 → uploads → website creates 2 more tasks
-9. Continue until depth = max_depth (no more child tasks created)
-10. When all tasks at max_depth are done → website combines layers (8→6 algorithm)
+1. Boss creates Question: "Split Starry Night recursively"
+2. Boss creates Task A: {depth: 0, max_depth: 3, layers: 2, input_image: "starry_night.png"}
+3. Worker X polls website → claims Task A
+4. Worker X downloads starry_night.png from website → runs ComfyUI (layers=2) → gets 2 layers
+5. Worker X uploads both layers to website → marks Task A complete
+6. Boss polls → sees Task A done
+7. Boss downloads the 2 layers from website
+8. Boss decides: "depth 0 < max_depth 3, keep going"
+9. Boss creates Task B: {depth: 1, input_image: "layer_0.png"}
+10. Boss creates Task C: {depth: 1, input_image: "layer_1.png"}
+11. Worker Y claims Task B → splits layer_0 → uploads 2 results
+12. Worker Z claims Task C → splits layer_1 → uploads 2 results
+13. Boss sees B and C done → creates 4 more tasks at depth=2
+14. Repeat until depth = max_depth
+15. Boss runs 8→6 combining algorithm on final layers
 ```
 
-### That's It
-No séance. No GitHub. No OpenCode. Just workers polling the same Flask website they already poll for D&D scenes. The website is the only mediator.
+### What the Website Does (Nothing Smart)
+Just the existing REST endpoints:
+- `GET /api/tasks/pending` → returns available tasks
+- `POST /api/tasks/<id>/claim` → worker claims a task
+- `POST /api/tasks/<id>/upload` → worker uploads resulting layers
+- `GET /api/images/<filename>` → serve image files
+- `GET /api/questions/<id>` → Boss polls to check task completion status
 
-### Required Code Changes
+### What the Boss Does (All the Intelligence)
+- Creates Tasks with `depth`, `max_depth`, `layers`, `input_image`
+- Polls tasks to check completion
+- When a task completes: if `depth < max_depth`, downloads results and creates 2 new child tasks
+- When all tasks at max_depth are done: runs combining algorithm
+- The Boss code runs in `src/boss.py` (PyQt6 GUI) or as a standalone script
 
-**In `src/models.py`:** Add fields to Task model:
+### Why This Is Clean
+- Website has ZERO business logic — just CRUD storage
+- Boss has ALL the intelligence — one place to change the splitting strategy
+- Workers are dumb and interchangeable — any computer can be a worker
+- Same architecture as existing D&D scene pipeline — just `layers=N` instead of `layers=1`
+
+### Code to Add (src/boss.py or GUI boss mode)
 ```python
-class Task(db.Model):
-    # ... existing fields ...
-    layers = db.Column(db.Integer, default=1)           # How many layers to output (2 for recursive)
-    depth = db.Column(db.Integer, default=0)             # Current recursion depth
-    max_depth = db.Column(db.Integer, default=3)         # How deep to recurse
-    parent_task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=True)  # Who spawned this task
-    input_image = db.Column(db.String(256), nullable=True)  # Source image filename to split
-    result_filenames = db.Column(db.Text, nullable=True)  # Comma-separated: "layer_0.png,layer_1.png"
-    child_tasks = db.relationship("Task", backref=db.backref("parent", remote_side=[id]))
+def process_recursive(question, max_depth=3):
+    """Boss polls tasks and creates child tasks recursively."""
+    while True:
+        # Check all tasks for this question
+        pending = Task.query.filter_by(question_id=question.id, status='pending').all()
+        claimed = Task.query.filter_by(question_id=question.id, status='claimed').all()
+        
+        # Wait for all tasks to complete
+        if pending or claimed:
+            time.sleep(2)
+            continue
+        
+        # All tasks done — check depth
+        completed = Task.query.filter_by(question_id=question.id, status='completed').all()
+        max_current_depth = max(t.depth for t in completed)
+        
+        if max_current_depth >= max_depth:
+            # Done recursing — run combining
+            combine_layers([t for t in completed if t.depth == max_depth])
+            break
+        
+        # Create children for tasks at current depth that don't already have children
+        for task in completed:
+            if task.depth < max_depth:
+                existing_children = Task.query.filter_by(parent_task_id=task.id).count()
+                if existing_children == 0:
+                    # Download results from website
+                    for i, filename in enumerate(task.result_filenames.split(',')):
+                        child = Task(
+                            question_id=question.id,
+                            parent_task_id=task.id,
+                            depth=task.depth + 1,
+                            max_depth=max_depth,
+                            layers=2,
+                            input_image=filename,
+                            prompt=f"Decompose this layer further",
+                            status='pending',
+                        )
+                        db.session.add(child)
+        db.session.commit()
 ```
-
-**In `src/app.py`:** Modify upload endpoint to handle multi-file upload and child task creation:
-```python
-@app.route("/api/tasks/<int:task_id>/upload", methods=["POST"])
-def upload_task_result(task_id):
-    task = db.session.get(Task, task_id)
-    # Accept multiple files
-    files = request.files.getlist("files")
-    saved = []
-    for i, file in enumerate(files):
-        filename = f"task_{task_id}_layer_{i}.png"
-        file.save(os.path.join(OUTPUT_DIR, filename))
-        saved.append(filename)
-    
-    task.status = TaskStatus.COMPLETED
-    task.result_filenames = ",".join(saved)
-    task.completed_at = datetime.now(timezone.utc)
-    
-    # If recursive: create child tasks for next depth
-    if task.layers > 1 and task.depth < task.max_depth:
-        for i, filename in enumerate(saved):
-            child = Task(
-                question_id=task.question_id,
-                layers=2,
-                depth=task.depth + 1,
-                max_depth=task.max_depth,
-                parent_task_id=task.id,
-                input_image=filename,
-                prompt=f"Decompose this layer further (depth {task.depth + 1}/{task.max_depth})",
-                status=TaskStatus.PENDING,
-            )
-            db.session.add(child)
-    
-    db.session.commit()
-    return jsonify({"status": "ok", "saved": saved, "children_created": len(saved) if task.depth < task.max_depth else 0})
-```
-
-**In `src/generator.py`:** Support `layers > 1` parameter:
-```python
-def generate_layers(image_path, output_dir, layers=2, steps=20, cfg=4.0):
-    # Calls ComfyUI API with layers=N
-    # Returns list of output filenames
-    # (Uses same run_comfy_decomp.py pattern)
-```
-
-### What the Worker Does
-1. Poll `/api/tasks/pending` → get a task
-2. Claim it: POST `/api/tasks/<id>/claim`
-3. Download `input_image` from website: GET `/api/images/<filename>`
-4. Run ComfyUI: layers=task.layers (2 for recursive)
-5. Upload all resulting layers: POST `/api/tasks/<id>/upload` with multiple files
-6. Repeat
-
-### Why This Scales
-- Any computer with 12+ GB VRAM can be a worker
-- No coordination between workers — they just poll and claim
-- Works over LAN or internet (Cloudflared tunnel for public mode)
-- Same architecture as existing D&D scene pipeline — just layers=N instead of layers=1
 
 
 ## 🧩 8→6 LAYER COMBINING — Preserving Parallax
