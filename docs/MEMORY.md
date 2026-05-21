@@ -1709,13 +1709,44 @@ pipeline = QwenImageLayeredPipeline.from_pretrained("T5B/Qwen-Image-Layered-FP8"
 
 Three models consulted: Claude Opus 4.7, Gemini 3.1 Pro Preview, GPT-5.5
 
-### Claude Opus 4.7
+### Claude Opus 4.7 (CORRECTED — admitted all hallucinations)
 
-- Recommends `DiffusionPipeline.from_pretrained()` with `variant="bf16"` (likely wrong pipeline class — should be `QwenImageLayeredPipeline`)
-- Claims `num_layers=6`, `layer_mode="rgba_transparent"`, `preserve_strokes=True` — these parameter names are unverified, likely hallucinated
-- **Good advice:** bfloat16, VAE tiling, attention_slicing("max"), CPU offload fallback
-- Recommends 40-60 steps, CFG 3.5-5.0
-- Suggests sanity check: composite layers back → should match source
+Claude admitted fabricating: `num_layers`, `layer_mode`, `preserve_strokes`, `guidance_scale`, `enable_vae_tiling`, `enable_attention_slicing`, `.to("cuda")` without offload.
+
+**Corrected code from Claude:**
+
+```python
+pipe = DiffusionPipeline.from_pretrained(
+    "Qwen/Qwen-Image-Layered",
+    torch_dtype=torch.bfloat16,
+)
+pipe.enable_model_cpu_offload()
+
+src = Image.open("painting.png").convert("RGBA")
+generator = torch.Generator(device="cuda").manual_seed(42)
+
+result = pipe(
+    image=src,
+    generator=generator,
+    true_cfg_scale=4.0,
+    negative_prompt=" ",
+    num_inference_steps=50,
+    num_images_per_prompt=1,
+    layers=6,
+    resolution=640,           # 640 or 1024
+    cfg_normalize=True,
+    use_en_prompt=True,
+)
+
+for i, layer in enumerate(result.layers):  # Claude notes: verify .layers vs .images vs other
+    layer.save(f"layer_{i:02d}.png")
+```
+
+**Claude's honest caveats:**
+- Not sure if return is `.layers`, `.images`, or tuple — needs checking model card
+- 640 resolution is safe first run; 1024 pushes offload harder
+- No magic `preserve_strokes` flag — only levers are `true_cfg_scale`, `num_inference_steps`, and `resolution`
+- Alpha-compositing sanity check still recommended
 
 ### Gemini 3.1 Pro Preview
 
