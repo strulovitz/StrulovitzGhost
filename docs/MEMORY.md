@@ -1786,3 +1786,29 @@ for i, layer in enumerate(result.layers):  # Claude notes: verify .layers vs .im
 | Pipeline class | DiffusionPipeline ❌ | AutoModelForCausalLM ❌ | Official repo needed |
 | Max resolution | 1536² | 1512² | 1024-1536 |
 | Windows vs Linux | Windows OK | Windows OK | WSL2 preferred |
+
+---
+
+## 🎉 FIRST SUCCESSFUL RUN — May 21, 2026
+
+**Pipeline:** ComfyUI built-in blueprint "Image to Layers (Qwen-Image-Layered)"
+**Model:** BF16 UNET (~40 GB), FP8 CLIP (9.4 GB), BF16 VAE (0.25 GB)
+**Input:** Van Gogh Starry Night, resized to 640px
+**Settings:** 20 steps, CFG 4.0, layers=6, seed 42
+
+**Result:** 7 RGBA layers produced at 640x504px with alpha channels.
+
+Output files: `src/output/comfy_starry_layers_00001_.png` through `_00007_.png`
+All RGBA mode, 640x504 pixels.
+
+**What succeeded:**
+- ComfyUI async weight offloading (2 streams + DynamicVRAM) handled 40 GB UNET on 24 GB
+- Job completed without OOM or freeze
+- All layers have alpha (transparency) channels
+
+**API fixes required:**
+- LoadImage node needed (not raw filename string)
+- SaveImage output node required (otherwise "prompt has no outputs") 
+- Image pre-uploaded to ComfyUI `input/` directory
+
+**Next steps:** Inspect layers visually, composite back to verify reconstruction
