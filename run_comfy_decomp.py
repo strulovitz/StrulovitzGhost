@@ -12,11 +12,11 @@ from PIL import Image
 
 COMFY_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
-STEPS = 50
+STEPS = 20
 CFG = 4.0
 LAYERS = 6
 SEED = 42
-PREFIX = "monet_v2"  # Change this for each painting
+PREFIX = "great_wave"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
@@ -84,7 +84,7 @@ prompt_nodes = {
     },
     "6": {
         "class_type": "CLIPTextEncode",
-        "inputs": {"text": "Decompose this impressionist painting into 6 depth layers from back to front: 1) far sky and trees, 2) far water surface with reflections, 3) mid-distance water with lily pads, 4) closer water with larger lily pads and flowers, 5) nearest water surface with foreground flowers, 6) closest lily pads and blooms at the very front. Preserve Monet brushwork, soft edges, and impressionist texture.", "clip": ["38", 0]}
+        "inputs": {"text": "Decompose this woodblock print into 6 depth layers from back to front: 1) sky and distant Mount Fuji, 2) far ocean horizon, 3) mid-distance waves, 4) the great wave crest with foam, 5) smaller foreground waves breaking, 6) closest wave spray and foam at the very front. Preserve the flat colors, clean edges, and woodblock print texture.", "clip": ["38", 0]}
     },
     "7": {
         "class_type": "CLIPTextEncode",
