@@ -16,7 +16,7 @@ STEPS = 20
 CFG = 4.0
 LAYERS = 6
 SEED = 42
-PREFIX = "monet_lilies"  # Change this for each painting
+PREFIX = "monet_ryerson"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
