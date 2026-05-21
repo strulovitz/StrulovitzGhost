@@ -999,14 +999,15 @@ numpy                2.4.4        ✅
 huggingface_hub      1.15.0       ✅
 ```
 
-### Laptop Model Inventory (May 21, 2026 — UPDATED)
+### Laptop Model Inventory (May 21, 2026)
 
 | Model | Size | Status |
 |-------|------|--------|
 | `unsloth/Qwen-Image-2512-unsloth-bnb-4bit` | ~17.4 GB | ✅ Downloaded |
 | `unsloth/Qwen-Image-2512-GGUF` | ~12.3 GB | ✅ Downloaded |
-| `Qwen/Qwen-Image-Layered` (full fp16) | ~53.8 GB | 🔴 TO DELETE — waste, can't fit 24GB VRAM anyway |
-| Total current | **~83.5 GB** | ⚠️ |
+| `T5B/Qwen-Image-Layered-FP8` | ~38.1 GB | ✅ Downloaded — FP8 pre-quantized, RTX 5090 native |
+| ~~`Qwen/Qwen-Image-Layered` (full fp16)~~ | ~~53.8 GB~~ | 🔴 DELETED May 21 — replaced by T5B FP8 |
+| Total | **~67.8 GB** | ✅ |
 
 ### 🔄 Qwen-Image-Layered — Switch to Pre-Quantized FP8 (May 21, 2026)
 
