@@ -12,11 +12,11 @@ from PIL import Image
 
 COMFY_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = "C:/Users/nir_s/StrulovitzGhost/src/output"
-STEPS = 20
-CFG = 4.0
+STEPS = 8
+CFG = 1.0
 LAYERS = 6
 SEED = 42
-PREFIX = "great_wave"  # Change this for each painting
+PREFIX = "great_wave_v2"  # Change this for each painting
 
 # ----- Auto-resize input image -----
 def prepare_image(input_path):
