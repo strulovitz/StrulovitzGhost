@@ -1,5 +1,7 @@
 import sys
 import os
+import traceback
+import json as json_mod
 from logger import setup_logging
 setup_logging()
 
@@ -24,12 +26,314 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QSplitter,
     QFileDialog,
+    QGraphicsView,
+    QGraphicsScene,
 )
-from PyQt6.QtCore import QTimer, Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QTimer, Qt, QThread, pyqtSignal, QRectF
+from PyQt6.QtGui import QPixmap, QImage, QPainter
 
 
 SERVER_URL = "http://localhost:5000"
+
+
+class LayerWindow_(QWidget):
+    def __init__(self, image_path, layer_index, saved_state=None):
+        super().__init__()
+        self.image_path = image_path
+        self.layer_index = layer_index
+        try:
+            self.setWindowTitle(f"Layer {layer_index + 1}")
+            self.setWindowFlags(
+                Qt.WindowType.Window |
+                Qt.WindowType.WindowCloseButtonHint |
+                Qt.WindowType.WindowMinimizeButtonHint |
+                Qt.WindowType.WindowMaximizeButtonHint
+            )
+            self.setMinimumSize(150, 100)
+
+            self.view = QGraphicsView()
+            self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+            self.view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+            self.view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+            self.view.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+
+            self.scene = QGraphicsScene()
+            self.pixmap_item = self.scene.addPixmap(QPixmap())
+            self.view.setScene(self.scene)
+
+            layout = QVBoxLayout()
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.addWidget(self.view)
+            self.setLayout(layout)
+
+            self._loading = True
+            img = QImage(image_path)
+            if not img.isNull():
+                self.pixmap_item.setPixmap(QPixmap.fromImage(img))
+                r = self.pixmap_item.pixmap().rect()
+                self.scene.setSceneRect(QRectF(r))
+            else:
+                self.setWindowTitle(f"Layer {layer_index + 1} (not found)")
+
+            self.rotation = 0
+            self.restore_state(saved_state)
+            self._loading = False
+
+            self._save_timer = QTimer()
+            self._save_timer.setSingleShot(True)
+            self._save_timer.setInterval(200)
+            self._save_timer.timeout.connect(self.signal_save)
+        except Exception:
+            import logging
+            logging.error(f"LayerWindow_ init failed: {traceback.format_exc()}")
+
+    def restore_state(self, state):
+        if not state:
+            self.resize(500, 400)
+            self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+            self.zoom_level = self.view.transform().m11()
+            return
+        if "x" in state and "y" in state:
+            self.move(state["x"], state["y"])
+        if "w" in state and "h" in state:
+            self.resize(state["w"], state["h"])
+        self.view.resetTransform()
+        zoom = state.get("zoom", 1.0)
+        if zoom <= 0:
+            zoom = 1.0
+        self.zoom_level = zoom
+        self.view.scale(zoom, zoom)
+        rotation = state.get("rotation", 0)
+        self.rotation = rotation % 360
+        if rotation:
+            self.view.rotate(rotation)
+        if "center_x" in state and "center_y" in state:
+            self.view.centerOn(state["center_x"], state["center_y"])
+
+    def get_state(self):
+        center = self.view.mapToScene(self.view.viewport().rect().center())
+        return {
+            "x": self.x(), "y": self.y(), "w": self.width(), "h": self.height(),
+            "zoom": self.zoom_level,
+            "rotation": self.rotation,
+            "center_x": center.x(), "center_y": center.y(),
+        }
+
+    def wheelEvent(self, event):
+        factor = 1.1 if event.angleDelta().y() > 0 else 0.9
+        self.view.scale(factor, factor)
+        self.zoom_level = self.view.transform().m11()
+        self.schedule_save()
+        event.accept()
+
+    def closeEvent(self, event):
+        self.schedule_save()
+        event.accept()
+
+
+class ViewerWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.windows = []
+        self.base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "output")
+        layout = QVBoxLayout(self)
+
+        title = QLabel("🎬 Scene Viewer")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #4ecca3; padding: 5px;")
+        layout.addWidget(title)
+
+        info = QLabel("Select a scene below. Layer windows will open as separate floating windows. Move, resize, or zoom them — all settings auto-save to scene.json.")
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #aaa; padding: 5px;")
+        layout.addWidget(info)
+
+        sel_row = QHBoxLayout()
+        self.prev_btn = QPushButton("◀ Prev")
+        self.prev_btn.setEnabled(False)
+        self.prev_btn.clicked.connect(self.prev_scene)
+        sel_row.addWidget(self.prev_btn)
+
+        self.scene_combo = QComboBox()
+        self.scene_combo.setMinimumWidth(250)
+        self.scene_combo.currentTextChanged.connect(self.on_scene_change)
+        sel_row.addWidget(self.scene_combo, 1)
+
+        self.next_btn = QPushButton("Next ▶")
+        self.next_btn.setEnabled(False)
+        self.next_btn.clicked.connect(self.next_scene)
+        sel_row.addWidget(self.next_btn)
+        layout.addLayout(sel_row)
+
+        self.launch_btn = QPushButton("🚀 Open Layer Windows")
+        self.launch_btn.clicked.connect(self.open_windows)
+        self.launch_btn.setMinimumHeight(35)
+        layout.addWidget(self.launch_btn)
+
+        self.close_btn = QPushButton("✕ Close All Windows")
+        self.close_btn.clicked.connect(self.close_windows)
+        self.close_btn.setEnabled(False)
+        layout.addWidget(self.close_btn)
+
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("color: #4ecca3; font-weight: bold; padding: 5px;")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.status_label)
+
+        self.preview_group = QGroupBox("Scene Contents")
+        preview_layout = QVBoxLayout()
+        self.preview_label = QLabel("")
+        self.preview_label.setWordWrap(True)
+        self.preview_label.setStyleSheet("color: #ccc; font-size: 11px;")
+        preview_layout.addWidget(self.preview_label)
+        self.preview_group.setLayout(preview_layout)
+        layout.addWidget(self.preview_group)
+
+        layout.addStretch()
+
+        self.scenes = []
+        self.refresh_scenes()
+
+    def refresh_scenes(self):
+        self.scenes = []
+        if os.path.isdir(self.base_dir):
+            for entry in sorted(os.listdir(self.base_dir)):
+                path = os.path.join(self.base_dir, entry)
+                if os.path.isdir(path):
+                    pngs = [f for f in os.listdir(path) if f.lower().endswith('.png')]
+                    if pngs:
+                        self.scenes.append(entry)
+        self.scene_combo.clear()
+        self.scene_combo.addItems(self.scenes)
+        if self.scenes:
+            self.scene_combo.setCurrentIndex(0)
+
+    def on_scene_change(self, name):
+        if not name:
+            self.preview_label.setText("")
+            return
+        was_open = bool(self.windows)
+        if self.windows:
+            self.close_windows()
+        folder = os.path.join(self.base_dir, name)
+        lines = []
+        for f in sorted(os.listdir(folder)):
+            if f.lower().endswith('.png'):
+                size_kb = os.path.getsize(os.path.join(folder, f)) // 1024
+                lines.append(f"  📄 {f} ({size_kb} KB)")
+        self.preview_label.setText("\n".join(lines))
+        self._update_nav()
+        if was_open:
+            self.open_windows()
+
+    def _update_nav(self):
+        name = self.scene_combo.currentText()
+        if not self.scenes or not name:
+            self.prev_btn.setEnabled(False)
+            self.next_btn.setEnabled(False)
+            return
+        try:
+            idx = self.scenes.index(name)
+        except ValueError:
+            self.prev_btn.setEnabled(False)
+            self.next_btn.setEnabled(False)
+            return
+        self.prev_btn.setEnabled(idx > 0)
+        self.next_btn.setEnabled(idx < len(self.scenes) - 1)
+
+    def prev_scene(self):
+        name = self.scene_combo.currentText()
+        try:
+            idx = self.scenes.index(name)
+        except ValueError:
+            return
+        if idx > 0:
+            self.scene_combo.setCurrentText(self.scenes[idx - 1])
+
+    def next_scene(self):
+        name = self.scene_combo.currentText()
+        try:
+            idx = self.scenes.index(name)
+        except ValueError:
+            return
+        if idx < len(self.scenes) - 1:
+            self.scene_combo.setCurrentText(self.scenes[idx + 1])
+
+    def open_windows(self):
+        try:
+            self._open_windows_impl()
+        except Exception:
+            import logging
+            logging.error(f"ViewerWidget open_windows failed: {traceback.format_exc()}")
+            self.status_label.setText("❌ Error opening windows — check log file")
+            self.close_windows()
+
+    def _open_windows_impl(self):
+        name = self.scene_combo.currentText()
+        if not name:
+            return
+        self.close_windows()
+        folder = os.path.join(self.base_dir, name)
+        saved = {}
+        scene_json = os.path.join(folder, "scene.json")
+        if os.path.exists(scene_json):
+            try:
+                with open(scene_json, 'r') as f:
+                    saved = json_mod.load(f)
+            except (json_mod.JSONDecodeError, IOError):
+                pass
+        png_files = sorted(
+            f for f in os.listdir(folder)
+            if f.lower().endswith('.png') and 'composite' not in f.lower()
+        )[:6]
+        for i, fname in enumerate(png_files):
+            path = os.path.join(folder, fname)
+            state = saved.get(str(i), None) if saved else None
+            w = LayerWindow_(path, i, state)
+            w.show()
+            w.raise_()
+            w.activateWindow()
+            self.windows.append(w)
+        self.close_btn.setEnabled(True)
+        self.launch_btn.setEnabled(False)
+        self.status_label.setText(f"✅ {len(self.windows)} windows open — {name}")
+        if not hasattr(self, '_auto_save_timer'):
+            self._auto_save_timer = QTimer()
+            self._auto_save_timer.setInterval(2000)
+            self._auto_save_timer.timeout.connect(self.save_all)
+        self._auto_save_timer.start()
+
+    def close_windows(self):
+        self.save_all()
+        if hasattr(self, '_auto_save_timer'):
+            self._auto_save_timer.stop()
+        for w in self.windows:
+            w.close()
+        self.windows.clear()
+        self.close_btn.setEnabled(False)
+        self.launch_btn.setEnabled(True)
+        self.status_label.setText("")
+
+    def save_all(self):
+        if not self.windows:
+            return
+        name = self.scene_combo.currentText()
+        if not name:
+            return
+        state = {}
+        for i, w in enumerate(self.windows):
+            state[str(i)] = w.get_state()
+        scene_json = os.path.join(self.base_dir, name, "scene.json")
+        try:
+            with open(scene_json, 'w') as f:
+                json_mod.dump(state, f, indent=2)
+        except IOError:
+            pass
+
+    def closeEvent(self, event):
+        self.close_windows()
+        event.accept()
 
 
 class MainWindow(QMainWindow):
@@ -50,7 +354,7 @@ class MainWindow(QMainWindow):
         top_bar.addStretch()
         top_bar.addWidget(QLabel("Mode:"))
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["Client", "Boss", "Worker"])
+        self.mode_combo.addItems(["Client", "Boss", "Worker", "Viewer"])
         self.mode_combo.currentTextChanged.connect(self.switch_mode)
         top_bar.addWidget(self.mode_combo)
         layout.addLayout(top_bar)
@@ -59,9 +363,11 @@ class MainWindow(QMainWindow):
         self.client_widget = ClientWidget()
         self.boss_widget = BossWidget()
         self.worker_widget = WorkerWidget()
+        self.viewer_widget = ViewerWidget()
         self.stack.addWidget(self.client_widget)
         self.stack.addWidget(self.boss_widget)
         self.stack.addWidget(self.worker_widget)
+        self.stack.addWidget(self.viewer_widget)
         layout.addWidget(self.stack)
 
     def switch_mode(self, mode):
@@ -72,6 +378,9 @@ class MainWindow(QMainWindow):
             self.boss_widget.refresh()
         elif mode == "Worker":
             self.stack.setCurrentWidget(self.worker_widget)
+        elif mode == "Viewer":
+            self.stack.setCurrentWidget(self.viewer_widget)
+            self.viewer_widget.refresh_scenes()
 
     def get_server(self):
         return self.server_input.text().rstrip("/")

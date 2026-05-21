@@ -1,0 +1,306 @@
+import sys
+import os
+import json
+from PyQt6.QtWidgets import (
+    QApplication, QWidget, QGraphicsView, QGraphicsScene, QVBoxLayout,
+    QHBoxLayout, QLabel, QPushButton, QComboBox,
+)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QShortcut, QKeySequence
+
+SETTINGS_FILE = "scene.json"
+
+
+class LayerWindow(QWidget):
+    def __init__(self, layer_path, layer_index, saved_state=None):
+        super().__init__()
+        self.layer_path = layer_path
+        self.layer_index = layer_index
+        self.setWindowTitle(f"Layer {layer_index + 1}")
+        self.setWindowFlags(
+            Qt.WindowType.Window |
+            Qt.WindowType.WindowCloseButtonHint |
+            Qt.WindowType.WindowMinimizeButtonHint |
+            Qt.WindowType.WindowMaximizeButtonHint
+        )
+        self.setMinimumSize(150, 100)
+
+        self.view = QGraphicsView()
+        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        self.view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.view.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+
+        self.scene = QGraphicsScene()
+        self.pixmap_item = self.scene.addPixmap(QPixmap())
+        self.view.setScene(self.scene)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.view)
+        self.setLayout(layout)
+
+        self._loading = True
+        self.load_image(layer_path)
+        self.restore_state(saved_state)
+        self._loading = False
+
+        self._save_timer = QTimer()
+        self._save_timer.setSingleShot(True)
+        self._save_timer.setInterval(200)
+        self._save_timer.timeout.connect(self.request_save)
+
+    def load_image(self, path):
+        img = QImage(path)
+        if img.isNull():
+            self.setWindowTitle(f"Layer {self.layer_index + 1} (not found)")
+            return
+        pix = QPixmap.fromImage(img)
+        self.pixmap_item.setPixmap(pix)
+        self.scene.setSceneRect(pix.rect())
+
+    def restore_state(self, state):
+        if not state:
+            self.resize(500, 400)
+            self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+            return
+
+        if "x" in state and "y" in state:
+            self.move(state["x"], state["y"])
+        if "w" in state and "h" in state:
+            self.resize(state["w"], state["h"])
+        if "zoom" in state and state.get("zoom", 0) > 0:
+            self.view.resetTransform()
+            self.view.scale(state["zoom"], state["zoom"])
+        if "center_x" in state and "center_y" in state:
+            self.view.centerOn(state["center_x"], state["center_y"])
+
+    def get_state(self):
+        tr = self.view.transform()
+        center = self.view.mapToScene(self.view.viewport().rect().center())
+        return {
+            "x": self.x(),
+            "y": self.y(),
+            "w": self.width(),
+            "h": self.height(),
+            "zoom": tr.m11(),
+            "center_x": center.x(),
+            "center_y": center.y(),
+        }
+
+    def schedule_save(self):
+        if not self._loading:
+            self._save_timer.start()
+
+    def request_save(self):
+        viewer = self.window()
+        if hasattr(viewer, 'save_all'):
+            viewer.save_all()
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self.schedule_save()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.schedule_save()
+
+    def wheelEvent(self, event):
+        factor = 1.1 if event.angleDelta().y() > 0 else 0.9
+        self.view.scale(factor, factor)
+        self.schedule_save()
+        event.accept()
+
+    def closeEvent(self, event):
+        self.schedule_save()
+        event.accept()
+
+
+class SceneViewer(QWidget):
+    def __init__(self, outputs_dir, initial_scene=None):
+        super().__init__()
+        self.outputs_dir = os.path.abspath(outputs_dir)
+        self.current_folder = None
+        self.windows = []
+        self.scenes = self._scan_scenes()
+
+        self.setWindowTitle("StrulovitzGhost — Scene Viewer")
+        self.setFixedSize(420, 120)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(10, 8, 10, 8)
+
+        self.scene_label = QLabel("No scene loaded")
+        self.scene_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.scene_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.scene_label)
+
+        nav = QHBoxLayout()
+
+        self.prev_btn = QPushButton("◀ Prev")
+        self.prev_btn.setEnabled(False)
+        self.prev_btn.clicked.connect(self.prev_scene)
+        nav.addWidget(self.prev_btn)
+
+        self.scene_combo = QComboBox()
+        self.scene_combo.setMinimumWidth(200)
+        for s in self.scenes:
+            self.scene_combo.addItem(s)
+        self.scene_combo.currentTextChanged.connect(self.on_combo_change)
+        nav.addWidget(self.scene_combo, 1)
+
+        self.next_btn = QPushButton("Next ▶")
+        self.next_btn.setEnabled(False)
+        self.next_btn.clicked.connect(self.next_scene)
+        nav.addWidget(self.next_btn)
+
+        layout.addLayout(nav)
+
+        hint = QLabel("Wheel=zoom  |  Drag=pan  |  ← → keys=switch scene")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint.setStyleSheet("color: gray; font-size: 10px;")
+        layout.addWidget(hint)
+
+        self.setLayout(layout)
+
+        QShortcut(QKeySequence(Qt.Key.Key_Left), self, activated=self.prev_scene)
+        QShortcut(QKeySequence(Qt.Key.Key_Right), self, activated=self.next_scene)
+
+        if initial_scene and initial_scene in self.scenes:
+            self.scene_combo.setCurrentText(initial_scene)
+        elif self.scenes:
+            self.scene_combo.setCurrentIndex(0)
+
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _scan_scenes(self):
+        scenes = []
+        if os.path.isdir(self.outputs_dir):
+            for entry in sorted(os.listdir(self.outputs_dir)):
+                path = os.path.join(self.outputs_dir, entry)
+                if os.path.isdir(path):
+                    pngs = [f for f in os.listdir(path) if f.lower().endswith('.png')]
+                    if pngs:
+                        scenes.append(entry)
+        return scenes
+
+    def on_combo_change(self, name):
+        if name and name != self.current_folder:
+            self.load_scene(name)
+
+    def load_scene(self, name):
+        self.save_all()
+
+        for w in self.windows:
+            w.close()
+        self.windows.clear()
+
+        folder = os.path.join(self.outputs_dir, name)
+        settings_path = os.path.join(folder, SETTINGS_FILE)
+        saved = {}
+        if os.path.exists(settings_path):
+            try:
+                with open(settings_path, 'r') as f:
+                    saved = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+
+        png_files = sorted(
+            f for f in os.listdir(folder)
+            if f.lower().endswith('.png') and 'composite' not in f.lower()
+        )[:6]
+
+        self.current_folder = name
+        self.scene_label.setText(f"📁 {name}")
+
+        for i, fname in enumerate(png_files):
+            path = os.path.join(folder, fname)
+            state = saved.get(str(i), None) if saved else None
+            w = LayerWindow(path, i, state)
+            w.show()
+            w.raise_()
+            w.activateWindow()
+            self.windows.append(w)
+
+        self._update_nav()
+
+    def _update_nav(self):
+        if not self.scenes:
+            self.prev_btn.setEnabled(False)
+            self.next_btn.setEnabled(False)
+            return
+        try:
+            idx = self.scenes.index(self.current_folder)
+        except ValueError:
+            self.prev_btn.setEnabled(False)
+            self.next_btn.setEnabled(False)
+            return
+        self.prev_btn.setEnabled(idx > 0)
+        self.next_btn.setEnabled(idx < len(self.scenes) - 1)
+
+    def prev_scene(self):
+        if not self.scenes:
+            return
+        try:
+            idx = self.scenes.index(self.current_folder)
+        except ValueError:
+            return
+        if idx > 0:
+            self.scene_combo.setCurrentText(self.scenes[idx - 1])
+
+    def next_scene(self):
+        if not self.scenes:
+            return
+        try:
+            idx = self.scenes.index(self.current_folder)
+        except ValueError:
+            return
+        if idx < len(self.scenes) - 1:
+            self.scene_combo.setCurrentText(self.scenes[idx + 1])
+
+    def save_all(self):
+        if not self.current_folder:
+            return
+        folder = os.path.join(self.outputs_dir, self.current_folder)
+        state = {}
+        for i, w in enumerate(self.windows):
+            state[str(i)] = w.get_state()
+        try:
+            with open(os.path.join(folder, SETTINGS_FILE), 'w') as f:
+                json.dump(state, f, indent=2)
+        except IOError:
+            pass
+
+    def closeEvent(self, event):
+        self.save_all()
+        for w in self.windows:
+            w.close()
+        event.accept()
+
+
+def launch_scene_viewer(scene_name=None):
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
+
+    repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    outputs_dir = os.path.join(repo_dir, "src", "output")
+
+    if not os.path.isdir(outputs_dir):
+        print(f"Outputs directory not found: {outputs_dir}")
+        sys.exit(1)
+
+    if scene_name is None and len(sys.argv) > 1:
+        scene_name = sys.argv[1]
+
+    print(f"Loading scene viewer... outputs: {outputs_dir}")
+    viewer = SceneViewer(outputs_dir, initial_scene=scene_name)
+    print(f"Scene viewer started with {len(viewer.windows)} layer windows")
+    app.exec()
+
+
+if __name__ == "__main__":
+    launch_scene_viewer()
