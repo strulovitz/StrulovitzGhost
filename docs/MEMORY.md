@@ -1529,6 +1529,30 @@ This is the ONLY method confirmed working on 24GB cards by the community.
 
 ---
 
+### 🟢 ComfyUI Setup for Qwen-Image-Layered FP8 (May 21, 2026)
+
+Downloaded all 3 required files:
+
+| File | Source | Size | Status |
+|---|---|---|---|
+| `qwen_image_layered_fp8_e4m3fn.safetensors` | `T5B/Qwen-Image-Layered-FP8` | 19.06 GB | ✅ In `models/diffusion_models/` |
+| `qwen_2.5_vl_7b_fp8_scaled.safetensors` | `f5aiteam/CLIP` | 8.74 GB | ✅ In `models/text_encoders/` |
+| `qwen_image_vae.safetensors` | `Comfy-Org/Qwen-Image_ComfyUI` | 0.24 GB | ✅ In `models/vae/` |
+
+ComfyUI installed at `C:\Users\nir_s\ComfyUI\`.
+
+### ComfyUI Workflow (from Google AI)
+
+1. Update ComfyUI to latest
+2. Add a GGUF/Diffusion Unet Loader node → select `qwen_image_layered_fp8_e4m3fn.safetensors`
+3. Add a DualCLIPLoader or GGUF CLIP Loader → select `qwen_2.5_vl_7b_fp8_scaled.safetensors`
+4. Route through standard KSampler node
+5. Empty Latent Image resolution: 1024x1024
+
+**NOTE:** This workflow describes text-to-image. We need image-to-image decomposition. Need to determine correct nodes for feeding a painting image and getting RGBA layers back.
+
+---
+
 ## 🧠 HuggingFace Direct — OFFICIAL Qwen/Qwen-Image-Layered Documentation (May 21, 2026) 🔥
 
 **Source:** https://huggingface.co/Qwen/Qwen-Image-Layered — THE ACTUAL MODEL CARD
