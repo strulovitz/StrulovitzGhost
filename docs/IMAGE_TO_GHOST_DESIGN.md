@@ -551,86 +551,126 @@ Then he does ONE final Z-ordering pass on the collected layers, followed by comb
 
 Mid-level bosses NEVER combine. They only arrange. The top boss is the only combiner.
 
-### 5.3 Z-Order Implementation: Pairwise Comparison (Ollama-Compatible)
+### 5.3 Z-Order Implementation: Parent-Anchored Positioning
 
-**CRITICAL:** Ollama's vision API supports ONE image per message, not multiple.
-We cannot send N images and ask "arrange them." Instead, use pairwise comparison:
+**CRITICAL INSIGHT from Nir:** Don't compare sub-parts against EACH OTHER blindly.
+Compare each sub-part against the PARENT IMAGE it came from. Use the whole as context.
+
+**Why this is better:**
+- Qwen3-VL sees the WHOLE and the PART together → spatial understanding is natural
+- Most parts get clear answers ("at the front", "at the back") → Z-order is INFERRED
+- Only ambiguous parts ("in the middle") need pairwise comparison
+- Occlusion shortcut: "Does A hide B?" → instant order. If neither hides the other → same depth, order doesn't matter
+- O(N) not O(N²) — N parent-comparisons + at most ~2 pairwise
+
+**Example: Tractor unit split into 4 sub-parts**
+- Engine compartment + whole tractor → "at the very front" → depth 1 ✅
+- Cabin + whole tractor → "behind the engine" → depth 2 ✅
+- Sleeper + whole tractor → "behind cabin, at the back" → depth 3 ✅
+- Air dam + whole tractor → "above cabin and sleeper" → unclear vs cabin ⚠️
+  → Only air dam vs cabin needs pairwise: "Does cabin hide air dam?" → no → same depth, order irrelevant
+
+4 parts = 4 parent-comparisons + 1 pairwise = 5 calls total (vs 6 pairwise with the old method)
 
 ```python
-def determine_z_order(layer_paths):
+def determine_z_order(sub_part_paths, parent_image_path, parent_description=""):
     """
-    Arrange N images by depth using pairwise Qwen3-VL comparisons.
+    Arrange N sub-parts by depth using parent-anchored Qwen3-VL comparisons.
     
-    Ollama-compatible: each call sends exactly 2 images + prompt.
+    Strategy:
+    1. Compare EACH sub-part against the PARENT image
+    2. From answers, infer Z-order
+    3. Only ambiguous parts get pairwise comparison
+    4. Occlusion check: if A hides B → instant order
     
-    Returns: list of paths sorted farthest→closest.
+    Returns: list of paths sorted closest→farthest.
     """
-    if len(layer_paths) <= 1:
-        return list(layer_paths)
+    if len(sub_part_paths) <= 1:
+        return list(sub_part_paths)
     
-    # Sort using pairwise comparisons (like a tournament)
-    # For each pair, ask: "Which of these two is farther from the viewer?"
+    parent_b64 = _encode_image(parent_image_path)
     
-    # Start with first image as "current farthest"
-    sorted_layers = [layer_paths[0]]
+    # Step 1: Ask Qwen3-VL where each sub-part is in the parent
+    positions = {}  # path → {"region": "front/middle/back", "description": "..."}
     
-    for new_path in layer_paths[1:]:
-        # Compare new_path against each already-sorted layer to find its position
-        inserted = False
-        for i, existing in enumerate(sorted_layers):
-            result = _pairwise_compare(new_path, existing)  # returns: "A_farther" or "B_farther"
-            if result == "A_farther":  # new is farther than existing
-                sorted_layers.insert(i, new_path)
-                inserted = True
-                break
-        if not inserted:
-            sorted_layers.append(new_path)  # new is closest of all
+    for path in sub_part_paths:
+        sub_b64 = _encode_image(path)
+        
+        prompt = f"""You see two images: the WHOLE image and ONE sub-part extracted from it.
+        {parent_description}
+        
+        Describe the spatial position of the sub-part within the whole image.
+        Is it at the FRONT (closest to viewer/camera), MIDDLE, or BACK (farthest)?
+        
+        Also note: does this sub-part visually OVERLAP or HIDE any other visible objects?
+        
+        Respond ONLY with JSON:
+        {{"position": "front" or "middle" or "back", "description": "brief spatial description", "hides": "nothing" or description of what it obscures}}
+        """
+        
+        response = ollama.chat(
+            model="qwen3-vl:4b",
+            messages=[{
+                "role": "user",
+                "content": prompt,
+                "images": [parent_b64, sub_b64]
+            }]
+        )
+        positions[path] = json.loads(response["message"]["content"])
     
-    return sorted_layers
+    # Step 2: Sort by position (front → middle → back)
+    order = {"front": 0, "middle": 1, "back": 2}
+    sorted_paths = sorted(sub_part_paths, key=lambda p: order.get(positions[p]["position"], 1))
+    
+    # Step 3: Resolve ambiguities — parts with same "middle" position
+    # Use occlusion check: "Does A hide B?"
+    middle_paths = [p for p in sorted_paths if positions[p]["position"] == "middle"]
+    if len(middle_paths) > 1:
+        # Only need O(N) occlusion checks, not pairwise
+        resolved = _resolve_middle_ambiguities(middle_paths, parent_b64)
+        sorted_paths = _insert_resolved(sorted_paths, resolved, positions)
+    
+    return sorted_paths
 
 
-def _pairwise_compare(image_a_path, image_b_path):
-    """
-    Ask Qwen3-VL: "Which of these two layers is farther from the viewer?"
+def _resolve_middle_ambiguities(middle_paths, parent_b64):
+    """For parts in the 'middle', do occlusion checks. If A hides B, A is closer."""
+    resolved = []  # (path, relative_order)
     
-    Returns: "A_farther" or "B_farther"
-    """
-    with open(image_a_path, "rb") as f:
-        img_a_b64 = base64.b64encode(f.read()).decode()
-    with open(image_b_path, "rb") as f:
-        img_b_b64 = base64.b64encode(f.read()).decode()
+    for i, path in enumerate(middle_paths):
+        sub_b64 = _encode_image(path)
+        
+        prompt = """You see the WHOLE image and ONE sub-part.
+        Is this sub-part positioned IN FRONT OF other objects in the scene,
+        or BEHIND other objects, or NEITHER (at same depth)?
+        
+        Respond ONLY with: "front", "behind", or "neither"
+        """
+        
+        response = ollama.chat(
+            model="qwen3-vl:4b",
+            messages=[{
+                "role": "user",
+                "content": prompt,
+                "images": [parent_b64, sub_b64]
+            }]
+        )
+        answer = response["message"]["content"].strip().lower()
+        resolved.append((path, answer))
     
-    prompt = """You see two transparent image layers extracted from the same artwork.
-    Which one is FARTHER from the viewer (background)?
-    
-    Consider: sky/horizon = farthest. Characters/foreground objects = closest.
-    Larger objects, more detail, warmer colors = closer to the viewer.
-    
-    Respond ONLY with: "A" or "B"
-    (A = the first image, B = the second image)"""
-    
-    response = ollama.chat(
-        model="qwen3-vl:4b",
-        messages=[{
-            "role": "user",
-            "content": prompt,
-            "images": [img_a_b64, img_b_b64]
-        }]
-    )
-    
-    answer = response["message"]["content"].strip().upper()
-    if "A" in answer:
-        return "A_farther"
-    else:
-        return "B_farther"
+    return resolved
 ```
 
-**Performance:** N layers → ~N²/2 pairwise comparisons. For typical N=2-6 layers, this is 1-15 comparisons.
-Each comparison call to Ollama: ~0.5-1 second. Total: <15 seconds for worst case.
+**Performance:** For N sub-parts:
+- N parent-comparisons (one per sub-part)
+- At most ~2 occlusion checks for ambiguous middle parts
+- Total: N+2 calls ≈ 4-8 seconds for typical case
 
-**Which to use:** Qwen3-VL pairwise comparison ONLY. No programmatic fallback — it cannot work (giant cloud = high coverage ≠ closer than tiny character). If Qwen3-VL is unavailable, the task waits. If Qwen3-VL is wrong, the output is wrong — cost of full automation. Only a human can override.
+**Which to use:** Parent-anchored positioning ONLY. No programmatic fallback. 
+If Qwen3-VL is unavailable, the task waits. If wrong, output is wrong — cost of automation.
 
-**Helper: Propagate Client's original prompt.** If the Client described depth in their submission (e.g., "foreground: hookah glass, middle: smoke, background: mystical mist"), each entity receives this context alongside the image. Qwen3-VL uses it as a hint when comparing layers pairwise.
+**Helper: Propagate parent context.** Each entity passes the original Client description
+and the parent image's spatial description down the chain with every task.
 
 ---
 
