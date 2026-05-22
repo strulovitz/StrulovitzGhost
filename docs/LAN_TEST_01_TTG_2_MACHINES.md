@@ -149,10 +149,12 @@ Both machines claim remaining tasks until all 6 layers generated.
 ### Boss Splitting
 | Metric | Value |
 |--------|-------|
-| LLM Model | qwen3.6:27b |
-| Time to Split | ___ |
-| Layers Created | ___ |
-| Errors | ___ |
+| LLM Model | qwen3:14b |
+| Time to Split | ~34 seconds |
+| Layers Created | 6 |
+| Errors | None |
+
+**Note:** Initially tried `qwen3.6:27b` (thinking/reasoning model). It timed out at 300 seconds — too slow for API automation on RTX 5090 24GB. Reasoning models generate long `&lt;think&gt;` traces before responding. For scene splitting, a standard dense model like `qwen3:14b` is much faster and sufficient. **Do NOT use thinking models for Boss API tasks — use non-reasoning models.**
 
 ### Layer Generation
 | Layer | Content | Worker | Time | Status |
@@ -172,8 +174,8 @@ Both machines claim remaining tasks until all 6 layers generated.
 - [ ] Layers visually stack correctly
 
 ### Lessons Learned
-- ___
-- ___
+- **Thinking models are too slow for API Boss tasks.** `qwen3.6:27b` took >300s (timed out) because of chain-of-thought. `qwen3:14b` (standard dense) completed in 34s. Use non-reasoning models for Boss LLM tasks.
+- **Model auto-detection in GUI is essential.** Without the "Detect Models" button, users would need to manually type model names from Ollama CLI. Fixed in commit `c6ac121`.
 - ___
 
 ---
