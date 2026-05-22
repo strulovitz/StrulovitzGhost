@@ -12,7 +12,7 @@
 
 | # | Issue | Concern | Status |
 |---|-------|---------|--------|
-| 1 | **Qwen-Image-Layered prompts don't work reliably** | Tested 6+ hours May 21. Empty prompt `""` worked accidentally but no prompt consistently produces non-garbage layers for fine art. Model trained on Photoshop PSDs, not impressionist brushwork. Whole ITG depends on this working. | ⬜ UNRESOLVED |
+| 1 | **Qwen-Image-Layered prompts don't work reliably** | Tested 6+ hours May 21. Empty prompt `""` worked accidentally but no prompt consistently produces non-garbage layers for fine art. Model trained on Photoshop PSDs, not impressionist brushwork. Whole ITG depends on this working. | ⚠️ OPEN — will investigate after build. Market is broader than just "fine art": Hubble photos, Christmas tables, CCTV frames, drone photos, garden planters all worked. Possibly our prompt SYNTAX was wrong (Nir realized today: newline+comma = double-encoding, telling model "one good line + one empty line"). Need to re-test with correct syntax. Feature works even if classic paintings don't — too many other use cases. |
 | 2 | **Combining is destructive** | Pair-combine is permanent fusion. If Z-order was wrong, or those 2 layers should have stayed separate (meaningful parallax), there's no undo. Top Boss makes an irreversible call. | ⬜ UNRESOLVED |
 | 3 | **N < 6 handling is weak** | Only 3 good layers → put at L4-L5-L6, L1-L2-L3 empty transparent. But physical setup expects ALL 6 layers to have content. Empty layers are dead air. Acceptable for Pepper's Ghost? | ⬜ UNRESOLVED |
 | 4 | **No prompt inheritance** | TTG: worker gets text prompt from Boss. ITG: worker gets IMAGE from parent — but what PROMPT for Qwen-Image-Layered? Qwen3-VL generates it? Boss writes it manually? | ⬜ UNRESOLVED |
@@ -71,7 +71,7 @@
 - Google AI contradicted itself 4 times
 - Model trained on Photoshop PSDs (photos with clear subjects), not Van Gogh's brushstrokes
 
-**The entire ITG design ASSUMES the model works. If it doesn't, we built a distributed pipeline for nothing.**
+**UPDATE (May 22, after discussing with Nir):** "Fine Art" is just the marketing name. The feature works on many image types — Eagle Nebula (Hubble), Opium Dream (Boris Vallejo, 4 good layers), Christmas dinner table, etc. It may turn out OUR prompt SYNTAX was wrong (newline+comma = double separator characters). The feature has value even if classic paintings don't work. We build now, investigate prompt syntax later. Not a blocker.
 
 ---
 
@@ -81,7 +81,7 @@
 
 | Issue # | Nir's Input | Resolution |
 |---------|-------------|------------|
-| — | — | — |
+| 1 | "Fine Art" is marketing name. Feature works on Eagle Nebula, Opium Dream (4 layers), Christmas table, etc. Paintings may fail but many other use cases. Prompt syntax was possibly our fault — newline+comma = double separator. Not a blocker — build now, investigate later. | ⚠️ OPEN for investigation, but NOT a build blocker. Feature has broad value beyond paintings. |
 
 ---
 
