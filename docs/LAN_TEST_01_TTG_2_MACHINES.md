@@ -1,4 +1,4 @@
-# 🧪 LAN Test #01 — Silver Warrior (Text To Ghost)
+# 🧪 LAN Test #01 — TTG Distributed on 2 Machines
 
 **Date:** May 22, 2026 | **Status:** IN PROGRESS | **Mode:** TTG
 
