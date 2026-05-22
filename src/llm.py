@@ -110,6 +110,10 @@ def split_scene_lmstudio(scene: str, style: str = "Ghibli animation", model: str
                 "max_tokens": 4096,
             },
             timeout=300,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data["choices"][0]["message"]["content"]
         print(f"[LLM] Response: {len(text)} chars", flush=True)
         return _parse_json_response(text)
     except Exception as e:
