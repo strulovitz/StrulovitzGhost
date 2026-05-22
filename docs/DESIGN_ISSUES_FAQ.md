@@ -13,7 +13,7 @@
 | # | Issue | Concern | Status |
 |---|-------|---------|--------|
 | 1 | **Qwen-Image-Layered prompts don't work reliably** | Tested 6+ hours May 21. Empty prompt `""` worked accidentally but no prompt consistently produces non-garbage layers for fine art. Model trained on Photoshop PSDs, not impressionist brushwork. Whole ITG depends on this working. | ⚠️ OPEN — will investigate after build. Market is broader than just "fine art": Hubble photos, Christmas tables, CCTV frames, drone photos, garden planters all worked. Possibly our prompt SYNTAX was wrong (Nir realized today: newline+comma = double-encoding, telling model "one good line + one empty line"). Need to re-test with correct syntax. Feature works even if classic paintings don't — too many other use cases. |
-| 2 | **Combining is destructive** | Pair-combine is permanent fusion. If Z-order was wrong, or those 2 layers should have stayed separate (meaningful parallax), there's no undo. Top Boss makes an irreversible call. | ⬜ UNRESOLVED |
+| 2 | **Combining is destructive** | Pair-combine is permanent fusion. If Z-order was wrong, or those 2 layers should have stayed separate (meaningful parallax), there's no undo. Top Boss makes an irreversible call. | ✅ RESOLVED — Combining is DESIRED, not a problem. Client trusts the system, system trusts Qwen3-VL (best local vision models: Qwen3-VL 30B/35B, Gemma 3 4B). Good summaries always omit raw material. If mistake → re-run. For 90% of users, this is sufficient. Professionals who need perfection use Photoshop. |
 | 3 | **N < 6 handling is weak** | Only 3 good layers → put at L4-L5-L6, L1-L2-L3 empty transparent. But physical setup expects ALL 6 layers to have content. Empty layers are dead air. Acceptable for Pepper's Ghost? | ⬜ UNRESOLVED |
 | 4 | **No prompt inheritance** | TTG: worker gets text prompt from Boss. ITG: worker gets IMAGE from parent — but what PROMPT for Qwen-Image-Layered? Qwen3-VL generates it? Boss writes it manually? | ⬜ UNRESOLVED |
 | 5 | **Z-order is fragile** | Whole pipeline depends on correct depth ordering. Qwen3-VL pairwise could be wrong. Programmatic fallback (coverage-based) is a GUESS — tiny foreground character vs giant background cloud could swap. | ⬜ UNRESOLVED |
@@ -81,7 +81,8 @@
 
 | Issue # | Nir's Input | Resolution |
 |---------|-------------|------------|
-| 1 | "Fine Art" is marketing name. Feature works on Eagle Nebula, Opium Dream (4 layers), Christmas table, etc. Paintings may fail but many other use cases. Prompt syntax was possibly our fault — newline+comma = double separator. Not a blocker — build now, investigate later. | ⚠️ OPEN for investigation, but NOT a build blocker. Feature has broad value beyond paintings. |
+| 1 | "Fine Art" is marketing name. Feature works on Eagle Nebula, Opium Dream (4 layers), Christmas table, etc. Paintings may fail but many other use cases. Prompt syntax possibly our fault (newline+comma = double separator). Build now, investigate later. | ⚠️ OPEN for investigation, but NOT a build blocker. Feature has broad value beyond paintings. |
+| 2 | Combining is desired. Client trusts system, system trusts Qwen3-VL. Good summary always omits data. If mistake → re-run. 90% sufficient. Pros use Photoshop. | ✅ RESOLVED |
 
 ---
 
