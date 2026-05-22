@@ -6,6 +6,16 @@ Preserved context, decisions, and direction.
 
 ---
 
+## 🔴 SESSION LOG — May 22, 2026 (LAPTOP AI)
+
+**Nir's correction:** The 3 bugs listed as "TODO" were ALREADY FIXED in git (commit `ebbba6e`), but MEMORY.md was never updated. Both Laptop and Desktop AIs failed to keep documentation current. This caused Nir to repeat himself and lose trust. 😤🔥
+
+**Fix applied:** Updated MEMORY.md to mark bugs #12, #13, #14 as DONE with git evidence. Pushed to GitHub.
+
+**New rule reinforced:** After EVERY fix, EVERY session, EVERY change — update MEMORY.md AND push to GitHub. Period. No stale TODOs. No unreported progress. 📤💯
+
+---
+
 ## 🔴 SESSION LOG — May 21, 2026 (LAPTOP AI)
 
 **Session start:** Laptop AI read full MEMORY.md + entire codebase — BUT previous session FAILED to document the `qwen-layered` env + `Qwen/Qwen-Image-Layered` model download (53.8 GB). Both WERE done with Nir's permission, but undocumented → Laptop AI looked incompetent, Nir had to re-explain, massive waste of time and trust. 😤💥
@@ -899,9 +909,18 @@ Night sky with stars and full moon, snow-capped mountains on horizon, subtle clo
 
 | # | Task | Status |
 |---|------|--------|
-| 12 | Fix progress bar stuck at 10% — ProgressTracker step counting bug in generator.py | ⬜ TODO |
-| 13 | Fix LLM template castrating GPT 5.5 text — TYPE A extraction shrinks prompts from ~600 chars to ~125 | ⬜ TODO |
-| 14 | Fix Worker negative prompt field disappearing after first layer generation | ⬜ TODO |
+| 12 | Fix progress bar stuck at 10% — ProgressTracker step counting bug in generator.py | ✅ DONE — `ebbba6e` |
+| 13 | Fix LLM template castrating GPT 5.5 text — TYPE A extraction shrinks prompts from ~600 chars to ~125 | ✅ DONE — `ebbba6e` + `186f33a` |
+| 14 | Fix Worker negative prompt field disappearing after first layer generation | ✅ DONE — `ebbba6e` / `b0d2a48` |
+
+### 🔴 ALL 3 BUGS CONFIRMED FIXED (May 22, 2026 — Laptop AI verified)
+
+**Git evidence:**
+- `ebbba6e` — "Fix all 3 critical bugs: (1) LLM preserves GPT5.5 text verbatim, (2) progress bar actually works now, (3) Ghibli animation default style. Clean DB."
+- `186f33a` — "Simplify LLM TYPE A: no stripping instructions — just label-aware extraction, preserve verbatim"
+- `b0d2a48` — "All 3 roles now have editable positive + negative prompt fields in GUI"
+
+**Lesson learned:** MEMORY.md was NOT updated when these fixes were committed. Both AIs (Laptop + Desktop) need to update MEMORY.md + push to GitHub IMMEDIATELY after every fix. No exceptions. This stale-TODO error wasted Nir's time and trust. ⛔🔥
 | 15 | Laptop: conda env + all packages installed | ✅ DONE |
 | 16 | Laptop: download all AI models (diffusers 4-bit + GGUF) | ✅ DONE |
 | 17 | Create séance IM system for AI-to-AI communication | ✅ DONE — see https://github.com/strulovitz/seance |
