@@ -510,16 +510,17 @@ Instead, the Z-order flows UP through the hierarchy:
 │     "task_42_02_01.png is middle"                            │
 │     "task_42_01_01.png is closest"                           │
 │                                                              │
-│   Result: 3 layers. N=3 < 6 → create 3 empty transparent     │
-│   for farthest positions, place these 3 at closest positions.│
+│   Result: 3 layers. N=3 < 6 → place real layers at closest     │
+│   positions (L1-L3), remaining (L4-L6) empty transparent.       │
+│   Layer convention: L1=closest(20cm) → L6=farthest              │
 │                                                              │
 │   Top Boss uploads: POST /api/questions/42/complete          │
-│     layer_1.png = empty transparent                          │
-│     layer_2.png = empty transparent                          │
-│     layer_3.png = empty transparent                          │
-│     layer_4.png = task_42_01_02.png  (farthest real layer)   │
-│     layer_5.png = task_42_02_01.png  (middle real layer)     │
-│     layer_6.png = task_42_01_01.png  (closest real layer)    │
+│     layer_1.png = task_42_01_01.png  (CLOSEST real layer)    │
+│     layer_2.png = task_42_02_01.png  (middle real layer)     │
+│     layer_3.png = task_42_01_02.png  (FARTHEST real layer)   │
+│     layer_4.png = empty transparent                          │
+│     layer_5.png = empty transparent                          │
+│     layer_6.png = empty transparent                          │
 │                                                              │
 │ DONE. Client downloads 6 layers.                             │
 └─────────────────────────────────────────────────────────────┘
@@ -677,13 +678,13 @@ ONLY arrange Z-order — they do NOT combine.
 ```python
 def reduce_to_6_layers(z_ordered_paths):
     """
-    Given N RGBA layers in Z-order (index 0 = farthest, index N-1 = closest),
-    reduce to exactly 6 layers.
+    Given N RGBA layers in Z-order: index 0 = CLOSEST (Layer 1, 20cm from viewer),
+    index N-1 = FARTHEST (Layer N, deepest background).
 
-    Always combine from the FARTHEST end — minimal parallax there.
-    Never combine the closest 4 layers (strong parallax).
+    Always combine from the FARTHEST end (end of list) — minimal parallax there.
+    Never combine the closest 4 layers (start of list) — strong parallax.
 
-    Returns: list of exactly 6 paths (new combined files).
+    Returns: list of exactly 6 paths, index 0 = closest, index 5 = farthest.
     """
     N = len(z_ordered_paths)
 
@@ -691,33 +692,28 @@ def reduce_to_6_layers(z_ordered_paths):
         return z_ordered_paths  # Already perfect
 
     if N < 6:
-        # Not enough layers. Closest get actual images, farthest are empty.
-        result = []
-        empty_count = 6 - N
-        for i in range(empty_count):
-            result.append(create_empty_transparent_png())  # Transparent 640px PNG
-        for path in z_ordered_paths:
-            result.append(path)
+        # Real layers at closest positions (L1-LN), empty transparent at farthest (L(N+1)-L6)
+        result = list(z_ordered_paths)  # Real layers first (closest)
+        for _ in range(6 - N):
+            result.append(create_empty_transparent_png())  # Empty far layers at end
         return result
 
-    # N > 6: Combine pairs from farthest until 6 remain
-    layers = list(z_ordered_paths)  # index 0 = farthest
+    # N > 6: Combine pairs from FARTHEST (end of list) until 6 remain
+    layers = list(z_ordered_paths)  # index 0 = closest, index N-1 = farthest
 
     while len(layers) > 6:
-        # Combine the TWO FARTHEST layers
-        farthest_2 = layers[:2]
-        combined = Image.open(farthest_2[0]).convert("RGBA")
-        overlay = Image.open(farthest_2[1]).convert("RGBA")
-        combined = Image.alpha_composite(combined, overlay)
+        # Combine the TWO FARTHEST layers (at the end of the list)
+        back = Image.open(layers[-2]).convert("RGBA")
+        front = Image.open(layers[-1]).convert("RGBA")
+        combined = Image.alpha_composite(back, front)
         
         combined_path = f"combined_{uuid4().hex[:6]}.png"
         combined.save(combined_path, "PNG")
 
-        # Remove the 2 farthest, insert combined at front (farthest position)
-        layers = [combined_path] + layers[2:]
+        # Remove the 2 farthest, insert combined at end (farthest position)
+        layers = layers[:-2] + [combined_path]
 
-    return layers  # Exactly 6
-```
+    return layers  # Exactly 6: index 0 = closest (20cm), index 5 = farthest
 
 ### 6.3 Why Not Combine Closest Layers
 
@@ -939,8 +935,8 @@ not impressionist brushwork.
 | **ComfyUI crash mid-split** | Caught by try/except → task reset to pending → another worker picks up |
 | **Qwen3-VL unavailable** | Fall back to programmatic Z-order (coverage+warmth, see §5.4) + programmatic quality (coverage threshold) |
 | **N = 0 good layers** | Mark question as `failed`, notify Client |
-| **N = 1 good layer** | Put it at Layer 1 (closest), 5 empty transparent layers |
-| **N < 6 layers** | Remaining farthest layers are empty transparent PNGs (see §6.2) |
+| **N = 1 good layer** | Put it at L1 (closest, 20cm), L2-L6 empty transparent |
+| **N < 6 layers** | Closest layers (L1-LN) get real images, remaining farthest (L(N+1)-L6) are empty transparent PNGs (see §6.2). L1=20cm closest, L6=farthest. |
 | **Pre-built ComfyUI models missing** | Node checks on startup, warns user to download models (links to setup guide) |
 | **Disk full on website** | `GET /api/health` returns disk space warning; Boss pauses creating new tasks |
 | **Worker disconnects mid-job** | Task auto-resets to pending after timeout (e.g., 10 minutes with no progress) |
