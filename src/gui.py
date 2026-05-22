@@ -594,8 +594,15 @@ class BossWidget_TTG(QWidget):
         self.llm_combo.addItems(["ollama", "lmstudio"])
         llm_row.addWidget(self.llm_combo)
         llm_row.addWidget(QLabel("Model:"))
-        self.llm_model = QLineEdit("qwen3:14b")
+        self.llm_model = QComboBox()
+        self.llm_model.setEditable(True)
+        self.llm_model.setMinimumWidth(180)
+        self.llm_model.setToolTip("Select a model or type a custom name")
         llm_row.addWidget(self.llm_model)
+        self.refresh_models_btn = QPushButton("Detect Models")
+        self.refresh_models_btn.clicked.connect(self.detect_models)
+        self.refresh_models_btn.setToolTip("Auto-detect available models from Ollama and LM Studio")
+        llm_row.addWidget(self.refresh_models_btn)
         split_layout.addLayout(llm_row)
         self.split_btn = QPushButton("Auto-Split with LLM")
         self.split_btn.clicked.connect(self.auto_split)
@@ -648,6 +655,8 @@ class BossWidget_TTG(QWidget):
         except Exception:
             pass
         self.check_llm()
+        if self.llm_model.count() == 0:
+            self.detect_models()
 
     def check_llm(self):
         try:
@@ -713,14 +722,49 @@ class BossWidget_TTG(QWidget):
         except Exception as e:
             self.split_status.setText(f"Error: {e}")
 
+    def detect_models(self):
+        provider = self.llm_combo.currentText()
+        self.llm_model.clear()
+        self.split_status.setText("Detecting models...")
+        try:
+            if provider == "ollama":
+                r = requests.get("http://localhost:11434/api/tags", timeout=5)
+                if r.ok:
+                    models = [m["name"] for m in r.json().get("models", [])]
+                    if models:
+                        self.llm_model.addItems(sorted(models))
+                        self.split_status.setText(f"Found {len(models)} Ollama models")
+                    else:
+                        self.split_status.setText("No Ollama models found. Run: ollama pull <model>")
+                        self.llm_model.setEditText("qwen3:14b")
+                else:
+                    self.split_status.setText("Ollama not reachable")
+                    self.llm_model.setEditText("qwen3:14b")
+            else:
+                r = requests.get("http://localhost:1234/v1/models", timeout=5)
+                if r.ok:
+                    models = [m["id"] for m in r.json().get("data", [])]
+                    if models:
+                        self.llm_model.addItems(sorted(models))
+                        self.split_status.setText(f"Found {len(models)} LM Studio models")
+                    else:
+                        self.split_status.setText("No LM Studio models loaded")
+                        self.llm_model.setEditText("qwen3:14b")
+                else:
+                    self.split_status.setText("LM Studio not reachable")
+                    self.llm_model.setEditText("qwen3:14b")
+        except Exception as e:
+            self.split_status.setText(f"Detection error: {e}")
+            self.llm_model.setEditText("qwen3:14b")
+
     def auto_split(self):
         if not self.current_question:
             self.split_status.setText("Select a question first.")
             return
         qid = self.current_question["id"]
         provider = self.llm_combo.currentText()
-        model = self.llm_model.text()
-        self.split_status.setText("Splitting with LLM...")
+        model = self.llm_model.currentText()
+        self.split_status.setText(f"Splitting with {model}...")
         self.split_btn.setEnabled(False)
         try:
             r = requests.post(f"{self.get_server()}/api/question/{qid}/split", json={"provider": provider, "model": model}, timeout=180)
