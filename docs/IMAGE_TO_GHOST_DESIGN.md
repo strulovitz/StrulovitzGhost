@@ -41,38 +41,55 @@ Therefore:
 
 ## 2. Architecture
 
-### 2.1 The Split Tree
+### 2.1 The Task POOL (NOT a Rigid Tree)
+
+The ITG system is a **pool**, not a rigid tree. Any free entity can claim any task.
 
 ```
-                    TOP BOSS (Manager)
-                    Splits painting → 2 layers
-                    Judges: Layer A ✓, Layer B ✓
-                         │
-            ┌────────────┴────────────┐
-            ▼                         ▼
-        TEACHER #1                TEACHER #2
-        Gets Layer A              Gets Layer B
-        Splits → 2 layers         Splits → 2 layers
-        Judge: ✓✓                 Judge: ✓✗ (one garbage, discarded)
-            │                         │
-      ┌─────┴─────┐                   │
-      ▼           ▼                   ▼
-   WORKER      WORKER              WORKER
-   (bottom)    (bottom)            (bottom)
-   Splits→2    Splits→2            Splits→2
-   Judge: ✓✓   Judge: ✓✗           Judge: ✓✓
-
-   Total good layers at bottom: 2 + 1 + 2 = 5
-
-   ON THE WAY BACK UP:
-   Teacher #1: Arranges 2 layers from his 2 workers by Z-depth
-   Teacher #2: Arranges 1 layer from his 1 worker by Z-depth
-   Top Boss: Arranges Teacher #1's layers + Teacher #2's layers = 3 layers total
-   Top Boss: N=3 < 6 → closest 3 get images, farthest 3 are empty transparent
-   Top Boss: Uploads 6 final layers
+MANAGER (Top Boss)
+  │
+  │  Splits painting → N good layers (usually 2-6)
+  │  Posts N tasks to the WEBSITE POOL
+  │
+  └──→ POOL on Website: [task_42_01] [task_42_02] [task_42_03] [task_42_04]
+           │                │              │              │
+           ▼                ▼              ▼              ▼
+       TEACHER A        TEACHER B      TEACHER C      TEACHER D
+       (claims 01)     (claims 02)    (claims 03)    (claims 04)
+           │                │              │              │
+           │ Splits 01     │ Splits 02   │ Splits 03   │ Splits 04
+           │ → 2 layers    │ → 2 layers  │ → 1 layer   │ → 2 layers
+           │                │              │   (1 garbage)│
+           │                │              │              │
+           └──→ POOL:       └──→ POOL:     └──→ POOL:     └──→ POOL:
+            [01_01]         [02_01]        [03_01]        [04_01]
+            [01_02]         [02_02]                       [04_02]
+               │  │            │  │            │             │  │
+               ▼  ▼            ▼  ▼            ▼             ▼  ▼
+           ANY FREE ENTITY CAN CLAIM THESE
 ```
 
-### 2.2 File Naming Convention (CRITICAL — per Nir)
+**Key rules:**
+- Manager posts tasks → **ANY free Teacher** claims from the pool
+- Teacher splits → posts sub-tasks → **ANY free entity** (another Teacher, a Worker) claims
+- **No rigid assignment.** "Teacher #1 handles branch 01" is FALSE — any Teacher can claim `task_42_02_01.png`
+- File naming (`task_X_01_02.png`) prevents double-processing: a claimed task is marked taken
+- Qwen brain stops infinite descent: garbage detection halts the branch
+- **The Teacher who claimed the PARENT task** collects+combines results from that branch — NOT the Manager
+- Manager only sees final results from his direct children (max 6 per original Teacher who took it)
+- If Manager somehow gets >6 layers → pair-from-farthest combining ✅
+
+### 2.2 Why the POOL is Better
+
+| Rigid Tree (wrong) | Task POOL (correct) |
+|---|---|
+| Teacher #1 must handle branch 01 | Any teacher can handle any task |
+| If Teacher #1 is busy, branch 01 stalls | Someone else claims it |
+| 20 teachers + 4 tasks = 16 idle | 20 teachers + 4 sub-tasks = 4 working, 16 claim the sub-tasks |
+| Manager gets hundreds of leaf layers | Manager gets max 6 × (original split count), same order of magnitude |
+| Ancestry tracked in DB | Ancestry tracked in FILENAME — simpler, no DB queries |
+
+### 2.3 File Naming Convention (CRITICAL — per Nir)
 
 Every image file encodes its full ancestry in the filename:
 
@@ -95,64 +112,53 @@ The DB stores these filenames in `result_filename` / `input_image` / `split_resu
 The convention applies to BOTH ITG and TTG (TTG workers generate NEW images from prompts, but
 when a TTG Boss combines worker results, the combined file is named `task_{parent_id}.png`).
 
-### 2.3 Key Insight: Splitting is NOT Parallel at Each Level
-
-Unlike TTG where 6 workers work in parallel on 6 sub-prompts, ITG's workers
-work on DIFFERENT images (different branches of the split tree). Each branch
-is independent — workers on different branches don't wait for each other.
-
-But workers WITHIN a branch DO wait: a Worker can't split a layer that hasn't
-been produced yet by the level above.
-
-### 2.3 Data Flow (Complete Lifecycle)
+### 2.4 Data Flow (Complete Lifecycle — POOL Model)
 
 ```
 Step 1: Client → Website
   POST /api/questions  { type: "ITG", file: painting.jpg }
-  Website saves original to disk, records path in DB
+  Website saves original, records path in DB
 
-Step 2: Boss (Manager) → Website (polling)
-  GET /api/questions/pending?type=ITG
-  Claims question #42
+Step 2: Manager → Website (polling)
+  Claims question #42. Downloads painting.
 
-Step 3: Boss (Manager) → ComfyUI → Qwen-Image-Layered
-  Downloads painting from website
-  Runs split (1 image → 2 layers) using Qwen-Image-Layered
-  Gets 2 RGBA layers
+Step 3: Manager ✂️👁️🧠 splits → POOL
+  Qwen-Image-Layered splits 1→N layers (usually 2-6)
+  Qwen3-VL judges each layer, discards garbage
+  Qwen LLM writes tailored prompt per layer
+  Uploads N good layers + creates N tasks in POOL:
+  POST /api/tasks/batch  [task_42_01, task_42_02, task_42_03, task_42_04]
 
-Step 4: Boss (Manager) → Qwen3-VL → Website
-  For each of the 2 layers:
-    Qwen3-VL judges: "Is this a recognizable portion of the painting?"
-    If YES → upload to website, create child task
-    If NO (solid color, blurry, incomprehensible) → discard
+Step 4: ANY FREE TEACHER claims from POOL
+  Teacher A claims task_42_01. Teacher B claims task_42_02.
+  (If only 4 tasks and 20 teachers, 16 remain idle — waiting for sub-tasks to appear)
 
-  POST /api/tasks (×N, where N = number of good layers)
-  { question_id: 42, type: "ITG", depth: 1, max_depth: 2,
-    parent_task_id: null, prompt: "...", input_image: "task_42_01.png" }
+Step 5: Teacher A ✂️👁️🧠 splits task_42_01 → creates sub-tasks
+  Splits 1→2. Judges. Writes prompts. Uploads good layers.
+  Creates: [task_42_01_01, task_42_01_02] in POOL
 
-Step 5: Boss (Teacher) → Website → ComfyUI → Qwen3-VL → Website
-  Polls: GET /api/tasks/pending?type=ITG
-  Claims task with input_image "task_42_01.png"
-  Downloads task_42_01.png from website
-  Splits 1→2 using Qwen-Image-Layered
-  Judges with Qwen3-VL → keeps good, discards garbage
-  Creates child tasks at depth 2
+Step 6: ANY FREE ENTITY claims sub-tasks
+  Could be Teacher C (idle), or Worker W1, or even Teacher B if done with task_42_02.
+  Entity claims task_42_01_01 → splits → judges → uploads
+  Qwen brain stops descent if garbage or depth limit reached
 
-Step 6: Worker (bottom level, depth = max_depth) → Website
-  Same flow: claim → download → split 1→2 → judge → upload good layers
-  But now: depth == max_depth, so NO child tasks created
-  Uploads good layers as FINAL results: POST /api/tasks/{id}/result
+Step 7: Teacher A (original claimer of parent task_42_01) polls
+  Sees ALL children of task_42_01 are complete (regardless of WHO claimed them)
+  Downloads ALL child results from website
+  Qwen3-VL arranges by Z-depth (farthest → closest)
+  Uploads Z-order: PUT /api/tasks/task_42_01/zorder
+  { layers: ["task_42_01_02", "task_42_01_01"] }
 
-Step 7: Boss (Teacher) → Website (polling)
-  Sees ALL his children are complete
-  Downloads children's result images from website
-  Qwen3-VL: arranges them by Z-depth (farthest → closest)
-  Uploads Z-order info: POST /api/tasks/{parent_id}/zorder
-  { layers: ["task_42_01_02.png", "task_42_01_01.png"] }
+Step 8: Manager polls
+  Sees ALL his direct children complete (task_42_01 through task_42_04)
+  Downloads Z-order metadata + actual images from each
+  Qwen brain selects best representative per teacher
+  If total > 6: pair-from-farthest combining
+  If total < 6: empty transparent at farthest positions
+  Uploads final 6: POST /api/questions/42/complete
 
-Step 8: Top Boss (Manager) → Website
-  Sees ALL his children (Teachers) are complete
-  Downloads all final layer images + Z-order info
+Step 9: Client downloads 6 layers. DONE.
+```
   Builds complete Z-ordered layer list
   If N > 6: pair-combine from farthest until 6 remain
   If N < 6: closest N get images, remaining (6-N) are empty transparent PNGs

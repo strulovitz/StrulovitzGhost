@@ -24,7 +24,7 @@
 
 | # | Issue | Desktop's Concern | Status |
 |---|-------|-------------------|--------|
-| 6 | **Z-order flow was unclear** | "What images does Top Boss download from teachers?" — data flow not specified step by step. | ✅ FIXED |
+| 6 | **Z-order flow was unclear → discovered ITG must be POOL, not rigid tree** | Desktop asked "What images does Top Boss download from teachers?" → Led to Nir's clarification: ITG is a TASK POOL. Any free teacher claims any task. Ancestry via filename. Original teacher (who claimed parent) collects children's results. Manager only handles his direct children's final results (max ~36, not hundreds). File naming prevents double-processing. See ITG design §2.1-2.4. | ✅ FIXED — Rewrote entire ITG architecture to POOL model |
 | 7 | **Multi-image Qwen3-VL won't work in Ollama** | Original code sent ALL images at once. Ollama supports 1-2 images per call, not N. | ✅ FIXED — switched to pairwise |
 | 8 | **File naming mismatched** | Nir wants `task_42_01_02.png` but ancestry was tracked in DB fields. | ✅ FIXED — filename-based ancestry |
 | 9 | **Both layers garbage = branch silently dies** | Only handled "1 good + 1 bad." If both bad, parent task stays "claimed" forever. | ✅ FIXED — 3-retry fallback |
