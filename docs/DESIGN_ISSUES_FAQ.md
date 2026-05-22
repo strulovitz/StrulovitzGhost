@@ -37,11 +37,11 @@
 
 | # | Question | Status |
 |---|----------|--------|
-| 12 | **Should the website auto-cleanup?** Or should Client/Boss explicitly call `/cleanup`? | ⬜ UNRESOLVED |
-| 13 | **Can one Boss handle multiple questions simultaneously?** Or locked to one job at a time? | ⬜ UNRESOLVED |
-| 14 | **Worker failure recovery after N retries?** Currently task resets to pending. What if it fails 5 times in a row? | ⬜ UNRESOLVED |
-| 15 | **Which Qwen model for hierarchical splitting?** Currently `qwen3:14b`. Good enough for splitting "a bouquet of flowers" into 6 individual flower descriptions? | ⬜ UNRESOLVED |
-| 16 | **TTG hierarchical depth — who sets it?** Client? Boss? Each teacher decides for their own classroom? | ⬜ UNRESOLVED |
+| 12 | **Should the website auto-cleanup?** Or Client/Boss explicitly call `/cleanup`? | ✅ RESOLVED — Option A: Website auto-cleans temp files when it detects all tasks in a question are complete. No manual trigger needed. |
+| 13 | **Can one Boss handle multiple questions simultaneously?** Or locked to one job at a time? | ✅ RESOLVED — Option A: One question at a time. If someone wants another picture, they wait in line or get redirected to another school. |
+| 14 | **Worker failure recovery after N retries?** Task resets to pending. What if it fails 5 times in a row? | ✅ RESOLVED — After 3 failures (claimed → reset → claimed → reset → claimed → reset), mark task as `failed`. Not the Workers, it's the task — image is probably corrupted or unsplittable. |
+| 15 | **Which Qwen model for hierarchical TTG splitting?** Is `qwen3:14b` good enough for all levels? | ✅ RESOLVED — Upper levels have MORE responsibility (manager's bad split ruins everything downstream). RECOMMENDATION (not demand): upper levels use better hardware + better models (DeepSeek for logic). But software supports ANY model at ANY level — user chooses. Lower levels work with smaller pieces anyway, less thinking needed. |
+| 16 | **TTG hierarchical depth — who sets it?** Client? Boss? Each teacher? | ✅ RESOLVED — Hardware determines depth, not software. A school with 500 computers goes deeper than one with 5. Each boss knows how many children they have, divides work accordingly. No boss knows total depth — it's emergent. "Too much detail" won't happen in reality — excess computers just do MORE scenes, not deeper on one scene. |
 
 ---
 
