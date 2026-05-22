@@ -81,7 +81,7 @@ def split_scene_ollama(scene: str, style: str = "Ghibli animation", model: str =
         response = requests.post(
             OLLAMA_URL,
             json={"model": model, "prompt": prompt, "stream": False},
-            timeout=120,
+            timeout=300,
         )
         response.raise_for_status()
         data = response.json()
@@ -109,11 +109,7 @@ def split_scene_lmstudio(scene: str, style: str = "Ghibli animation", model: str
                 "temperature": 0.7,
                 "max_tokens": 4096,
             },
-            timeout=120,
-        )
-        response.raise_for_status()
-        data = response.json()
-        text = data["choices"][0]["message"]["content"]
+            timeout=300,
         print(f"[LLM] Response: {len(text)} chars", flush=True)
         return _parse_json_response(text)
     except Exception as e:
