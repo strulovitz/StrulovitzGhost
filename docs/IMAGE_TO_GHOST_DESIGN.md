@@ -72,7 +72,30 @@ Therefore:
    Top Boss: Uploads 6 final layers
 ```
 
-### 2.2 Key Insight: Splitting is NOT Parallel at Each Level
+### 2.2 File Naming Convention (CRITICAL — per Nir)
+
+Every image file encodes its full ancestry in the filename:
+
+```
+task_{question_id}.png                    ← Original painting uploaded by Client
+task_{question_id}_01.png                 ← 1st split from Manager (Level 1, branch 01)
+task_{question_id}_02.png                 ← 2nd split from Manager (Level 1, branch 02)
+task_{question_id}_01_01.png              ← Teacher #1's 1st split (Level 2, branch 01→01)
+task_{question_id}_01_02.png              ← Teacher #1's 2nd split (Level 2, branch 01→02)
+task_{question_id}_02_01.png              ← Teacher #2's 1st split (Level 2, branch 02→01)
+...
+task_{question_id}_01_01_01.png           ← Worker's 1st split from Teacher #1's 1st child
+```
+
+**Rule:** Each `_NN` suffix represents one level of splitting.
+The filename IS the ancestry tracker — no need to query the DB to know where it came from.
+Numbers are zero-padded to 2 digits (01, 02, ... 99) per level.
+
+The DB stores these filenames in `result_filename` / `input_image` / `split_result_1` / `split_result_2`.
+The convention applies to BOTH ITG and TTG (TTG workers generate NEW images from prompts, but
+when a TTG Boss combines worker results, the combined file is named `task_{parent_id}.png`).
+
+### 2.3 Key Insight: Splitting is NOT Parallel at Each Level
 
 Unlike TTG where 6 workers work in parallel on 6 sub-prompts, ITG's workers
 work on DIFFERENT images (different branches of the split tree). Each branch
@@ -218,49 +241,120 @@ Every node (Boss or Worker) follows the same pipeline when claiming an ITG task:
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 4.1 ComfyUI Integration
+### 4.1 ComfyUI Integration (with Port Management)
+
+**CRITICAL:** If Boss and Worker run on the SAME machine, they cannot share
+one ComfyUI instance (40 GB UNET can only be loaded once). Each needs its
+OWN ComfyUI on a different port.
 
 ```python
-def split_image_into_2_layers(input_image_path, output_dir, seed=None):
+# In src/config.py or per-user settings:
+COMFYUI_BASE_PORT = 8188
+
+def get_comfyui_port(node_role, node_id):
+    """
+    Assign unique ComfyUI ports per node on the same machine.
+    
+    - Boss gets base port 8188
+    - Additional nodes get 8189, 8190, etc.
+    
+    Port is stored per-user in the GUI settings (persisted to local config).
+    """
+    # If this node already has a running ComfyUI, reuse its port
+    # Otherwise, find next free port starting from base
+    for port_offset in range(10):  # Max 10 nodes per machine
+        port = COMFYUI_BASE_PORT + port_offset
+        if not _is_port_in_use(port):
+            return port
+    raise RuntimeError("No free ComfyUI ports available (8188-8198)")
+
+
+def _start_comfyui_for_node(port, model_dir=None):
+    """
+    Start a dedicated ComfyUI instance on the given port.
+    
+    Each instance loads Qwen-Image-Layered models into VRAM independently.
+    On RTX 5090 24GB: can run 1 instance (model is ~40GB, offloaded).
+    On RTX 4070 Ti 12GB: can run 1 instance (heavy offloading).
+    
+    Simultaneous Boss+Worker on same GPU: NOT RECOMMENDED.
+    Both would fight for VRAM. Queue them instead — the GUI serializes
+    ITG tasks from the same machine.
+    """
+    subprocess.Popen(
+        [sys.executable, COMFYUI_MAIN, "--port", str(port),
+         "--output-directory", str(model_dir / "output"),
+         "--input-directory", str(model_dir / "input")],
+        cwd=COMFYUI_DIR,
+    )
+    # Wait for it to be ready
+    for _ in range(30):
+        time.sleep(2)
+        if _is_comfyui_running(port):
+            return port
+    raise RuntimeError(f"ComfyUI failed to start on port {port}")
+
+
+# In the GUI: each user (Boss/Worker tab) gets a ComfyUI port setting
+# If Boss and Worker are on the same machine, they SHARE the same ComfyUI
+# and the GUI serializes their tasks (don't run splits in parallel).
+# If on different machines, they have independent instances — true parallelism.
+```
+
+### 4.2 Split Function (Using Managed ComfyUI)
+
+```python
+def split_image_into_2_layers(input_image_path, output_dir, comfyui_port, seed=None):
     """
     Split one RGBA image into 2 layers using Qwen-Image-Layered via ComfyUI.
 
     Returns: (layer_1_path, layer_2_path) — both RGBA PNG files.
-    Layer 1 = foreground, Layer 2 = background (per Qwen-Image-Layered convention).
     """
     if seed is None:
         seed = random.randint(0, 2**32 - 1)
 
-    # Resize input to 640px
-    img = Image.open(input_image_path).convert("RGBA")
-    img.thumbnail((640, 640), Image.LANCZOS)
+    # Resize to 640x640 with padding (preserves aspect ratio, no extreme shapes)
+    img = _prepare_for_qwen(input_image_path)
     prep_path = os.path.join(output_dir, f"split_input_{uuid4().hex[:6]}.png")
     img.save(prep_path, "PNG")
 
     # Upload to ComfyUI
-    image_name = _comfy_upload_image(prep_path)
+    image_name = _comfy_upload_image(prep_path, port=comfyui_port)
 
-    # Build workflow (reuse existing run_comfy_decomp.py pattern)
+    # Build and submit workflow
     workflow = _build_split_workflow(
-        image_name=image_name,
-        layers=2,
-        steps=20,
-        cfg=4.0,
-        seed=seed,
-        prompt="",  # Empty prompt = autonomous decomposition
+        image_name=image_name, layers=2, steps=20,
+        cfg=4.0, seed=seed, prompt="",
     )
+    prompt_id = _comfy_submit(workflow, port=comfyui_port)
+    output_files = _comfy_wait_and_download(prompt_id, output_dir, port=comfyui_port)
 
-    # Submit and wait
-    prompt_id = _comfy_submit(workflow)
-    output_files = _comfy_wait_and_download(prompt_id, output_dir)
-
-    # output_files should have 3 files (2 layers + 1 composite)
-    # Filter out composite, keep the 2 layer files
+    # Filter: expect 3 files (2 layers + 1 composite), keep the 2 layer files
     layer_files = [f for f in output_files if not f.endswith('_00001_.png')]
     if len(layer_files) != 2:
         raise RuntimeError(f"Expected 2 layers, got {len(layer_files)}")
 
     return layer_files[0], layer_files[1]
+
+
+def _prepare_for_qwen(image_path, target_size=640):
+    """
+    Resize image to fit within target_size × target_size with PADDING.
+    
+    thumbnail() preserves aspect ratio but can produce extreme rectangles
+    (e.g., 640×50 for a panoramic painting). Qwen-Image-Layered's MMDiT
+    expects near-square inputs. We pad to square to avoid artifacts.
+    """
+    img = Image.open(image_path).convert("RGBA")
+    img.thumbnail((target_size, target_size), Image.LANCZOS)
+    
+    # Create square canvas with transparent padding
+    square = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+    offset_x = (target_size - img.width) // 2
+    offset_y = (target_size - img.height) // 2
+    square.paste(img, (offset_x, offset_y))
+    
+    return square
 ```
 
 ### 4.2 Qwen3-VL Quality Gate
@@ -297,9 +391,52 @@ def judge_layer_quality(image_path, original_painting_desc=""):
     )
 
     return json.loads(response)
+
+
+def handle_dual_garbage(parent_task, split_result_1, split_result_2):
+    """
+    CRITICAL EDGE CASE: Both split layers from Qwen-Image-Layered are garbage.
+    
+    If we discard both, the parent task stays in "claimed" state forever
+    — no children, no result. The whole branch dies silently.
+    
+    Strategy:
+    1. Re-upload the ORIGINAL input image as a single child
+    2. Different seed + CFG for next attempt (maximize chance of a good split)
+    3. Max 3 retries per branch — after that, mark as failed (image is unsplittable)
+    """
+    from src.logger import logger
+    
+    retry = parent_task.get('retry_count', 0) + 1
+    
+    if retry >= 3:
+        logger.error(f"Task {parent_task['id']}: 3 dual-garbage splits. "
+                     f"Branch dead — image is fundamentally unsplittable.")
+        parent_task['status'] = 'failed'
+        parent_task['error'] = 'Unsplitabble image after 3 retries'
+        PATCH /api/tasks/{parent_task['id']}  { status: 'failed' }
+        return
+    
+    logger.warning(f"Task {parent_task['id']}: BOTH outputs garbage (retry {retry}/3). "
+                   f"Creating fallback child with randomized seed.")
+    
+    # Re-upload original as child input
+    original = download_image(parent_task['input_image'])
+    child_filename = parent_task['input_image'].replace('.png', f'_r{retry}.png')
+    upload_image(original, child_filename)
+    
+    # Create ONE child (not two — don't duplicate the problem)
+    create_child_task(
+        parent_task_id=parent_task['id'],
+        depth=parent_task['depth'] + 1,
+        max_depth=parent_task['max_depth'],
+        input_image=child_filename,
+        prompt="",
+        retry_count=retry,
+    )
 ```
 
-### 4.3 Prompts for Qwen-Image-Layered (The Unresolved Problem)
+### 4.4 Prompts for Qwen-Image-Layered (The Unresolved Problem)
 
 We know from MEMORY.md (extensive testing May 21) that:
 - **Empty prompt** (`""`) often works BETTER than wrong prompts
@@ -323,49 +460,208 @@ DEFAULT_SPLIT_PROMPTS = {
 
 ## 5. Z-Ordering (On the Way Back Up)
 
-### 5.1 What Happens
+### 5.1 The Complete Flow — Step by Step
 
-When a Boss's children complete:
-1. Download all children's result images
-2. Send ALL images to Qwen3-VL in one batch
-3. Qwen3-VL arranges them from farthest to closest
-4. Boss uploads Z-order metadata
+```
+TOP BOSS (Manager) does NOT download ALL final layers directly.
+Instead, the Z-order flows UP through the hierarchy:
 
-### 5.2 Qwen3-VL Z-Order Prompt
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 1: Bottom-level Workers upload their final good layers │
+│   Worker W1: Uploads task_42_01_01.png (from split 1)       │
+│   Worker W1: Uploads task_42_01_02.png (from split 2)       │
+│   Worker W2: Uploads task_42_02_01.png                       │
+│   (Each uploads to: POST /api/tasks/{id}/result)            │
+├─────────────────────────────────────────────────────────────┤
+│ STEP 2: Teacher #1 polls — sees both children complete      │
+│   Downloads: task_42_01_01.png + task_42_01_02.png           │
+│   Qwen3-VL (pairwise): which of these 2 is farther?         │
+│   Uploads Z-order metadata:                                  │
+│     PUT /api/tasks/{teacher1_id}/zorder                     │
+│     {                                                       │
+│       "layers": [                                           │
+│         "task_42_01_02.png",  ← farthest (background)       │
+│         "task_42_01_01.png"   ← closest (foreground)        │
+│       ]                                                     │
+│     }                                                       │
+├─────────────────────────────────────────────────────────────┤
+│ STEP 3: Teacher #2 does the same for HIS children            │
+│   Downloads: task_42_02_01.png (only 1 — other was garbage) │
+│   Single layer: no Z-order needed (auto = only layer)       │
+│   Uploads Z-order metadata:                                  │
+│     PUT /api/tasks/{teacher2_id}/zorder                     │
+│     {                                                       │
+│       "layers": ["task_42_02_01.png"]                       │
+│     }                                                       │
+├─────────────────────────────────────────────────────────────┤
+│ STEP 4: Top Boss polls — sees ALL teachers complete          │
+│   Top Boss downloads:                                        │
+│     — Teacher #1's zorder: ["task_42_01_02.png",            │
+│                              "task_42_01_01.png"]            │
+│     — Teacher #2's zorder: ["task_42_02_01.png"]            │
+│                                                              │
+│   Top Boss downloads the actual images:                      │
+│     GET /api/files/task_42_01_02.png                         │
+│     GET /api/files/task_42_01_01.png                         │
+│     GET /api/files/task_42_02_01.png                         │
+│                                                              │
+│   Top Boss runs Qwen3-VL pairwise Z-order on them:           │
+│     "task_42_01_02.png is farthest"                          │
+│     "task_42_02_01.png is middle"                            │
+│     "task_42_01_01.png is closest"                           │
+│                                                              │
+│   Result: 3 layers. N=3 < 6 → create 3 empty transparent     │
+│   for farthest positions, place these 3 at closest positions.│
+│                                                              │
+│   Top Boss uploads: POST /api/questions/42/complete          │
+│     layer_1.png = empty transparent                          │
+│     layer_2.png = empty transparent                          │
+│     layer_3.png = empty transparent                          │
+│     layer_4.png = task_42_01_02.png  (farthest real layer)   │
+│     layer_5.png = task_42_02_01.png  (middle real layer)     │
+│     layer_6.png = task_42_01_01.png  (closest real layer)    │
+│                                                              │
+│ DONE. Client downloads 6 layers.                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key insight:** Top Boss does NOT download every single layer from every worker.
+He downloads the Z-order METADATA from his direct children (the Teachers).
+That metadata tells him which filenames to download and in what order.
+Then he does ONE final Z-ordering pass on the collected layers, followed by combining.
+
+### 5.2 What Each Boss Level Does
+
+| Boss Level | Downloads from children | Uploads |
+|-----------|------------------------|---------|
+| **Teacher (mid-level)** | Children's result images | Z-order metadata for HIS children's layers |
+| **Manager (top level)** | Z-order metadata from all teachers + the actual images | Final 6 layers |
+
+Mid-level bosses NEVER combine. They only arrange. The top boss is the only combiner.
+
+### 5.3 Z-Order Implementation: Pairwise Comparison (Ollama-Compatible)
+
+**CRITICAL:** Ollama's vision API supports ONE image per message, not multiple.
+We cannot send N images and ask "arrange them." Instead, use pairwise comparison:
 
 ```python
-def determine_z_order(layer_paths, original_painting_path=None):
+def determine_z_order(layer_paths):
     """
-    Ask Qwen3-VL to arrange N images by depth (farthest from viewer → closest to viewer).
-    Returns list of paths in Z-order.
-    """
-    images_b64 = []
-    for path in layer_paths:
-        with open(path, "rb") as f:
-            images_b64.append(base64.b64encode(f.read()).decode())
-
-    prompt = f"""You are looking at {len(layer_paths)} transparent image layers
-    extracted from the same artwork. Your job: arrange them by depth.
-
-    Layer 1 = FARTHEST from the viewer (sky, distant background, horizon)
-    Layer {len(layer_paths)} = CLOSEST to the viewer (foreground objects, characters)
-
-    List layer numbers from 1 (farthest) to {len(layer_paths)} (closest).
+    Arrange N images by depth using pairwise Qwen3-VL comparisons.
     
-    Respond with ONLY this JSON:
-    {{"z_order": [1, 3, 2, ...]}}  (indices: 1-based, in farthest→closest order)
+    Ollama-compatible: each call sends exactly 2 images + prompt.
+    
+    Returns: list of paths sorted farthest→closest.
     """
+    if len(layer_paths) <= 1:
+        return list(layer_paths)
+    
+    # Sort using pairwise comparisons (like a tournament)
+    # For each pair, ask: "Which of these two is farther from the viewer?"
+    
+    # Start with first image as "current farthest"
+    sorted_layers = [layer_paths[0]]
+    
+    for new_path in layer_paths[1:]:
+        # Compare new_path against each already-sorted layer to find its position
+        inserted = False
+        for i, existing in enumerate(sorted_layers):
+            result = _pairwise_compare(new_path, existing)  # returns: "A_farther" or "B_farther"
+            if result == "A_farther":  # new is farther than existing
+                sorted_layers.insert(i, new_path)
+                inserted = True
+                break
+        if not inserted:
+            sorted_layers.append(new_path)  # new is closest of all
+    
+    return sorted_layers
 
-    # This requires a model that can take multiple images. 
-    # Ollama supports this in the chat API with multiple image parts.
-    # Alternative: judge pairwise and build a sort order.
+
+def _pairwise_compare(image_a_path, image_b_path):
+    """
+    Ask Qwen3-VL: "Which of these two layers is farther from the viewer?"
+    
+    Returns: "A_farther" or "B_farther"
+    """
+    with open(image_a_path, "rb") as f:
+        img_a_b64 = base64.b64encode(f.read()).decode()
+    with open(image_b_path, "rb") as f:
+        img_b_b64 = base64.b64encode(f.read()).decode()
+    
+    prompt = """You see two transparent image layers extracted from the same artwork.
+    Which one is FARTHER from the viewer (background)?
+    
+    Consider: sky/horizon = farthest. Characters/foreground objects = closest.
+    Larger objects, more detail, warmer colors = closer to the viewer.
+    
+    Respond ONLY with: "A" or "B"
+    (A = the first image, B = the second image)"""
     
     response = ollama.chat(
-        model="qwen3-vl:8b",
-        messages=[{"role": "user", "content": prompt, "images": images_b64}],
+        model="qwen3-vl:4b",
+        messages=[{
+            "role": "user",
+            "content": prompt,
+            "images": [img_a_b64, img_b_b64]
+        }]
     )
-    return json.loads(response)["z_order"]
+    
+    answer = response["message"]["content"].strip().upper()
+    if "A" in answer:
+        return "A_farther"
+    else:
+        return "B_farther"
 ```
+
+**Performance:** N layers → ~N²/2 pairwise comparisons. For typical N=2-6 layers, this is 1-15 comparisons.
+Each comparison call to Ollama: ~0.5-1 second. Total: <15 seconds for worst case.
+
+### 5.4 Programmatic Z-Order (Fallback — No AI Needed)
+
+If Qwen3-VL is unavailable or produces inconsistent results:
+
+```python
+def determine_z_order_programmatic(layer_paths):
+    """
+    Heuristic Z-order without AI.
+    
+    Strategy: 
+    - More alpha coverage = closer (foreground objects fill more of the canvas)
+    - Warmer colors = closer (atmospheric perspective: distant objects are cooler/bluer)
+    - Larger connected components = closer
+    """
+    scores = []
+    for path in layer_paths:
+        img = Image.open(path).convert("RGBA")
+        arr = np.array(img)
+        alpha = arr[:, :, 3]
+        rgb = arr[:, :, :3]
+        
+        # Score 1: Alpha coverage (% of non-transparent pixels)
+        coverage = np.sum(alpha > 10) / (img.width * img.height)
+        
+        # Score 2: Warmth ratio (red+green vs blue — lower blue = warmer/closer)
+        r_mean = np.mean(rgb[alpha > 10, 0]) if np.any(alpha > 10) else 0
+        g_mean = np.mean(rgb[alpha > 10, 1]) if np.any(alpha > 10) else 0
+        b_mean = np.mean(rgb[alpha > 10, 2]) if np.any(alpha > 10) else 0
+        warmth = ((r_mean + g_mean) / 2) / max(b_mean, 1)
+        
+        # Score 3: Average connected component size (simplified)
+        from scipy import ndimage
+        labeled, num_features = ndimage.label(alpha > 10)
+        avg_component_size = np.sum(alpha > 10) / max(num_features, 1)
+        
+        # Combined score (higher = closer to viewer)
+        score = coverage * 3 + warmth * 1 + (avg_component_size / 10000) * 2
+        scores.append(score)
+    
+    # Sort by score ascending (lower score = farther)
+    sorted_indices = sorted(range(len(scores)), key=lambda i: scores[i])
+    return [layer_paths[i] for i in sorted_indices]
+```
+
+**Which to use:** Try Qwen3-VL pairwise first. If it fails (Ollama not running, timeout, nonsense response),
+fall back to programmatic. The programmatic heuristic is surprisingly good for most paintings.
 
 ### 5.3 Alternative: Programmatic Z-Order
 
@@ -667,13 +963,17 @@ not impressionist brushwork.
 | Scenario | Handling |
 |----------|----------|
 | **All layers garbage** | Top boss creates 6 empty transparent PNGs, marks question complete with warning |
+| **Dual-garbage split (both layers bad)** | Handle with `handle_dual_garbage()`: retry with original image + new seed, max 3 retries before marking branch dead (see §4.3) |
 | **ComfyUI crash mid-split** | Caught by try/except → task reset to pending → another worker picks up |
-| **Qwen3-VL unavailable** | Fall back to heuristic: coverage-based quality + programmatic Z-order |
+| **Qwen3-VL unavailable** | Fall back to programmatic Z-order (coverage+warmth, see §5.4) + programmatic quality (coverage threshold) |
 | **N = 0 good layers** | Mark question as `failed`, notify Client |
 | **N = 1 good layer** | Put it at Layer 1 (closest), 5 empty transparent layers |
+| **N < 6 layers** | Remaining farthest layers are empty transparent PNGs (see §6.2) |
 | **Pre-built ComfyUI models missing** | Node checks on startup, warns user to download models (links to setup guide) |
 | **Disk full on website** | `GET /api/health` returns disk space warning; Boss pauses creating new tasks |
 | **Worker disconnects mid-job** | Task auto-resets to pending after timeout (e.g., 10 minutes with no progress) |
+| **Boss+Worker same machine ComfyUI conflict** | Single ComfyUI instance shared; GUI serializes tasks (see §4.1); if port conflict, auto-find next free port |
+| **Extreme aspect ratio input** | Pad to 640×640 square with transparent border before sending to Qwen-Image-Layered (see §4.2 `_prepare_for_qwen`) |
 
 ---
 
