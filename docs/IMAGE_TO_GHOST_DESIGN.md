@@ -204,39 +204,44 @@ Every node (Boss or Worker) follows the same pipeline when claiming an ITG task:
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    SPLITTING PIPELINE                     │
+│  (Every node: Boss & Worker — ✂️ scissors + 👁️ eyes + 🧠 brain)│
 │                                                          │
 │  1. Download input_image from website                    │
 │     GET /api/files/task_42_01.png                        │
 │                                                          │
-│  2. Resize to 640px (longest side)                       │
-│     Maintains aspect ratio. Required by Qwen-Image-Layered│
+│  2. Resize to 640×640 padded square                      │
+│     Pad with transparent border for aspect ratio safety  │
 │                                                          │
-│  3. Run Qwen-Image-Layered via ComfyUI                   │
+│  3. ✂️ SPLIT: Qwen-Image-Layered via ComfyUI             │
 │     Settings: layers=2, steps=20, cfg=4.0, seed=random   │
-│     Input: resized RGBA image                            │
-│     Output: 2 RGBA layers (split_result_1, split_result_2)│
+│     Output: 2 RGBA layers                                │
 │                                                          │
 │  4. Save both layers locally as temp files               │
 │                                                          │
-│  5. Qwen3-VL Quality Gate (for each of the 2 layers)     │
-│     Send image to Qwen3-VL: "Is this image recognizable  │
-│     as part of the original artwork, or is it a solid    │
-│     color / blurry / incomprehensible?"                  │
+│  5. 👁️ JUDGE: Qwen3-VL quality gate (each layer)         │
+│     "Is this recognizable content or solid/blurry?"      │
 │     Response: "good" or "garbage"                        │
 │                                                          │
-│  6. Upload good layers to website                        │
-│     POST /api/files/upload (multipart: task_42_01_01.png)│
+│  6. 👁️👁️ DESCRIBE: Qwen3-VL + 🧠🧠 BRAINSTORM: Qwen LLM   │
+│     For each GOOD layer:                                 │
+│     a) Qwen3-VL describes: "hookah glass with smoke"     │
+│     b) Qwen LLM writes split prompt for child:           │
+│        "Decompose: glass base, metal stem, smoke wisps"  │
+│     c) This prompt is attached to the child task in DB   │
 │                                                          │
-│  7a. If depth < max_depth (Boss):                        │
-│      Create 2 child tasks (or 1 if one layer garbage)    │
-│      POST /api/tasks/batch { tasks: [...] }              │
+│  7. Upload good layers to website                        │
+│     POST /api/files/upload (multipart)                   │
 │                                                          │
-│  7b. If depth == max_depth (Worker/bottom):              │
+│  8a. If depth < max_depth (Boss):                        │
+│      Create child tasks WITH custom prompts from step 6  │
+│      POST /api/tasks/batch { tasks: [{prompt: "..."}] }  │
+│                                                          │
+│  8b. If depth == max_depth (Worker/bottom):              │
 │      Upload good layers as final result                  │
 │      POST /api/tasks/{id}/result { images: [...] }       │
 │      Mark task complete                                  │
 │                                                          │
-│  8. Clean up local temp files                            │
+│  9. Clean up local temp files                            │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
