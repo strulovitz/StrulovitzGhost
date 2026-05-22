@@ -69,7 +69,7 @@ silhouette advancing directly toward the viewer.
 |-----------|---------------|
 | Flask Server | app.py (May 22, commit `b134e73`) |
 | PyQt6 GUI | gui.py (May 22, auto-detect models) |
-| Boss LLM | qwen3.6:27b (Ollama, 17 GB) |
+| Boss LLM | qwen3:14b (Ollama, 9 GB) |
 | Worker Image AI | Qwen-Image-2512 4-bit (diffusers) |
 | Chroma Key | green, #00FF00 → PIL alpha |
 
@@ -79,7 +79,7 @@ silhouette advancing directly toward the viewer.
 
 ### Step 1: Laptop — Pull Boss Model
 ```powershell
-ollama pull qwen3.6:27b
+ollama pull qwen3:14b
 ```
 
 ### Step 2: Laptop — Start Flask Website (Terminal 1)
@@ -103,7 +103,7 @@ C:\Users\nir_s\miniconda3\envs\strulovitzghost\python.exe gui.py
 
 ### Step 5: Laptop — Boss: Split Scene into 6 Layers
 1. Tab: "Text To Ghost" | Role: "Boss"
-2. Click **Detect Models** → select `qwen3.6:27b`
+2. Click **Detect Models** → select `qwen3:14b`
 3. Click **Refresh** → select the new question
 4. Click **Auto-Split with LLM**
 5. Wait for thinking model (~60-120 sec)
