@@ -622,52 +622,9 @@ def _pairwise_compare(image_a_path, image_b_path):
 **Performance:** N layers → ~N²/2 pairwise comparisons. For typical N=2-6 layers, this is 1-15 comparisons.
 Each comparison call to Ollama: ~0.5-1 second. Total: <15 seconds for worst case.
 
-### 5.4 Programmatic Z-Order (Fallback — No AI Needed)
+**Which to use:** Qwen3-VL pairwise comparison ONLY. No programmatic fallback — it cannot work (giant cloud = high coverage ≠ closer than tiny character). If Qwen3-VL is unavailable, the task waits. If Qwen3-VL is wrong, the output is wrong — cost of full automation. Only a human can override.
 
-If Qwen3-VL is unavailable or produces inconsistent results:
-
-```python
-def determine_z_order_programmatic(layer_paths):
-    """
-    Heuristic Z-order without AI.
-    
-    Strategy: 
-    - More alpha coverage = closer (foreground objects fill more of the canvas)
-    - Warmer colors = closer (atmospheric perspective: distant objects are cooler/bluer)
-    - Larger connected components = closer
-    """
-    scores = []
-    for path in layer_paths:
-        img = Image.open(path).convert("RGBA")
-        arr = np.array(img)
-        alpha = arr[:, :, 3]
-        rgb = arr[:, :, :3]
-        
-        # Score 1: Alpha coverage (% of non-transparent pixels)
-        coverage = np.sum(alpha > 10) / (img.width * img.height)
-        
-        # Score 2: Warmth ratio (red+green vs blue — lower blue = warmer/closer)
-        r_mean = np.mean(rgb[alpha > 10, 0]) if np.any(alpha > 10) else 0
-        g_mean = np.mean(rgb[alpha > 10, 1]) if np.any(alpha > 10) else 0
-        b_mean = np.mean(rgb[alpha > 10, 2]) if np.any(alpha > 10) else 0
-        warmth = ((r_mean + g_mean) / 2) / max(b_mean, 1)
-        
-        # Score 3: Average connected component size (simplified)
-        from scipy import ndimage
-        labeled, num_features = ndimage.label(alpha > 10)
-        avg_component_size = np.sum(alpha > 10) / max(num_features, 1)
-        
-        # Combined score (higher = closer to viewer)
-        score = coverage * 3 + warmth * 1 + (avg_component_size / 10000) * 2
-        scores.append(score)
-    
-    # Sort by score ascending (lower score = farther)
-    sorted_indices = sorted(range(len(scores)), key=lambda i: scores[i])
-    return [layer_paths[i] for i in sorted_indices]
-```
-
-**Which to use:** Try Qwen3-VL pairwise first. If it fails (Ollama not running, timeout, nonsense response),
-fall back to programmatic. The programmatic heuristic is surprisingly good for most paintings.
+**Helper: Propagate Client's original prompt.** If the Client described depth in their submission (e.g., "foreground: hookah glass, middle: smoke, background: mystical mist"), each entity receives this context alongside the image. Qwen3-VL uses it as a hint when comparing layers pairwise.
 
 ---
 
@@ -938,7 +895,7 @@ not impressionist brushwork.
 | **All layers garbage** | Top boss creates 6 empty transparent PNGs, marks question complete with warning |
 | **Dual-garbage split (both layers bad)** | Handle with `handle_dual_garbage()`: retry with original image + new seed, max 3 retries before marking branch dead (see §4.3) |
 | **ComfyUI crash mid-split** | Caught by try/except → task reset to pending → another worker picks up |
-| **Qwen3-VL unavailable** | Fall back to programmatic Z-order (coverage+warmth, see §5.4) + programmatic quality (coverage threshold) |
+| **Qwen3-VL unavailable** | Task waits. No programmatic fallback (unreliable — giant cloud vs tiny character). Only human can override Z-order. |
 | **N = 0 good layers** | Mark question as `failed`, notify Client |
 | **N = 1 good layer** | Put it at L1 (closest, 20cm), L2-L6 empty transparent |
 | **N < 6 layers** | Closest layers (L1-LN) get real images, remaining farthest (L(N+1)-L6) are empty transparent PNGs (see §6.2). L1=20cm closest, L6=farthest. |
