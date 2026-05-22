@@ -49,14 +49,14 @@
 
 | # | Question | Status |
 |---|----------|--------|
-| 17 | **Qwen3-VL model size?** 4B (fast, might miss nuance) vs 8B (better, heavier). Which for quality judging? | ⬜ UNRESOLVED |
-| 18 | **Is Qwen3-VL available in Ollama?** Need to VERIFY — never actually tested Ollama's vision API with local Qwen3-VL. | ⬜ UNRESOLVED |
-| 19 | **Prompt for Qwen-Image-Layered — STILL UNSOLVED.** Biggest risk. Might build whole ITG system, discover model produces garbage 90% of the time for fine art. | ⬜ UNRESOLVED |
-| 20 | **SageAttention + Triton for diffusers?** Might allow Python-native splitting (no ComfyUI). Worth investigating? | ⬜ UNRESOLVED |
-| 21 | **How many workers per Boss?** Exactly 2 (since split is 1→2)? Or should a Teacher run multiple splits and create more children? | ⬜ UNRESOLVED |
-| 22 | **Claim timeout for ITG?** How long before claimed-but-not-completed task resets? ITG split: ~2-3 min (RTX 5090), ~8-12 min (RTX 4070 Ti). | ⬜ UNRESOLVED |
-| 23 | **What if a painting decomposes into ONLY 1 good layer total?** N=1 after all splitting and judging. Is that a "successful decomposition" or a failure? | ⬜ UNRESOLVED |
-| 24 | **Should ITG and TTG share the SAME website instance?** Or separate Flask servers? Same DB? Different DBs? | ⬜ UNRESOLVED |
+| 17 | **Qwen3-VL model size?** 4B vs 8B vs 30B — which for quality judging? | ✅ RESOLVED — No minimum. Document the options: 4B (fast, modest quality), 8B (balanced), 30B (best, needs strong GPU). User chooses based on their hardware/budget. Software works with ANY size. Smaller = faster but less accurate — still works. |
+| 18 | **Is Qwen3-VL available in Ollama?** Never actually tested Ollama's vision API with local Qwen3-VL. | ✅ CONFIRMED — All sizes available: 2B, 4B, 8B, 30B, 32B, 235B. Command: `ollama run qwen3-vl:4b "Describe: /path/to/image.png"`. Works for both quality judging and parent-anchored spatial positioning. ITG design is on solid ground. |
+| 19 | **Prompt for Qwen-Image-Layered — STILL UNSOLVED.** Might build whole ITG system, discover model produces garbage 90% of the time for fine art. | ✅ NOT A BLOCKER (see Issue #1). Worked excellent on food+drink table, Eagle Nebula, Opium Dream (4 layers). We build now, investigate prompt syntax later. Feature has value without perfect fine art support. |
+| 20 | **SageAttention + Triton for diffusers?** Might allow Python-native splitting without ComfyUI. | ✅ DEFERRED — Yesterday was "a day from hell" with diffusers. ComfyUI works, we stick with it. SageAttention is "maybe someday" research, not a build priority. |
+| 21 | **How many workers per Boss?** Exactly 2 (split 1→2)? Or can a Teacher create more? | ✅ RESOLVED by Issue #6 (POOL architecture). We don't control how many good layers Qwen splitter produces. Manager posts however many come out → whoever is free claims them. No fixed count. |
+| 22 | **Claim timeout for ITG?** How long before claimed task resets? ITG: ~2-3 min (RTX 5090), ~8-12 min (RTX 4070 Ti). | ✅ RESOLVED — Boss decides timeout, not website (website is just a blackboard). Timeout based on SLOWEST known worker so weak computers don't get tasks stolen mid-work. Default: 15 min (12 min for slowest + 3 min grace). |
+| 23 | **N = 1 good layer total?** After all splitting, only 1 layer remains. Success or failure? | ✅ RESOLVED — 1 layer = FAILURE (it's just the original — nothing was split). 2-3 = borderline, subjective. 4+ = minimum for success. Mark question status accordingly so Client knows. |
+| 24 | **Should ITG and TTG share the SAME website instance?** Separate servers? Different DBs? | ✅ RESOLVED — SAME database with `type` field. To users, it's ONE system: Strulovitz Ghost. Photo or text input = implementation detail. Same queue, same line. Sharing DB doesn't hurt performance — it makes tracking easier (who's next in line regardless of mode). |
 
 ---
 
