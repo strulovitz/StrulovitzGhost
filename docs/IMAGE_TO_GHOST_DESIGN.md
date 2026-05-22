@@ -357,7 +357,7 @@ def _prepare_for_qwen(image_path, target_size=640):
     return square
 ```
 
-### 4.2 Qwen3-VL Quality Gate
+### 4.3 Qwen3-VL Quality Gate
 
 ```python
 def judge_layer_quality(image_path, original_painting_desc=""):
@@ -662,34 +662,6 @@ def determine_z_order_programmatic(layer_paths):
 
 **Which to use:** Try Qwen3-VL pairwise first. If it fails (Ollama not running, timeout, nonsense response),
 fall back to programmatic. The programmatic heuristic is surprisingly good for most paintings.
-
-### 5.3 Alternative: Programmatic Z-Order
-
-If Qwen3-VL multi-image is unreliable:
-
-```python
-def determine_z_order_programmatic(layer_paths):
-    """
-    Heuristic: larger objects = closer. More alpha coverage = closer.
-    Fall back to manual ordering if AI fails.
-    """
-    scores = []
-    for path in layer_paths:
-        img = Image.open(path).convert("RGBA")
-        arr = np.array(img)
-        alpha = arr[:, :, 3]
-        
-        # Score: percentage of non-transparent pixels
-        coverage = np.sum(alpha > 0) / (img.width * img.height)
-        
-        # Score: average "connected component" size (bigger = closer)
-        # Simplified: just use coverage as proxy
-        scores.append(coverage)
-    
-    # Sort by coverage ascending (less coverage = farther, typically sky/background)
-    sorted_indices = sorted(range(len(scores)), key=lambda i: scores[i])
-    return [i + 1 for i in sorted_indices]  # 1-based indices
-```
 
 ---
 
