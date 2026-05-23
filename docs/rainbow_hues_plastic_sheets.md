@@ -22,7 +22,15 @@ A semi-transparent plastic sheet behaves differently. Light from the monitor beh
 
 4. **The Fluid Rainbow:** No plastic sheet is perfectly uniform. Thickness varies by nanometers across the surface, causing the boosted wavelength to shift across the spectrum — creating the rainbow sweep.
 
-### Why This Scene Triggers It More Than Others
+### ⚡ THE KEY INSIGHT: Thin Films vs. Thick Glass
+
+**Thin-film interference ONLY happens when the material is close to the wavelength of light (~400–700 nm).** Plastic sheets, Mylar films, and stretched polymer foils fall into this category — they're thin enough for the front and back reflections to stay in phase.
+
+**Thick glass does NOT exhibit this artifact.** Standard glass panes (millimeters thick) are thousands of times thicker than light's wavelength. The reflected waves from the front and back surfaces are too far apart in phase to interfere constructively — no rainbow.
+
+This is why professional Pepper's Ghost displays use **thick glass or dielectric beamsplitter glass** instead of thin plastic films. The plastic sheets in Nir's setup (6 stacked between monitors) are the root cause.
+
+**Practical takeaway:** Replace the thin plastic sheets with thicker glass/acrylic panels (3mm+) to largely eliminate rainbow artifacts. The thicker the pane, the less interference.
 
 The Silver Warrior scene has large areas of uniform color (white snow, blue sky, pale mountains). These expose the rainbow artifact more than scenes with busy, high-contrast detail that visually "mask" the interference pattern.
 
