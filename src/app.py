@@ -1,4 +1,4 @@
-import os, sys, shutil, glob, json as json_module, io, zipfile
+import os, sys, shutil, json as json_module, io, zipfile
 from logger import setup_logging
 setup_logging()
 
@@ -471,29 +471,35 @@ def complete_question(question_id):
     return jsonify(question_to_dict(question))
 
 
-def _cleanup_question(question_id):
+def _cleanup_question(question_id, delete_permanent=False):
     question = Question.query.get(question_id)
     if not question:
         return
     question_type = question.type.value if question.type else "TTG"
     temp_dir = ITG_TEMP if question_type == "ITG" else TTG_TEMP
-    pattern = os.path.join(temp_dir, f"task{question_id}*")
-    for f in glob.glob(pattern):
-        try:
-            os.remove(f)
-        except OSError:
-            pass
-    pattern2 = os.path.join(temp_dir, f"*task{question_id}*")
-    for f in glob.glob(pattern2):
-        try:
-            os.remove(f)
-        except OSError:
-            pass
+    final_dir = ITG_FINAL if question_type == "ITG" else TTG_FINAL
+    tasks = Task.query.filter_by(question_id=question_id).all()
+    for t in tasks:
+        if not t.result_filename:
+            continue
+        for filename in t.result_filename.split(","):
+            filename = filename.strip()
+            src = os.path.join(temp_dir, filename)
+            dst = os.path.join(final_dir, filename)
+            try:
+                if delete_permanent:
+                    if os.path.isfile(dst):
+                        os.remove(dst)
+                elif os.path.isfile(src):
+                    os.makedirs(final_dir, exist_ok=True)
+                    shutil.move(src, dst)
+            except OSError:
+                pass
 
 
 @app.route("/api/question/<int:question_id>/cleanup", methods=["DELETE"])
 def cleanup_question(question_id):
-    _cleanup_question(question_id)
+    _cleanup_question(question_id, delete_permanent=True)
     return jsonify({"cleaned": question_id})
 
 
