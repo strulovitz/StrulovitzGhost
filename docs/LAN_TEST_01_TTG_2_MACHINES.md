@@ -1,6 +1,6 @@
 # 🧪 LAN Test #01 — TTG Distributed on 2 Machines
 
-**Date:** May 23, 2026 | **Status:** ⏳ READY TO RUN | **Mode:** TTG
+**Date:** May 23, 2026 | **Status:** ✅ COMPLETED — REAL GUI TEST | **Mode:** TTG
 
 ---
 
@@ -204,7 +204,24 @@ Zero manual coordination. The system works.
 
 ## Results
 
-### Boss Splitting (May 23, 2026 — Test Run)
+### ✅ REAL GUI TEST — Run #3 (May 23, 2026) 🎉
+
+**This was the REAL test** — Nir clicked all GUI checkboxes, submitted from Desktop Client tab. Zero API usage. No AI agents touched anything. Proper user-facing flow.
+
+### Setup (GUI Clicking by Nir)
+| Machine | Window | Tab | Setup |
+|---------|--------|-----|-------|
+| Laptop | GUI #1 | Boss | Detect qwen3:14b → Auto-Pilot ✅ |
+| Laptop | GUI #2 | Worker | ID: laptop-5090 → Polling → Auto-Generate ✅ |
+| Desktop | GUI #1 | Worker | URL: 10.0.0.6:5000 → ID: desktop-4070ti → Polling → Auto-Generate ✅ |
+| Desktop | GUI #2 | Client | URL: 10.0.0.6:5000 → Paste scene → Submit ✅ |
+
+### Submission
+- Submitted from Desktop Client tab (proper user flow)
+- Silver Warrior — Frank Frazetta arctic fantasy scene, 6 layers
+- Style: Ghibli animation
+
+### Boss Splitting
 | Metric | Value |
 |--------|-------|
 | LLM Model | qwen3:14b (Ollama) |
@@ -212,73 +229,63 @@ Zero manual coordination. The system works.
 | Layers Created | 6 |
 | Errors | None |
 
-### Layer Generation — Run #2 (Coordinated 2-Machine ✅)
-| Layer | Content | Worker | Time | Status |
-|-------|---------|--------|------|--------|
-| 1 | Snow foreground | laptop-5090 | ~26s | ✅ |
-| 2 | Polar bears | laptop-5090 | ~26s | ✅ |
-| 3 | Sled + runners | laptop-5090 | ~26s | ✅ |
-| 4 | Warrior | desktop-4070ti | ~10m | ✅ |
-| 5 | Mountains | desktop-4070ti | ~10m | ✅ |
-| 6 | Sky | desktop-4070ti | ~10m | ✅ |
+### Layer Generation
 
-**Total: 2 machines, 3 layers each. Distributed generation proven.** ✅
+| Layer | Content | Worker | Time | Size | Status |
+|-------|---------|--------|------|------|--------|
+| 1 | Snow foreground | laptop-5090 | ~26s | 599 KB | ✅ |
+| 2 | Polar bears | laptop-5090 | ~26s | 565 KB | ✅ |
+| 3 | Sled | laptop-5090 | ~26s | 741 KB | ✅ |
+| 4 | Warrior | laptop-5090 | ~26s | 680 KB | ✅ |
+| 5 | Mountains | laptop-5090 | ~26s | 498 KB | ✅ |
+| 6 | Sky | desktop-4070ti | ~10m | 443 KB | ✅ |
 
-### Run #2 Coordination Method
-- Laptop submitted scene + triggered LLM split via API
-- Laptop immediately claimed tasks 10, 11, 12 (Layers 1-3) via API
-- Desktop claimed tasks 7, 8, 9 (Layers 4-6) via API (coordinated via seance)
-- Both generated simultaneously
-- Laptop finished first (5090 = 26s/layer), Desktop took ~10 min/layer (4070 Ti)
+**Total: 2 machines, 5 layers Laptop (5090) + 1 layer Desktop (4070 Ti).**
+**All 6 files preserved in `output/ttg/final/` after cleanup fix.** ✅
 
-### Final Output (Run #2)
-- [x] All 6 layers generated
-- [x] Both machines contributed ✅ (laptop-5090 + desktop-4070ti)
-- [x] All RGBA with green chroma-key transparency
-- [x] Question marked "completed" ✅
+### Layer Distribution
+- Laptop RTX 5090: 5 of 6 layers (~26s each, ~2 min total)
+- Desktop RTX 4070 Ti: 1 layer (~10 min)
+- Desktop was outpaced by faster 5090 claiming tasks rapidly
+
+### 🐛 BUG FOUND & FIXED: Cleanup Deleted Layer Files
+
+**Root cause:** `_cleanup_question()` used wildcard pattern `task{question_id}*` which accidentally matched task-level files when question ID collided with task IDs. When question #1 auto-completed, pattern `task1*` matched task ID 1's uploaded file (Layer 6) and silently deleted it — before Nir could download the ZIP.
+
+**Fix (commit `b7d2a10`):**
+- Replaced wildcard `glob.glob` patterns with DB-driven exact filenames
+- Auto-complete now **MOVES** files from `temp/` → `final/` (preserves for ZIP download)
+- Manual DELETE endpoint still permanently removes files
+- Removed unused `glob` import
+
+### Final Verification
+| Check | Status |
+|-------|--------|
+| All 6 layers generated | ✅ |
+| Both machines contributed | ✅ |
+| Files survive auto-complete (in final/) | ✅ |
+| ZIP download includes all 6 | ✅ |
+| Submitted from Desktop Client tab | ✅ |
+| Zero API usage by AI agents | ✅ |
+| GUI checkboxes all clicked by Nir | ✅ |
+| Seance used for AI coordination only | ✅ |
+
+**🎯 THE DISTRIBUTED PIPELINE WORKS END-TO-END THROUGH THE GUI.**
+
+### ❌ Previous Runs (Invalid — API-only tests)
+
+Runs #1 and #2 used raw API calls (bypassing GUI). Proved plumbing works but tested zero user-facing features. Seance was improperly used as task coordinator.
 
 ### Lessons Learned
 
-#### 🚨 WHAT WENT WRONG — RUNS #1 AND #2 ARE INVALID
-
-| Problem | Run #1 | Run #2 |
-|---------|--------|--------|
-| Used API instead of GUI | ❌ Laptop used `python -c` loop | ❌ Both machines used `python -c` commands |
-| Manual task assignment | ❌ Laptop grabbed all 6 tasks | ❌ Tasks manually claimed by ID |
-| No GUI Auto-Pilot used | ❌ Boss/Worker auto-pilot never tested | ❌ Same |
-| Seance used as production coordinator | ❌ Tried to orchestrate via seance | ❌ Used seance for task distribution |
-| Zero user-facing testing | ❌ No GUI buttons clicked | ❌ Same |
-
-**Root cause:** The testers (AI agents) couldn't interact with the GUI (it requires
-human hands to click checkboxes). Instead of fixing that limitation, they bypassed
-the GUI entirely and tested the raw API — which proves the plumbing works but
-proves NOTHING about whether a real user can use the system.
-
-**The fix:** The test must use the GUI. If the GUI can't be operated by the AI agent,
-Nir must do the GUI clicks. The AI agent handles only the terminal commands
-(Flask server start, GUI launch) — never the API directly.
-
-#### ✅ What actually works
-
-- **RTX 5090 24GB is fast.** 25 seconds per layer at 768×576 with 15 steps.
-- **Desktop RTX 4070 Ti works.** ~9-10 minutes per layer.
-
-- **Auto-Pilot code exists** in gui.py — but has NEVER been tested through the GUI.
-- **API endpoints all work** — submit, split, claim, generate, upload all functional.
-- **Flask server accessible over LAN** at 10.0.0.6:5000.
-- **Ollama qwen3:14b** splitting works fast (~15s).
-- **GPT-5.5 pre-split prompts** produce better layer descriptions.
-- **Chroma-key green → RGBA** works reliably.
-- **Desktop can claim + generate + upload** over LAN using the same codebase.
-
-#### 🔜 For the REAL test
-
-**Nir must perform the GUI interactions** (check Auto-Pilot, Start Polling, Auto-Generate)
-because the AI agents cannot click GUI buttons. Then:
-1. Nir submits the scene in Client tab
-2. Nir watches both machines' progress bars fill automatically
-3. Nir verifies both machines contributed
-4. Only then is the test valid
+- **RTX 5090 24GB:** 25s/layer at 768×576. **Fast.** ⚡
+- **RTX 4070 Ti 12GB:** 9-10 min/layer. Works reliably over LAN.
+- **Auto-Pilot (Boss + Worker):** ✅ Proven through real GUI clicking
+- **Desktop can claim + generate + upload** over LAN ✅
+- **Ollama qwen3:14b** splitting: ~15s ✅
+- **Chroma-key green → RGBA:** Works ✅
+- **GUI is the interface:** API is plumbing only. Tests must use GUI.
+- **Seance:** For AI-to-AI coordination only. Never for task distribution.
 
 ---
 
