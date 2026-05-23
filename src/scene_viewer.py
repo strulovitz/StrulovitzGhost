@@ -6,7 +6,7 @@ import traceback
 from datetime import datetime
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QGraphicsView, QGraphicsScene, QVBoxLayout,
-    QHBoxLayout, QLabel, QPushButton, QComboBox,
+    QHBoxLayout, QLabel, QPushButton, QComboBox, QGroupBox,
 )
 from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QShortcut, QKeySequence
@@ -157,7 +157,7 @@ class SceneViewer(QWidget):
         self.scenes = self._scan_scenes()
 
         self.setWindowTitle("StrulovitzGhost — Scene Viewer")
-        self.setFixedSize(440, 120)
+        self.setFixedSize(440, 220)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 8, 10, 8)
@@ -192,6 +192,15 @@ class SceneViewer(QWidget):
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint.setStyleSheet("color: gray; font-size: 10px;")
         layout.addWidget(hint)
+
+        self.preview_group = QGroupBox("Scene Contents")
+        preview_layout = QVBoxLayout()
+        self.preview_label = QLabel("")
+        self.preview_label.setWordWrap(True)
+        self.preview_label.setStyleSheet("color: #ccc; font-size: 11px;")
+        preview_layout.addWidget(self.preview_label)
+        self.preview_group.setLayout(preview_layout)
+        layout.addWidget(self.preview_group)
 
         self.setLayout(layout)
 
@@ -248,7 +257,14 @@ class SceneViewer(QWidget):
         )[:6]
 
         self.current_folder = name
-        self.scene_label.setText(f"📁 {name}")
+        self.scene_label.setText(f"\U0001f4c1 {name}")
+
+        lines = []
+        for f in sorted(os.listdir(folder)):
+            if f.lower().endswith('.png') and 'composite' not in f.lower():
+                size_kb = os.path.getsize(os.path.join(folder, f)) // 1024
+                lines.append(f"  {f} ({size_kb} KB)")
+        self.preview_label.setText("\n".join(lines))
 
         for i, fname in enumerate(png_files):
             path = os.path.join(folder, fname)

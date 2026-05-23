@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import (
     QSlider,
 )
 from PyQt6.QtCore import QTimer, Qt, QThread, pyqtSignal, QRectF
-from PyQt6.QtGui import QPixmap, QImage, QPainter
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QShortcut, QKeySequence
 
 
 SERVER_URL = "http://localhost:5000"
@@ -137,12 +137,30 @@ class LayerWindow_(QWidget):
         self.schedule_save()
         event.accept()
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_R:
+            self.view.rotate(90)
+            self.rotation = (self.rotation + 90) % 360
+            self.schedule_save()
+        else:
+            super().keyPressEvent(event)
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self.schedule_save()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.schedule_save()
+
     def schedule_save(self):
         if hasattr(self, '_save_timer'):
             self._save_timer.start()
 
     def signal_save(self):
-        pass
+        viewer = self.window()
+        if hasattr(viewer, '_auto_save_timer'):
+            pass
 
 
 class ViewerWidget(QWidget):
@@ -156,10 +174,15 @@ class ViewerWidget(QWidget):
         title.setStyleSheet("font-size: 18px; font-weight: bold; color: #4ecca3; padding: 5px;")
         layout.addWidget(title)
 
-        info = QLabel("Select a scene below. Layer windows will open as separate floating windows. Move, resize, or zoom them -- all settings auto-save to scene.json.")
+        info = QLabel("Select a scene below. Layer windows open as separate floating windows. Move, resize, zoom, or rotate -- all settings auto-save to scene.json.")
         info.setWordWrap(True)
         info.setStyleSheet("color: #aaa; padding: 5px;")
         layout.addWidget(info)
+
+        hint = QLabel("Wheel=zoom | Drag=pan | R=rotate 90° | Move/resize windows freely")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint.setStyleSheet("color: gray; font-size: 10px; padding: 3px;")
+        layout.addWidget(hint)
 
         sel_row = QHBoxLayout()
         self.prev_btn = QPushButton("Prev")
@@ -205,6 +228,9 @@ class ViewerWidget(QWidget):
         layout.addStretch()
         self.scenes = []
         self.refresh_scenes()
+
+        QShortcut(QKeySequence(Qt.Key.Key_Left), self, activated=self.prev_scene)
+        QShortcut(QKeySequence(Qt.Key.Key_Right), self, activated=self.next_scene)
 
     def refresh_scenes(self):
         self.scenes = []
