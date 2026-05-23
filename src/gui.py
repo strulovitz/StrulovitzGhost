@@ -1622,13 +1622,23 @@ class MainWindow(QMainWindow):
 
         outer_layout.addWidget(self.tabs)
 
+        # Viewer (separate from TTG/ITG tabs)
+        self.viewer_widget = ViewerWidget()
+        self.viewer_widget.hide()
+        outer_layout.addWidget(self.viewer_widget)
+
         # Sync mode across tabs
         self.mode_combo.currentTextChanged.connect(self.switch_mode)
 
     def switch_mode(self, mode):
         idx = 0 if mode == "Client" else 1 if mode == "Boss" else 2 if mode == "Worker" else 3
         if idx == 3:
+            self.tabs.hide()
+            self.viewer_widget.show()
+            self.viewer_widget.refresh_scenes()
             return
+        self.viewer_widget.hide()
+        self.tabs.show()
         self.ttg_stack.setCurrentIndex(idx)
         self.itg_stack.setCurrentIndex(idx)
         if mode == "Boss":
