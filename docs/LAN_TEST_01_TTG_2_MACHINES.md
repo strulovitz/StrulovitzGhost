@@ -1,8 +1,8 @@
 # 🧪 LAN Test #01 — TTG Distributed on 2 Machines
 
-**Date:** May 23, 2026 | **Status:** RUN #2 IN PROGRESS | **Mode:** TTG
+**Date:** May 23, 2026 | **Status:** ✅ RUN #2 COMPLETED | **Mode:** TTG
 
-**Note:** Run #1 was solo Laptop (RTX 5090 too fast). Run #2 uses GPT-5.5 pre-split prompts and coordinated 2-machine generation.
+**Summary:** Both machines contributed — TRUE distributed generation. GPT-5.5 pre-split prompts. API-coordinated via seance.
 
 ---
 
@@ -138,27 +138,30 @@ Both machines claim remaining tasks until all 6 layers generated.
 | Layers Created | 6 |
 | Errors | None |
 
-### Layer Generation — Run #2 (Coordinated 2-Machine)
+### Layer Generation — Run #2 (Coordinated 2-Machine ✅)
 | Layer | Content | Worker | Time | Status |
 |-------|---------|--------|------|--------|
-| 1 | Snow foreground | ___ | ___ | ⬜ |
-| 2 | Polar bears | ___ | ___ | ⬜ |
-| 3 | Sled + runners | ___ | ___ | ⬜ |
-| 4 | Warrior | ___ | ___ | ⬜ |
-| 5 | Mountains | ___ | ___ | ⬜ |
-| 6 | Sky | ___ | ___ | ⬜ |
+| 1 | Snow foreground | laptop-5090 | ~26s | ✅ |
+| 2 | Polar bears | laptop-5090 | ~26s | ✅ |
+| 3 | Sled + runners | laptop-5090 | ~26s | ✅ |
+| 4 | Warrior | desktop-4070ti | ~10m | ✅ |
+| 5 | Mountains | desktop-4070ti | ~10m | ✅ |
+| 6 | Sky | desktop-4070ti | ~10m | ✅ |
 
-### Distribution Plan (Run #2)
-- **Laptop RTX 5090:** Layers 1, 2, 3 (foreground complex: snow, bears, sled)
-- **Desktop RTX 4070 Ti:** Layers 4, 5, 6 (background: warrior, mountains, sky)
-- **Strategy:** Laptop claims tasks 1-3 manually after split, Desktop auto-gen claims 4-6.
-  Both generate SIMULTANEOUSLY.
+**Total: 2 machines, 3 layers each. Distributed generation proven.** ✅
+
+### Run #2 Coordination Method
+- Laptop submitted scene + triggered LLM split via API
+- Laptop immediately claimed tasks 10, 11, 12 (Layers 1-3) via API
+- Desktop claimed tasks 7, 8, 9 (Layers 4-6) via API (coordinated via seance)
+- Both generated simultaneously
+- Laptop finished first (5090 = 26s/layer), Desktop took ~10 min/layer (4070 Ti)
 
 ### Final Output (Run #2)
-- [ ] All 6 layers generated
-- [ ] Both machines contributed (Desktop ≠ 0 layers)
-- [ ] All RGBA with transparency
-- [ ] Question marked "completed"
+- [x] All 6 layers generated
+- [x] Both machines contributed ✅ (laptop-5090 + desktop-4070ti)
+- [x] All RGBA with green chroma-key transparency
+- [x] Question marked "completed" ✅
 
 ### Lessons Learned
 - **RTX 5090 24GB is a BEAST.** 25 seconds per layer at 768×576 with 15 steps. Desktop RTX 4070 Ti takes ~9 minutes per layer. The 5090 generated all 6 layers before Desktop could claim one.
