@@ -61,72 +61,101 @@ Layer 6 — farthest sky and atmosphere: Draw a clear arctic sky filling the top
 
 ---
 
-## The REAL User Flow (One-Click Auto-Pilot) ⭐
+## Nir's Instructions — What YOU Do (Real User Flow) ⭐
 
-**This is how actual users will experience the system.** No terminal commands after setup.
-No manual task claiming. No API calls. No seance coordination between AIs.
-The system runs itself — the user just submits the scene and walks away.
+The AI agents handle terminal commands (Flask server, GUI launch). You handle
+the GUI checkboxes and the website. This is exactly what a real user does.
 
-### ⚠️ CRITICAL RULE FOR TESTERS
-**DO NOT bypass the GUI.** Do NOT use `curl`, `requests.post()`, or `python -c` to
-submit, split, claim, generate, or upload. The entire point of this test is to
-prove the GUI Auto-Pilot works for a real human user. If you can't use the GUI
-because it requires manual clicks, that's a bug to fix — not an excuse to use the API.
+### PREP (done by AI):
+- [ ] Laptop: Flask server started (`python app.py` from src/)
+- [ ] Laptop: GUI launched (`python gui.py` from src/)
+- [ ] Desktop: GUI launched (`python gui.py` from src/)
 
-### The user does exactly this (on EACH machine):
+### YOU DO — Laptop:
 
+**Step 1 — Open the website:**
 ```
-On LAPTOP:
-  1. Start Flask server: python app.py  (Terminal 1)
-  2. Start GUI: python gui.py  (Terminal 2)
-  3. Boss tab: check "Auto-Pilot" ✅
-  4. Worker tab: set Worker ID → "Start Polling" → check "Auto-Generate" ✅
-  5. Client tab: paste scene → set style → click "Submit New Scene"
-  6. Done. Walk away. Watch progress bars fill automatically.
+Open browser → http://localhost:5000
+```
+You'll see the Strulovitz Ghost dashboard with a "Submit New Scene" form.
 
-On DESKTOP:
-  1. Start GUI: python gui.py
-  2. Set Server URL: http://10.0.0.6:5000
-  3. Worker tab: set Worker ID → "Start Polling" → check "Auto-Generate" ✅
-  4. Done. Watch it auto-claim, auto-generate, auto-upload.
-
-That's it. The Boss auto-detects the new scene and auto-splits it.
-Both Workers auto-claim pending tasks, auto-generate each layer, auto-upload results.
-All 6 layers complete. Both machines contribute naturally.
+**Step 2 — Set up Boss Auto-Pilot (in the GUI window):**
+```
+Tab: "Text To Ghost" | Role: "Boss"
+Click "Detect Models" → select qwen3:14b
+Check: "Auto-Pilot" ✅
+Status should say: "ON — watching for new scenes..."
 ```
 
-### What happens automatically (zero user interaction):
-
+**Step 3 — Set up Worker Auto-Generate (in the GUI window):**
 ```
-1. Boss poll timer (3s) detects new "pending" question
-2. Boss auto-splits with Ollama qwen3:14b → creates 6 tasks
-3. Laptop Worker poll timer (5s) sees pending tasks → auto-claims one
-4. Laptop Worker auto-generates with Qwen → auto-uploads result
-5. Desktop Worker poll timer (5s) sees pending tasks → auto-claims one
-6. Desktop Worker auto-generates with Qwen → auto-uploads result
-7. Both Workers continue looping until no pending tasks remain
-8. All 6 layers complete. Question marked "completed" in DB.
+Tab: "Text To Ghost" | Role: "Worker"
+Set Worker ID: laptop-5090
+Click "Start Polling"
+Check: "Auto-Generate" ✅
 ```
 
-### What users NEVER do:
-- ❌ Run Python API commands in terminal
-- ❌ Manually claim specific task IDs
-- ❌ Coordinate who does which layer
-- ❌ Upload files manually
-- ❌ Use seance to orchestrate (seance is for AI-to-AI dev chat, not production)
+**Step 4 — Submit the scene (on the website):**
+```
+In the browser at http://localhost:5000:
+  - Paste the Silver Warrior scene into the textarea
+  - Style: "Frank Frazetta fantasy art, epic fantasy book cover style"
+  - Click "Submit Question"
+  - See: "Submitted! ✅ Refresh to see it."
+```
+
+**Step 5 — Watch it happen:**
+```
+On the website: Click "Refresh" periodically.
+  You'll see: Question #1 appear → status changes to "processing" → 6 task layers appear → each changes to "completed" as they finish.
+
+In the GUI Boss tab: Auto-Pilot status changes: "ON — auto-splitting #1..." → "ON — #1 split! 6 layers"
+
+In the GUI Worker tab: Progress bar fills as each layer generates → uploads → auto-claims next.
+```
+
+### YOU DO — Desktop:
+
+**Step 1 — Set up Worker Auto-Generate (in the GUI window):**
+```
+Tab: "Text To Ghost" | Role: "Worker"
+Set Server URL: http://10.0.0.6:5000
+Set Worker ID: desktop-4070ti
+Click "Start Polling"
+Check: "Auto-Generate" ✅
+```
+That's it. Desktop Worker auto-polls Laptop's website, auto-claims tasks, auto-generates, auto-uploads.
+
+### What you should see:
+
+On the **website** (http://localhost:5000, Refresh periodically):
+```
+Question #1 → processing → completed
+  Layer 1: completed [laptop-5090]     📷 View
+  Layer 2: completed [desktop-4070ti]  📷 View
+  Layer 3: completed [laptop-5090]     📷 View
+  Layer 4: completed [desktop-4070ti]  📷 View
+  Layer 5: completed [laptop-5090]     📷 View
+  Layer 6: completed [desktop-4070ti]  📷 View
+```
+
+Both workers contributed. Zero manual coordination. The website tracked everything.
+The system worked like it's supposed to.
 
 ---
 
-## Setup Prerequisites (one-time, done by Nir)
+## Setup Prerequisites (one-time, already done)
 
-### On both machines:
-- Conda env `strulovitzghost` with all packages
-- Qwen-Image-2512 4-bit model cached
-- Ollama installed with `qwen3:14b` pulled
-- Latest code pulled from GitHub
+### Both machines:
+- Conda env `strulovitzghost` with all packages ✅
+- Qwen-Image-2512 4-bit model cached ✅
+- Ollama installed with `qwen3:14b` pulled ✅
+- Latest code pulled from GitHub ✅
 
-### On Laptop only:
-- Flask server started before GUI
+### What the AI agent does (before Nir touches anything):
+- Laptop: start Flask server (`python app.py` from src/) → serves at http://10.0.0.6:5000
+- Laptop: start GUI (`python gui.py` from src/)
+- Desktop: start GUI (`python gui.py` from src/)
 
 ---
 
