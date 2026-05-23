@@ -8,52 +8,35 @@
 
 The rainbow hues are caused by **thin-film interference** — the same optical phenomenon behind oil slicks on water and soap bubble iridescence.
 
-### Why The Plastic Sheets Show Rainbows (But Screens Don't)
+A semi-transparent plastic sheet is incredibly thin — close to the wavelength of visible light (400 to 700 nanometers). When external light hits this layer, some light reflects off the top surface of the sheet, and the rest passes through and reflects off the bottom surface. Because the layer is microscopic, these two reflections bounce back almost perfectly in sync. If the thickness of the sheet matches a specific wavelength of light, those light waves reinforce each other (constructive interference) and blast a vivid, metallic color to your eye. Print layers are rarely perfectly uniform — thickness varies by tiny fractions of a nanometer across the page, so as the thickness shifts, the boosted color shifts, creating a sweeping rainbow effect across the material.
 
-When looking at a monitor, you're looking at an **emissive light source** — the screen controls exactly which wavelengths hit your eye.
+### ⚡ How This Applies to Pepper's Ghost Displays
 
-A semi-transparent plastic sheet behaves differently. Light from the monitor behind it passes through the sheet, but:
+A Pepper's Ghost display relies on a clear pane of glass or a polymer film placed at a 45-degree angle to project a floating, semi-transparent image. Thin-film interference interacts with this setup in two distinct ways:
 
-1. **The Nanometer Trap:** The plastic sheet is incredibly thin — close to the wavelength of visible light (400–700 nm).
+#### 1. The Accidental Problem (Cheap Polymer Foils)
 
-2. **The Split Light Wave:** Light hits the sheet. Some reflects off the front surface, some passes through and reflects off the back surface. These two reflections are nearly in sync.
+Many modern or DIY Pepper's Ghost setups use stretched polymer plastic films (like Mylar or window insulation film) instead of heavy glass.
 
-3. **Constructive Interference:** If the sheet thickness matches a specific wavelength, those light waves reinforce each other — producing a vivid, metallic color at that spot.
+**The Rainbow Artifact:** If the plastic film is ultra-thin and has slight variations in thickness or stretching tension, the ambient room light will cause thin-film interference.
 
-4. **The Fluid Rainbow:** No plastic sheet is perfectly uniform. Thickness varies by nanometers across the surface, causing the boosted wavelength to shift across the spectrum — creating the rainbow sweep.
+**The Consequence:** The audience will see distracting, oily rainbow rings (similar to Newton's rings) hovering across the "invisible" screen, ruining the illusion of a clean, empty stage.
 
-### ⚡ THE KEY INSIGHT: Thin Films vs. Thick Glass
+#### 2. The Intentional Solution (Dielectric Beamsplitters / Heavy Glass)
 
-**Thin-film interference ONLY happens when the material is close to the wavelength of light (~400–700 nm).** Plastic sheets, Mylar films, and stretched polymer foils fall into this category — they're thin enough for the front and back reflections to stay in phase.
+To combat double-reflections (ghostly blurring) and unwanted glare, high-end Pepper's Ghost systems use specialized dielectric beamsplitter glass.
 
-**Thick glass does NOT exhibit this artifact.** Standard glass panes (millimeters thick) are thousands of times thicker than light's wavelength. The reflected waves from the front and back surfaces are too far apart in phase to interfere constructively — no rainbow.
+**Controlled Thin Films:** These glasses are coated with multiple sub-microscopic layers of materials with varying refractive indices.
 
-This is why professional Pepper's Ghost displays use **thick glass or dielectric beamsplitter glass** instead of thin plastic films. The plastic sheets in Nir's setup (6 stacked between monitors) are the root cause.
+**Anti-Reflective Tuning:** Instead of letting random rainbow hues bounce around, engineers precisely calculate the thickness of these coatings to trigger destructive interference for unwanted glare wavelengths. This cancels out reflections from the back of the glass while boosting a sharp, crisp reflection on the front.
 
-**Practical takeaway:** Replace the thin plastic sheets with thicker glass/acrylic panels (3mm+) to largely eliminate rainbow artifacts. The thicker the pane, the less interference.
+**The practical takeaway:** Professional Pepper's Ghost systems use heavy glass (or dielectric beamsplitter glass with engineered anti-reflective coatings) instead of plastic/polymer sheets. Glass eliminates the rainbow artifact entirely.
 
-The Silver Warrior scene has large areas of uniform color (white snow, blue sky, pale mountains). These expose the rainbow artifact more than scenes with busy, high-contrast detail that visually "mask" the interference pattern.
+---
 
-### Additional Contributors in Our Setup
+## Additional Factors in This Specific Setup
 
 - **Chroma-key edge fringing:** The green-to-alpha transition has sub-pixel color bleed invisible on screen but amplified when light passes through physical plastic.
 - **Polarization:** Monitors emit polarized light. The 6 stacked plastic sheets can act as polarizing filters at certain viewing angles (Monitor #3 already has known polarization issues).
 - **Multiple stacked sheets:** 6 layers of plastic compound the interference — each sheet adds its own thin-film effect on top of the previous one.
-
-### How This Applies to Pepper's Ghost Displays
-
-A Pepper's Ghost display uses a clear pane (glass or polymer film) placed at an angle to create a floating, semi-transparent image. Thin-film interference affects this:
-
-#### Accidental Artifact (Cheap Polymer Films)
-
-Stretched polymer plastic films (like Mylar or window insulation) used in DIY Pepper's Ghost rigs:
-
-- **The Rainbow Artifact:** Ultra-thin plastic with thickness/stretching variations causes interference.
-- **The Consequence:** Oily rainbow rings (Newton's rings) hover across the "invisible" screen, breaking the illusion of an empty stage.
-
-#### Professional Solution (Dielectric Beamsplitters)
-
-High-end Pepper's Ghost systems use dielectric beamsplitter glass with engineered coatings:
-
-- **Controlled Thin Films:** Coated with sub-microscopic layers of varying refractive indices.
-- **Anti-Reflective Tuning:** Thicknesses calculated to create **destructive** interference for glare wavelengths, canceling unwanted reflections while boosting a sharp primary reflection.
+- **Uniform scene content:** The Silver Warrior scene has large areas of uniform color (white snow, blue sky, pale mountains) that expose the rainbow artifact more than busy, high-contrast scenes.
