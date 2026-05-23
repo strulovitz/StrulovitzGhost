@@ -57,9 +57,26 @@ Preserved context, decisions, and direction.
 | Seance bridge | Running on port 5555 |
 
 ### Next
+- Run LAN Test #02 (ITG distributed on 2 machines) — needs ComfyUI with Qwen-Image-Layered running
 - V2 Pepper's Ghost layers generation
 - Qwen-Image-Layered research
 - Fine Art Decomposition
+
+### Session #2 — ITG GUI Wiring (May 23-24, 2026, late night)
+
+**6. ITG GUI wired (commit `2f06566`):**
+- `ITGSplitThread(QThread)` — background thread handling full split pipeline: download→split (ComfyUI)→retry (3 attempts for dual-garbage)→judge (Ollama qwen3-vl)→upload. Emits `ITGSplitResult`.
+- `WorkerWidget_ITG` — progress bar, image preview, Auto-Process checkbox, real split/upload methods
+- `BossWidget_ITG` — state machine (idle→processing_root→waiting_children→combining→done), Auto-Pilot checkbox, root task creation, child creation, Z-order + reduce_to_6_layers via `arrange_zorder` button
+- `ClientWidget_ITG` — auto-poll every 5s, Download ZIP button on completion
+- `itg_node.py` bug fix: duplicate Ollama calls eliminated (judgment saved, reused for child prompts)
+
+**7. Desktop AI review incorporated** (`docs/ITG_GUI_WIRING_REVIEW.md`):
+- Critical Fix #1: Thread handles retry loop internally
+- Critical Fix #2: Thread handles full flow (download→upload→result)
+- Concern #3: Worker Auto-Process checkbox (added)
+- Concern #4: Boss state machine (built)
+- All addressed in build
 
 ### 🔴 ITG Known Gaps — NOT YET BUILT (Tracked May 23, 2026)
 
@@ -76,9 +93,9 @@ Tracked so we don't forget. Will be built in future sessions.
 | 6 | Multiple ComfyUI instances / GPU pool management | ⏳ Planned |
 | 7 | ITG scene_viewer.py integration | ⏳ Planned |
 | 8 | Client auto-polling for completion status | ⏳ Planned |
-| 9 | Boss "Arrange Z-Order" button wiring | 🔧 In current build |
+| 9 | Boss "Arrange Z-Order" button wiring | ✅ Built May 23 |
 | 10 | Error recovery for failed branches (rebalancing) | ⏳ Planned |
-| 11 | ITG GUI wiring (Boss + Worker stubs → real functions) | 🔧 In current build |
+| 11 | ITG GUI wiring (Boss + Worker stubs → real functions) | ✅ Built May 23 |
 
 See: `docs/ITG_GUI_WIRING_PLAN.md` for full details on items 9 and 11.
 
