@@ -40,12 +40,23 @@ Layer 6 — farthest sky and atmosphere: Draw a clear arctic sky filling the top
 
 ---
 
-## Hardware
+## The Simulated Users (Who Runs What)
 
-| Machine | GPU | VRAM | Role |
-|---------|-----|------|------|
-| Laptop (10.0.0.6) | RTX 5090 Laptop | 24 GB | Website server, Boss, Worker |
-| Desktop (10.0.0.x) | RTX 4070 Ti | 12 GB | Worker |
+We have 2 physical machines simulating 3 separate users. Each user opens their own
+instance of the StrulovitzGhost GUI and stays on the tab for their assigned role.
+
+| Physical Machine | Simulated User | GUI Instance | Tab | Role |
+|-----------------|----------------|-------------|-----|------|
+| Laptop | DM | GUI #1 | **Boss** 👑 | Runs website + auto-splits scenes |
+| Laptop | Player #1 | GUI #2 | **Worker** 🔧 | Auto-generates layers with RTX 5090 |
+| Desktop | Player #2 | GUI #1 | **Worker** 🔧 | Auto-generates layers with RTX 4070 Ti |
+
+Plus a **browser** (any machine on the LAN) opened to `http://10.0.0.6:5000`
+for the Client 🙋 to submit the scene.
+
+Same app (`gui.py`), same tabs — but each instance only uses the tab for its role.
+In real life these would be different people on different computers. Here we
+simulate 3 users with 2 physical machines.
 
 ---
 
@@ -66,30 +77,33 @@ Layer 6 — farthest sky and atmosphere: Draw a clear arctic sky filling the top
 The AI agents handle terminal commands (Flask server, GUI launch). You handle
 the GUI checkboxes and the website. This is exactly what a real user does.
 
-### PREP (done by AI):
-- [ ] Laptop: Flask server started (`python app.py` from src/)
-- [ ] Laptop: GUI launched (`python gui.py` from src/)
-- [ ] Desktop: GUI launched (`python gui.py` from src/)
+### PREP (done by AI agent before Nir touches anything):
+- [ ] Laptop: start Flask server in background (`python app.py` from src/)
+- [ ] Laptop: launch 2 GUI windows:
+  - [ ] `python gui.py` → Boss tab (for the DM)
+  - [ ] `python gui.py` → Worker tab (for Player #1)
+- [ ] Desktop: launch 1 GUI window:
+  - [ ] `python gui.py` → Worker tab (for Player #2)
 
-### YOU DO — Laptop:
+### YOU DO — Laptop (3 things: website + 2 GUI windows):
 
 **Step 1 — Open the website:**
 ```
-Open browser → http://localhost:5000
+Browser → http://localhost:5000
 ```
-You'll see the Strulovitz Ghost dashboard with a "Submit New Scene" form.
+Dashboard with "Submit New Scene" form. This is where the Client submits.
 
-**Step 2 — Set up Boss Auto-Pilot (in the GUI window):**
+**Step 2 — GUI window #1: Set up Boss (the DM):**
 ```
-Tab: "Text To Ghost" | Role: "Boss"
+This window is on the "Boss" tab.
 Click "Detect Models" → select qwen3:14b
 Check: "Auto-Pilot" ✅
-Status should say: "ON — watching for new scenes..."
+Status: "ON — watching for new scenes..."
 ```
 
-**Step 3 — Set up Worker Auto-Generate (in the GUI window):**
+**Step 3 — GUI window #2: Set up Worker (Player #1 on Laptop's GPU):**
 ```
-Tab: "Text To Ghost" | Role: "Worker"
+This window is on the "Worker" tab.
 Set Worker ID: laptop-5090
 Click "Start Polling"
 Check: "Auto-Generate" ✅
@@ -97,40 +111,27 @@ Check: "Auto-Generate" ✅
 
 **Step 4 — Submit the scene (on the website):**
 ```
-In the browser at http://localhost:5000:
-  - Paste the Silver Warrior scene into the textarea
-  - Style: "Frank Frazetta fantasy art, epic fantasy book cover style"
-  - Click "Submit Question"
-  - See: "Submitted! ✅ Refresh to see it."
+Paste the Silver Warrior scene → Style: "Frank Frazetta fantasy art"
+Click "Submit Question"
+See: "Submitted! ✅ Refresh to see it."
 ```
 
-**Step 5 — Watch it happen:**
+### YOU DO — Desktop (1 GUI window):
+
+**Set up Worker (Player #2 on Desktop's GPU):**
 ```
-On the website: Click "Refresh" periodically.
-  You'll see: Question #1 appear → status changes to "processing" → 6 task layers appear → each changes to "completed" as they finish.
-
-In the GUI Boss tab: Auto-Pilot status changes: "ON — auto-splitting #1..." → "ON — #1 split! 6 layers"
-
-In the GUI Worker tab: Progress bar fills as each layer generates → uploads → auto-claims next.
-```
-
-### YOU DO — Desktop:
-
-**Step 1 — Set up Worker Auto-Generate (in the GUI window):**
-```
-Tab: "Text To Ghost" | Role: "Worker"
+GUI window on the "Worker" tab.
 Set Server URL: http://10.0.0.6:5000
 Set Worker ID: desktop-4070ti
 Click "Start Polling"
 Check: "Auto-Generate" ✅
 ```
-That's it. Desktop Worker auto-polls Laptop's website, auto-claims tasks, auto-generates, auto-uploads.
+Done. Desktop Worker auto-polls Laptop's website, claims tasks, generates, uploads.
 
-### What you should see:
+### What you should see on the website (Refresh periodically):
 
-On the **website** (http://localhost:5000, Refresh periodically):
 ```
-Question #1 → processing → completed
+Question #2 → processing → completed
   Layer 1: completed [laptop-5090]     📷 View
   Layer 2: completed [desktop-4070ti]  📷 View
   Layer 3: completed [laptop-5090]     📷 View
@@ -139,8 +140,9 @@ Question #1 → processing → completed
   Layer 6: completed [desktop-4070ti]  📷 View
 ```
 
-Both workers contributed. Zero manual coordination. The website tracked everything.
-The system worked like it's supposed to.
+3 simulated users, 2 physical machines, 2 Workers both contributing.
+The website is the central hub. The Boss and Workers all poll it autonomously.
+Zero manual coordination. The system works.
 
 ---
 
