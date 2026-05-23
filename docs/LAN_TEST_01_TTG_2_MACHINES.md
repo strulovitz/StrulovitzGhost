@@ -1,10 +1,37 @@
 # 🧪 LAN Test #01 — TTG Distributed on 2 Machines
 
-**Date:** May 23, 2026 | **Status:** ⚠️ AWAITING REAL GUI TEST | **Mode:** TTG
+**Date:** May 23, 2026 | **Status:** ⏳ READY TO RUN | **Mode:** TTG
 
-**Summary:** Runs #1 and #2 were API-only — not valid user tests. The actual test must use
-the GUI with Auto-Pilot checkboxes, exactly as a real human would. See "REAL User Flow" below.
-Runs #1 and #2 results preserved for reference but do NOT count as LAN test passes.
+---
+
+## 🤖 AI AGENTS — START HERE ON RESTART
+
+**You are simulating real human users. Do NOT use the API directly.**
+Your ONLY job is terminal commands to start servers/GUIs. Nir clicks everything else.
+
+### Laptop AI (you):
+```
+1. git pull (in StrulovitzGhost)
+2. Start Flask:   python app.py   (from src/, in background)
+3. Launch GUI #1: python gui.py   (from src/)  → this will be Boss tab
+4. Launch GUI #2: python gui.py   (from src/)  → this will be Worker tab
+5. Tell Nir: "Ready. 2 GUI windows open. Set up Boss + Worker tabs."
+6. Tell Desktop via seance: "Start your 2 GUIs — Worker + Client tabs."
+```
+Do NOT submit scenes, do NOT split, do NOT generate. Just launch the windows.
+
+### Desktop AI (via seance):
+```
+1. git pull (in StrulovitzGhost)
+2. Launch GUI #1: python gui.py   (from src/)  → this will be Worker tab
+3. Launch GUI #2: python gui.py   (from src/)  → this will be Client tab
+4. Tell Laptop via seance: "Ready. 2 GUI windows open."
+```
+Do NOT submit scenes, do NOT generate. Just launch the windows.
+
+### Nir (human) — after both AIs say ready:
+Follow "Nir's Instructions" below. It's 5 minutes of clicking checkboxes
+and pasting a scene. Then walk away. The system does the rest.
 
 ---
 
