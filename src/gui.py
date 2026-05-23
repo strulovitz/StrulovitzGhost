@@ -39,6 +39,11 @@ from PyQt6.QtGui import QPixmap, QImage, QPainter, QShortcut, QKeySequence
 SERVER_URL = "http://localhost:5000"
 
 
+from itg_splitter import split_image_into_n_layers
+from itg_judge import judge_layer_quality, determine_z_order
+from itg_combine import reduce_to_6_layers
+
+
 class LayerWindow_(QWidget):
     def __init__(self, image_path, layer_index, saved_state=None):
         super().__init__()
@@ -1230,7 +1235,15 @@ class ClientWidget_ITG(QWidget):
         self.refresh_btn.clicked.connect(self.refresh)
         layout.addWidget(self.refresh_btn)
 
+        self.download_btn = QPushButton("📦 Download All Layers (ZIP)")
+        self.download_btn.clicked.connect(self.download_zip)
+        self.download_btn.setVisible(False)
+        layout.addWidget(self.download_btn)
+
         self.chosen_file = None
+        self._client_poll = QTimer()
+        self._client_poll.timeout.connect(self.refresh)
+        self._client_poll.start(5000)  # auto-refresh every 5s
 
     def get_server(self):
         return self._mw.get_server()
@@ -1290,6 +1303,7 @@ class ClientWidget_ITG(QWidget):
 
     def refresh(self):
         self.question_list.clear()
+        self.download_btn.setVisible(False)
         try:
             r = requests.get(f"{self.get_server()}/api/questions?type=ITG", timeout=10)
             if r.ok:
@@ -1298,6 +1312,10 @@ class ClientWidget_ITG(QWidget):
                     item = QListWidgetItem(text)
                     item.setData(Qt.ItemDataRole.UserRole, q)
                     self.question_list.addItem(item)
+                    if q.get("status") == "completed":
+                        self._selected_download_q = q
+                        self.download_btn.setVisible(True)
+                        self.download_btn.setText(f"📦 Download Layers (Question #{q['id']})")
         except Exception:
             pass
 
@@ -1305,11 +1323,34 @@ class ClientWidget_ITG(QWidget):
         q = item.data(Qt.ItemDataRole.UserRole)
         if not q:
             return
-        detail = QMessageBox(self)
-        detail.setWindowTitle(f"Decomposition #{q['id']}")
-        msg = f"Status: {q['status']}\nResolution: {q.get('original_resolution','?')}\nDepth: {q.get('max_depth',0)}"
-        detail.setText(msg)
-        detail.exec()
+        if q.get("status") == "completed":
+            self._selected_download_q = q
+            self.download_btn.setVisible(True)
+            self.download_btn.setText(f"📦 Download Layers (Question #{q['id']})")
+        else:
+            detail = QMessageBox(self)
+            detail.setWindowTitle(f"Decomposition #{q['id']}")
+            msg = f"Status: {q['status']}\nResolution: {q.get('original_resolution','?')}\nDepth: {q.get('max_depth',0)}"
+            detail.setText(msg)
+            detail.exec()
+
+    def download_zip(self):
+        q = getattr(self, '_selected_download_q', None)
+        if not q:
+            self.status_label.setText("Double-click a completed question first.")
+            return
+        try:
+            r = requests.get(f"{self.get_server()}/api/question/{q['id']}/layers/download", timeout=60)
+            if r.ok:
+                save_path, _ = QFileDialog.getSaveFileName(self, "Save Layers ZIP", f"scene_{q['id']}_layers.zip", "ZIP Files (*.zip)")
+                if save_path:
+                    with open(save_path, "wb") as f:
+                        f.write(r.content)
+                    self.status_label.setText(f"Saved to {os.path.basename(save_path)}")
+            else:
+                self.status_label.setText(f"Download failed: {r.status_code}")
+        except Exception as e:
+            self.status_label.setText(f"Download error: {e}")
 
 
 class BossWidget_ITG(QWidget):
@@ -1332,11 +1373,19 @@ class BossWidget_ITG(QWidget):
         self.vision_model = QComboBox()
         self.vision_model.addItems(["qwen3-vl:4b", "qwen3-vl:8b", "qwen3-vl:30b"])
         config_row.addWidget(self.vision_model)
+        self.auto_pilot_cb = QCheckBox("Auto-Pilot")
+        self.auto_pilot_cb.setToolTip("Automatically split pending ITG questions, wait for children, and combine to 6 layers")
+        self.auto_pilot_cb.clicked.connect(self._toggle_auto_pilot)
+        config_row.addWidget(self.auto_pilot_cb)
         config_row.addStretch()
         layout.addLayout(config_row)
 
         self.status_label = QLabel("Ready")
         layout.addWidget(self.status_label)
+
+        self.state_label = QLabel("")
+        self.state_label.setStyleSheet("color: #ffab40; font-weight: bold;")
+        layout.addWidget(self.state_label)
 
         left_right = QHBoxLayout()
         left = QVBoxLayout()
@@ -1385,6 +1434,12 @@ class BossWidget_ITG(QWidget):
         layout.addLayout(left_right)
 
         self.current_question = None
+        self._boss_state = "idle"  # idle, processing_root, waiting_children, combining
+        self._boss_timer = QTimer()
+        self._boss_timer.timeout.connect(self._boss_poll)
+        self.split_thread = None
+        self.split_result = None
+        self.root_task = None
 
     def get_server(self):
         return self._mw.get_server()
@@ -1438,16 +1493,423 @@ class BossWidget_ITG(QWidget):
         except Exception:
             pass
 
+    def _toggle_auto_pilot(self):
+        if self.auto_pilot_cb.isChecked():
+            self._boss_state = "idle"
+            self._boss_timer.start(3000)
+            self.state_label.setText("ON — scanning for ITG questions...")
+            self.state_label.setStyleSheet("color: #4caf50; font-weight: bold;")
+            self._boss_poll()
+        else:
+            self._boss_timer.stop()
+            self._boss_state = "idle"
+            self.state_label.setText("")
+            self.status_label.setText("Ready")
+
+    def _boss_poll(self):
+        if self._boss_state == "processing_root" and self.split_thread is not None:
+            return  # split already running
+        if self._boss_state in ("processing_root", "waiting_children", "combining"):
+            return  # already working on a question
+
+        try:
+            r = requests.get(f"{self.get_server()}/api/questions?type=ITG&status=pending", timeout=10)
+            if r.ok:
+                questions = r.json()
+                for q in questions:
+                    self.current_question = q
+                    self._start_root_split(q)
+                    return
+        except Exception as e:
+            self.status_label.setText(f"Poll error: {e}")
+
+    def _start_root_split(self, q):
+        self._boss_state = "processing_root"
+        self.state_label.setText(f"PROCESSING — Question #{q['id']}")
+        self.state_label.setStyleSheet("color: #ffab40; font-weight: bold;")
+
+        port = 8188
+        try:
+            port = int(self.comfy_url.text().rstrip("/").split(":")[-1])
+        except ValueError:
+            pass
+
+        input_image = q.get("input_image_path", "")
+        if not input_image:
+            input_image = os.path.basename(q.get("input_image_url", ""))
+        if not input_image:
+            self.status_label.setText("No input image in question")
+            self._boss_state = "idle"
+            return
+
+        # Create root task
+        root_task = {
+            "question_id": q["id"],
+            "type": "ITG",
+            "depth": 0,
+            "max_depth": q.get("max_depth", 2),
+            "prompt": "",
+            "input_image": input_image,
+        }
+        try:
+            r = requests.post(f"{self.get_server()}/api/tasks/batch",
+                              json={"tasks": [root_task]}, timeout=10)
+            if r.ok and r.json():
+                self.root_task = r.json()[0]
+                # Claim it
+                cr = requests.post(f"{self.get_server()}/api/task/{self.root_task['id']}/claim",
+                                   json={"worker_id": self.boss_id.text()}, timeout=10)
+                if cr.ok:
+                    self.root_task = cr.json()
+                else:
+                    self.root_task = r.json()[0]  # use created task even if claim fails
+            else:
+                self.status_label.setText("Failed to create root task")
+                self._boss_state = "idle"
+                return
+        except Exception as e:
+            self.status_label.setText(f"Root task error: {e}")
+            self._boss_state = "idle"
+            return
+
+        self.status_label.setText(f"Root task #{self.root_task['id']} — splitting...")
+        self.split_result = None
+        output_dir = os.path.join("output", "itg", self.boss_id.text().replace(" ", "_"))
+        self.split_thread = ITGSplitThread(
+            self.get_server(), self.root_task,
+            self.comfy_url.text(), self.vision_model.currentText(),
+            output_dir
+        )
+        self.split_thread.progress_signal.connect(self._on_boss_progress)
+        self.split_thread.finished_signal.connect(self._on_boss_finished)
+        self.split_thread.error_signal.connect(self._on_boss_error)
+        self.split_thread.start()
+
+    def _on_boss_progress(self, msg):
+        self.status_label.setText(msg)
+
+    def _on_boss_finished(self, result):
+        self.split_result = result
+        self.split_thread = None
+
+        if result.finish_type == "failed":
+            self.status_label.setText("Root split failed — marking question failed")
+            self._boss_state = "idle"
+            return
+
+        depth = self.root_task.get("depth", 0) or 0
+        max_depth = self.root_task.get("max_depth", 2) or 2
+
+        if depth >= max_depth:
+            # Boss is at max depth — upload final directly (unusual)
+            try:
+                files = []
+                for fn in result.uploaded_filenames:
+                    output_dir = os.path.join("output", "itg", self.boss_id.text().replace(" ", "_"))
+                    fp = os.path.join(output_dir, fn)
+                    if os.path.exists(fp):
+                        files.append(("images", (fn, open(fp, "rb"), "image/png")))
+                if files:
+                    requests.post(f"{self.get_server()}/api/task/{self.root_task['id']}/result",
+                                  files=files, timeout=30)
+                self.status_label.setText("Root at max depth — uploaded final.")
+            except Exception as e:
+                self.status_label.setText(f"Upload error: {e}")
+            self._boss_state = "idle"
+        else:
+            # Create child tasks
+            child_tasks = []
+            for i, (fn, judgment) in enumerate(zip(result.uploaded_filenames, result.judgments)):
+                desc = judgment.get("description", "")
+                child_tasks.append({
+                    "question_id": self.root_task["question_id"],
+                    "type": "ITG",
+                    "parent_task_id": self.root_task["id"],
+                    "depth": depth + 1,
+                    "max_depth": max_depth,
+                    "prompt": f"Decompose this layer further: {desc}" if desc else "",
+                    "input_image": fn,
+                })
+            if child_tasks:
+                try:
+                    r = requests.post(f"{self.get_server()}/api/tasks/batch",
+                                      json={"tasks": child_tasks}, timeout=10)
+                    if r.ok:
+                        self.status_label.setText(f"Created {len(child_tasks)} children — waiting...")
+                except Exception as e:
+                    self.status_label.setText(f"Children error: {e}")
+
+            # Mark root task complete
+            split_data = {}
+            if len(result.uploaded_filenames) >= 1:
+                split_data["split_result_1"] = result.uploaded_filenames[0]
+            if len(result.uploaded_filenames) >= 2:
+                split_data["split_result_2"] = result.uploaded_filenames[1]
+            try:
+                requests.post(f"{self.get_server()}/api/task/{self.root_task['id']}/result",
+                              data=split_data, timeout=10)
+            except Exception:
+                pass
+
+            self._boss_state = "waiting_children"
+            self.state_label.setText(f"WAITING — children of Question #{self.current_question['id']}")
+            self.state_label.setStyleSheet("color: #ffab40; font-weight: bold;")
+            self.combine_btn.setEnabled(True)
+
+    def _on_boss_error(self, msg):
+        self.split_thread = None
+        self.status_label.setText(f"Split error: {msg[:100]}")
+        self._boss_state = "idle"
+
     def split_and_process(self):
         if not self.current_question:
             self.split_status.setText("Select a question first.")
             return
-        self.split_status.setText("ITG split requested -- run via terminal with src/itg_node.py for now.")
-        self.split_status.setStyleSheet("color: #e94560")
+        self.split_status.setText("")
+        self._start_root_split(self.current_question)
 
     def arrange_zorder(self):
-        self.split_status.setText("Arrange Z-order -- run via terminal with src/itg_node.py for now.")
-        self.split_status.setStyleSheet("color: #e94560")
+        if not self.current_question or self._boss_state != "waiting_children":
+            self.split_status.setText("No children to arrange. Wait for split to complete.")
+            self.split_status.setStyleSheet("color: #e94560")
+            return
+
+        self._boss_state = "combining"
+        self.state_label.setText("COMBINING — downloading children and Z-ordering...")
+        self.state_label.setStyleSheet("color: #ffab40; font-weight: bold;")
+        self.split_status.setText("")
+
+        try:
+            qid = self.current_question["id"]
+            output_dir = os.path.join("output", "itg", self.boss_id.text().replace(" ", "_"))
+            os.makedirs(output_dir, exist_ok=True)
+
+            # Get all leaf tasks (completed, with result filenames)
+            r = requests.get(f"{self.get_server()}/api/question/{qid}/tree", timeout=10)
+            if not r.ok:
+                self.split_status.setText("Failed to get task tree")
+                self._boss_state = "waiting_children"
+                return
+
+            tree = r.json().get("tree", [])
+            all_results = self._collect_leaf_results(tree)
+
+            if not all_results:
+                self.split_status.setText("No completed leaf tasks yet")
+                self._boss_state = "waiting_children"
+                return
+
+            if len(all_results) < 2:
+                self.split_status.setText("Need at least 2 leaf layers to Z-order")
+                self._boss_state = "waiting_children"
+                return
+
+            # Download all leaf result images
+            downloaded = []
+            for fn in all_results:
+                local_path = os.path.join(output_dir, fn)
+                if not os.path.exists(local_path):
+                    img_r = requests.get(f"{self.get_server()}/api/files/{fn}", timeout=30)
+                    if img_r.ok:
+                        with open(local_path, "wb") as f:
+                            f.write(img_r.content)
+                if os.path.exists(local_path):
+                    downloaded.append(local_path)
+
+            if len(downloaded) < 2:
+                self.split_status.setText("Could not download enough leaf images")
+                self._boss_state = "waiting_children"
+                return
+
+            # Z-order using original image as reference
+            original_image = self.current_question.get("input_image_path", "") or \
+                              os.path.basename(self.current_question.get("input_image_url", ""))
+            original_path = os.path.join(output_dir, original_image)
+            if not os.path.exists(original_path) and original_image:
+                img_r = requests.get(f"{self.get_server()}/api/files/{original_image}", timeout=30)
+                if img_r.ok:
+                    with open(original_path, "wb") as f:
+                        f.write(img_r.content)
+
+            if os.path.exists(original_path):
+                z_ordered = determine_z_order(downloaded, original_path, model=self.vision_model.currentText())
+            else:
+                z_ordered = downloaded  # no parent — just use download order
+
+            # Reduce to 6 layers
+            final_6 = reduce_to_6_layers(z_ordered, output_dir)
+
+            # Upload final 6
+            files = []
+            for i, path in enumerate(final_6):
+                fname = f"layer_{i + 1}.png"
+                files.append(("images", (fname, open(path, "rb"), "image/png")))
+
+            r = requests.post(f"{self.get_server()}/api/question/{qid}/complete",
+                              files=files, timeout=60)
+            if r.ok:
+                self.split_status.setText("Uploaded 6 final layers!")
+                self.split_status.setStyleSheet("color: #4caf50")
+                self.status_label.setText("Question completed!")
+                self._boss_state = "idle"
+                self.state_label.setText("DONE")
+                self.state_label.setStyleSheet("color: #4caf50; font-weight: bold;")
+                self.combine_btn.setEnabled(False)
+            else:
+                self.split_status.setText(f"Upload failed: {r.status_code}")
+                self._boss_state = "waiting_children"
+
+        except Exception as e:
+            self.split_status.setText(f"Combine error: {e}")
+            self.split_status.setStyleSheet("color: #e94560")
+            self._boss_state = "waiting_children"
+
+    def _collect_leaf_results(self, nodes):
+        """Recursively collect result filenames from leaf tasks (no children)."""
+        results = []
+        for node in nodes:
+            task = node.get("task", {})
+            children = node.get("children", [])
+            if not children:
+                fn = task.get("result_filename", "")
+                if fn:
+                    results.extend(fn.split(","))
+            else:
+                results.extend(self._collect_leaf_results(children))
+        return results
+
+
+class ITGSplitResult:
+    """Holds the result of an ITG split+judge+upload operation."""
+    def __init__(self):
+        self.good_layer_paths = []
+        self.uploaded_filenames = []
+        self.judgments = []
+        self.finish_type = ""  # "children", "final", or "failed"
+
+
+class ITGSplitThread(QThread):
+    """Background thread: download → split (with retry) → judge → upload.
+    
+    Handles the full itg_node claim_and_process flow:
+    1. Download input image from server
+    2. split_image_into_n_layers (25s-10min, ComfyUI blocking)
+    3. judge_layer_quality for each layer (2-5s each, Ollama)
+    4. Dual-garbage retry loop (up to 3 attempts with new seeds)
+    5. Upload good layers via POST /api/files/upload
+    6. Emit ITGSplitResult with all data
+    """
+    progress_signal = pyqtSignal(str)
+    finished_signal = pyqtSignal(object)   # ITGSplitResult
+    error_signal = pyqtSignal(str)
+
+    def __init__(self, server_url, task, comfy_url, vision_model, output_dir):
+        super().__init__()
+        self.server_url = server_url
+        self.task = task
+        self.comfy_url = comfy_url
+        self.vision_model = vision_model
+        self.output_dir = output_dir
+
+    def run(self):
+        result = ITGSplitResult()
+        try:
+            depth = self.task.get("depth", 0) or 0
+            max_depth = self.task.get("max_depth", 2) or 2
+
+            # Step 1: Download input image
+            input_image = self.task.get("input_image", "")
+            if not input_image:
+                self.error_signal.emit("No input_image in task")
+                return
+
+            self.progress_signal.emit("Downloading input image...")
+            input_path = os.path.join(self.output_dir, input_image)
+            if not os.path.exists(input_path):
+                r = requests.get(f"{self.server_url}/api/files/{input_image}", timeout=30)
+                if r.ok:
+                    os.makedirs(self.output_dir, exist_ok=True)
+                    with open(input_path, "wb") as f:
+                        f.write(r.content)
+                else:
+                    self.error_signal.emit(f"Download failed: {r.status_code}")
+                    return
+
+            # Step 2-4: Split + Judge with retry loop
+            max_retries = 3
+            port = 8188
+            try:
+                port = int(self.comfy_url.rstrip("/").split(":")[-1])
+            except ValueError:
+                pass
+
+            for attempt in range(max_retries):
+                if attempt > 0:
+                    self.progress_signal.emit(f"All garbage — retrying (attempt {attempt + 1}/{max_retries})...")
+                else:
+                    self.progress_signal.emit("Splitting image (ComfyUI)...")
+
+                # Split
+                layer_files = split_image_into_n_layers(
+                    input_path, self.output_dir, n=2,
+                    steps=20, cfg=4.0, comfyui_port=port,
+                    prompt=self.task.get("prompt", "") or ""
+                )
+
+                if len(layer_files) != 2:
+                    if attempt < max_retries - 1:
+                        continue
+                    self.error_signal.emit(f"Expected 2 layers, got {len(layer_files)}")
+                    return
+
+                # Judge each layer
+                good_layers = []
+                judgments = []
+                for i, lf in enumerate(layer_files):
+                    self.progress_signal.emit(f"Judging layer {i + 1}/2...")
+                    judgment = judge_layer_quality(
+                        lf, model=self.vision_model,
+                        parent_description=f"Sub-part {i + 1} from: {input_image}"
+                    )
+                    judgments.append(judgment)
+                    if judgment["quality"] == "good":
+                        good_layers.append(lf)
+
+                if good_layers:
+                    result.good_layer_paths = good_layers
+                    result.judgments = judgments
+                    break  # success!
+                elif attempt >= max_retries - 1:
+                    self.error_signal.emit("3 dual-garbage retries exhausted — branch failed")
+                    result.finish_type = "failed"
+                    self.finished_signal.emit(result)
+                    return
+                # else: continue retry
+
+            # Step 5: Upload good layers
+            result.uploaded_filenames = []
+            for i, lf in enumerate(result.good_layer_paths):
+                self.progress_signal.emit(f"Uploading good layer {i + 1}/{len(result.good_layer_paths)}...")
+                with open(lf, "rb") as f:
+                    r = requests.post(
+                        f"{self.server_url}/api/files/upload",
+                        files={"file": f},
+                        data={"task_id": str(self.task["id"])},
+                        timeout=30
+                    )
+                    if r.ok:
+                        result.uploaded_filenames.append(r.json()["filename"])
+
+            # Step 6: Determine finish type
+            if depth >= max_depth:
+                result.finish_type = "final"
+            else:
+                result.finish_type = "children"
+
+            self.finished_signal.emit(result)
+
+        except Exception as e:
+            self.error_signal.emit(str(e))
 
 
 class WorkerWidget_ITG(QWidget):
@@ -1494,20 +1956,41 @@ class WorkerWidget_ITG(QWidget):
         self.active_task_label.setMaximumHeight(120)
         self.active_task_label.setPlaceholderText("No active task")
         active_layout.addWidget(self.active_task_label)
+
+        self.progress = QProgressBar()
+        self.progress.setVisible(False)
+        active_layout.addWidget(self.progress)
+
+        self.image_preview = QLabel()
+        self.image_preview.setVisible(False)
+        self.image_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_preview.setMaximumHeight(300)
+        self.image_preview.setStyleSheet("border: 1px solid #333; border-radius: 6px; padding: 4px;")
+        active_layout.addWidget(self.image_preview)
+
+        self.auto_process_cb = QCheckBox("Auto-Process")
+        self.auto_process_cb.setToolTip("Automatically split+judge+upload when task is claimed")
+        active_layout.addWidget(self.auto_process_cb)
+
+        gen_row = QHBoxLayout()
         self.split_btn = QPushButton("Split Image (1->2)")
         self.split_btn.clicked.connect(self.split_task)
         self.split_btn.setEnabled(False)
-        active_layout.addWidget(self.split_btn)
+        gen_row.addWidget(self.split_btn)
         self.upload_btn = QPushButton("Upload Results")
         self.upload_btn.clicked.connect(self.upload_results)
         self.upload_btn.setEnabled(False)
-        active_layout.addWidget(self.upload_btn)
+        gen_row.addWidget(self.upload_btn)
+        gen_row.addStretch()
+        active_layout.addLayout(gen_row)
         active_group.setLayout(active_layout)
         layout.addWidget(active_group)
 
         self.poll_timer = QTimer()
         self.poll_timer.timeout.connect(self.poll_tasks)
         self.active_task = None
+        self.split_thread = None
+        self.split_result = None
 
     def get_server(self):
         return self._mw.get_server()
@@ -1555,20 +2038,151 @@ class WorkerWidget_ITG(QWidget):
                 self.active_task = r.json()
                 self.active_task_label.setPlainText(f"Task #{self.active_task['id']} depth={self.active_task.get('depth',0)}\nInput: {self.active_task.get('input_image','')}\nPrompt: {self.active_task.get('prompt','')}")
                 self.split_btn.setEnabled(True)
-                self.status_label.setText("Task claimed! Click Split Image.")
+                self.status_label.setText("Task claimed!")
                 self.tasks_list.clear()
+                if self.auto_process_cb.isChecked():
+                    self.split_task()
         except Exception as e:
             self.status_label.setText(f"Claim error: {e}")
 
     def split_task(self):
-        self.status_label.setText("ITG split -- use src/itg_node.py terminal interface. GUI split coming.")
+        if not self.active_task or self.split_thread is not None:
+            return
+        self.split_btn.setEnabled(False)
+        self.progress.setVisible(True)
+        self.progress.setRange(0, 0)  # indeterminate
+        self.status_label.setText("Starting split...")
+
+        port = 8188
+        try:
+            port = int(self.comfy_url.text().rstrip("/").split(":")[-1])
+        except ValueError:
+            pass
+
+        self.split_result = None
+        self.split_thread = ITGSplitThread(
+            self.get_server(), self.active_task,
+            self.comfy_url.text(), self.vision_model.currentText(),
+            os.path.join("output", "itg", self.worker_id.text().replace(" ", "_"))
+        )
+        self.split_thread.progress_signal.connect(self._on_split_progress)
+        self.split_thread.finished_signal.connect(self._on_split_finished)
+        self.split_thread.error_signal.connect(self._on_split_error)
+        self.split_thread.start()
+
+    def _on_split_progress(self, msg):
+        self.status_label.setText(msg)
+        self.progress.setVisible(True)
+
+    def _on_split_finished(self, result):
+        self.split_result = result
+        self.progress.setVisible(False)
+        self.split_thread = None
+
+        if result.finish_type == "failed":
+            self.status_label.setText("Split failed — all retries exhausted")
+            self.split_btn.setEnabled(False)
+            self.upload_btn.setEnabled(False)
+            self._reset_and_reclaim()
+            return
+
+        # Show preview of first good layer
+        if result.good_layer_paths:
+            pix = QPixmap(result.good_layer_paths[0])
+            if not pix.isNull():
+                scaled = pix.scaledToWidth(400, Qt.TransformationMode.SmoothTransformation)
+                self.image_preview.setPixmap(scaled)
+                self.image_preview.setVisible(True)
+
+        self.status_label.setText(f"Split done ({len(result.good_layer_paths)} good layers). Upload ready.")
         self.upload_btn.setEnabled(True)
 
-    def upload_results(self):
-        self.status_label.setText("Upload -- use src/itg_node.py terminal interface. GUI upload coming.")
-        self.active_task = None
+        if self.auto_process_cb.isChecked():
+            self.upload_results()
+
+    def _on_split_error(self, msg):
+        self.progress.setVisible(False)
+        self.split_thread = None
+        self.status_label.setText(f"Split error: {msg[:100]}")
+        self._reset_and_reclaim()
+
+    def _reset_and_reclaim(self):
+        if self.active_task:
+            try:
+                requests.post(f"{self.get_server()}/api/task/{self.active_task['id']}/reset", timeout=10)
+            except Exception:
+                pass
+            self.active_task = None
         self.split_btn.setEnabled(False)
         self.upload_btn.setEnabled(False)
+        self.image_preview.setVisible(False)
+        if self.auto_process_cb.isChecked():
+            self.poll_tasks()
+
+    def upload_results(self):
+        if not self.active_task or not self.split_result:
+            return
+
+        result = self.split_result
+        depth = self.active_task.get("depth", 0) or 0
+        max_depth = self.active_task.get("max_depth", 2) or 2
+
+        try:
+            if result.finish_type == "final" or depth >= max_depth:
+                # Upload final result PNGs
+                files = []
+                for fn in result.uploaded_filenames:
+                    fp = os.path.join(self.split_thread.output_dir, fn) if self.split_thread else None
+                    if fp and os.path.exists(fp):
+                        files.append(("images", (fn, open(fp, "rb"), "image/png")))
+                if files:
+                    r = requests.post(f"{self.get_server()}/api/task/{self.active_task['id']}/result",
+                                      files=files, timeout=30)
+                    if r.ok:
+                        self.status_label.setText("Final results uploaded!")
+            else:
+                # Create child tasks
+                child_tasks = []
+                for i, (fn, judgment) in enumerate(zip(result.uploaded_filenames, result.judgments)):
+                    desc = judgment.get("description", "")
+                    child_tasks.append({
+                        "question_id": self.active_task["question_id"],
+                        "type": "ITG",
+                        "parent_task_id": self.active_task["id"],
+                        "depth": depth + 1,
+                        "max_depth": max_depth,
+                        "prompt": f"Decompose this layer further: {desc}" if desc else "",
+                        "input_image": fn,
+                    })
+                if child_tasks:
+                    r = requests.post(f"{self.get_server()}/api/tasks/batch",
+                                      json={"tasks": child_tasks}, timeout=10)
+                    if r.ok:
+                        self.status_label.setText(f"Created {len(child_tasks)} child tasks!")
+
+            # Mark current task complete with split results
+            split_data = {}
+            if len(result.uploaded_filenames) >= 1:
+                split_data["split_result_1"] = result.uploaded_filenames[0]
+            if len(result.uploaded_filenames) >= 2:
+                split_data["split_result_2"] = result.uploaded_filenames[1]
+            requests.post(f"{self.get_server()}/api/task/{self.active_task['id']}/result",
+                          data=split_data, timeout=10)
+
+            self.status_label.setText("Uploaded! Ready for next task.")
+
+        except Exception as e:
+            self.status_label.setText(f"Upload error: {e}")
+
+        self.active_task = None
+        self.split_result = None
+        self.split_btn.setEnabled(False)
+        self.upload_btn.setEnabled(False)
+        self.image_preview.setVisible(False)
+        self.active_task_label.setPlainText("No active task")
+
+        if self.auto_process_cb.isChecked():
+            self.poll_tasks()
 
 
 # ─── Main Window with Tabs ──────────────────────────────────────────────

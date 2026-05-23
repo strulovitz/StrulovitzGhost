@@ -106,12 +106,14 @@ class ITGNode:
         # Judge quality
         good_layers = []
         garbage_layers = []
+        good_judgments = []  # save judgments to avoid re-calling Ollama in child prompt step
         for i, lf in enumerate(layer_files):
             judgment = judge_layer_quality(lf, model=self.vision_model,
                                            parent_description=f"Sub-part {i+1} from: {input_image}")
             print(f"  Layer {i+1}: {judgment['quality']} — {judgment['description'][:60]}", flush=True)
             if judgment["quality"] == "good":
                 good_layers.append(lf)
+                good_judgments.append(judgment)
             else:
                 garbage_layers.append(lf)
 
@@ -172,9 +174,9 @@ class ITGNode:
             print(f"  Depth {depth} < {max_depth} — creating {len(good_layers)} child tasks.", flush=True)
 
             child_tasks = []
-            for i, (lf, fn) in enumerate(zip(good_layers, uploaded_filenames)):
-                # Generate prompt for child using Qwen3-VL description + LLM
-                child_prompt = self._generate_child_prompt(lf, task)
+            for i, (lf, fn, judgment) in enumerate(zip(good_layers, uploaded_filenames, good_judgments)):
+                desc = judgment.get("description", "")
+                child_prompt = f"Decompose this layer further: {desc}" if desc else ""
 
                 child_tasks.append({
                     "question_id": task["question_id"],
