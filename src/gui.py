@@ -982,7 +982,7 @@ class WorkerWidget_TTG(QWidget):
                 self.status_label.setText(f"Polling... ({len(tasks)} tasks available)")
                 if self.auto_gen_cb.isChecked() and tasks and not self.active_task:
                     self.claim_task(task_dict=tasks[0])
-            except Exception as e:
+        except Exception as e:
             self.status_label.setText(f"Poll error: {e}")
 
     def claim_task(self, item=None, task_dict=None):
