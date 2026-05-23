@@ -1,6 +1,8 @@
 # 🧪 LAN Test #01 — TTG Distributed on 2 Machines
 
-**Date:** May 23, 2026 | **Status:** ✅ COMPLETED | **Mode:** TTG
+**Date:** May 23, 2026 | **Status:** RUN #2 IN PROGRESS | **Mode:** TTG
+
+**Note:** Run #1 was solo Laptop (RTX 5090 too fast). Run #2 uses GPT-5.5 pre-split prompts and coordinated 2-machine generation.
 
 ---
 
@@ -14,42 +16,24 @@ Prove: Two computers cooperate to generate a complete 6-layer Pepper's Ghost sce
 
 ---
 
-## The Scene
+## The Scene (GPT-5.5 Pre-Split — Run #2)
 
-Frank Frazetta's Silver Warrior — polar bears, armored barbarian on a sled, icy mountains.
+Frank Frazetta's Silver Warrior — polar bears, armored warrior on sled, icy arctic mountains.
+
+**Overall image:** A vertical fantasy illustration shows a heroic arctic scene in cold blue and white tones. Four large white polar bears charge forward through deep snow toward the viewer, pulling an ornate blue-silver sled with curved blade-like runners. A human warrior stands upright on the sled behind them, wearing dark metallic armor and a helmet, with long black hair or a cape blowing left in the wind, holding a tall curved sword raised upward. Behind the figure are pale icy mountains and a bright blue frozen sky, with blowing snow and mist giving the whole scene a dramatic, fast-moving, mythic winter atmosphere.
 
 ```
-Layer 1, closest to the camera: In the foreground, four powerful white polar bears charge
-forward through deep powdery snow, filling the lower half of the image. Their bodies overlap
-tightly in a wedge formation, with heavy paws breaking through the snow, open mouths, dark
-noses, and thick cream-white fur shaded with blue-gray shadows. Snow mist and soft drifting
-powder surround their legs, making the scene feel cold, fast, and forceful.
+Layer 1 — closest foreground snow: Draw a vertical portrait canvas with the closest foreground made of deep powdery snow filling the bottom quarter of the image. The snow is soft, uneven, and slightly mounded, with blue-gray shadows and bright white highlights. Add kicked-up snow mist and powder clouds around the lower center and lower right, as if heavy animals have just run through it. Include a few large paw-shaped depressions and rough snow ridges near the bottom edge, making the viewer feel very close to the action.
 
-Layer 2, just behind them: The bears are harnessed to an ornate fantasy sled with large
-curved metal runners sweeping upward on both sides like crescent blades. The front of the
-sled is decorated with intricate blue-silver engravings, circular patterns, and sculpted
-metalwork, partially buried in blowing snow.
+Layer 2 — four charging polar bears: Draw four large white polar bears in the lower half of a vertical portrait canvas, running directly toward the viewer in a tight group. The bears have thick cream-white fur with blue-gray shadowing, black noses, dark eyes, and open mouths showing energy and motion. Place one bear front-left closest and slightly lower, one bear front-right with its head turned slightly left and mouth open, and two bears behind them at center and upper right, partly overlapping. Their paws are large and heavy, pushing through snow, with snow powder rising around their legs. The bears should look like powerful sled-pulling animals, facing forward and moving fast.
 
-Layer 3, middle depth: Standing upright on the sled is a muscular armored warrior, centered
-vertically in the composition, wearing dark steel-blue armor with round plates, belts, and
-fur or leather details. The warrior holds a long curved sword raised high on the left side
-of the image, and a dark cape or long black hair streams dramatically to the left in the wind.
+Layer 3 — ornate sled and curved runners: Draw an elaborate fantasy sled positioned behind the polar bears, centered in the image and rising from the lower middle toward the center. The sled is made of blue-silver metal with intricate engraved patterns, circular ornaments, and decorative arctic designs. Add two large curved runners on the left and right sides, shaped like tall crescent blades that sweep upward beside the bears. The front of the sled is rounded and armored, with harness connections leading forward toward where the bears would be. The sled should look heavy, magical, and ceremonial, partly surrounded by blowing snow.
 
-Layer 4, behind the warrior: The upper body and helmet are silhouetted against the pale sky;
-the helmet has a rounded crown and small ornament, while the face is shadowed and stern,
-giving the figure a mythic barbarian or arctic warlord feeling. The sword's blade is dark
-bronze or steel, tapering upward into the sky, creating a strong diagonal line.
+Layer 4 — human warrior rider: Draw a full human warrior standing upright on a sled platform in the middle-upper part of a vertical portrait canvas. The warrior is a tall muscular human male figure wearing dark steel-blue fantasy armor, including a rounded helmet, shoulder plates, chest armor, arm guards, belt, and boots. His face is mostly shadowed under the helmet, giving him a stern heroic look. Long black hair or a dark cape streams strongly to the left in the wind. His right arm holds a long curved sword raised high along the upper left side of the image, the blade tall and dramatic. His body faces forward toward the viewer, standing balanced and commanding, like an arctic warlord riding into battle.
 
-Layer 5, distant background: Behind the rider are pale blue-white snowfields and jagged icy
-mountains, with one large glacier-like ridge stretching horizontally across the upper center,
-softened by atmospheric haze. The landscape is minimal and frozen, with faint cracks and
-ridges in the ice.
+Layer 5 — distant ice mountains and snowfield: Draw a far background of pale icy mountains and glaciers across the upper middle of a vertical portrait canvas. The main mountain ridge sits behind the warrior area, colored white and light blue, with soft jagged peaks and a large horizontal glacier shape stretching across the center. Use atmospheric haze so the mountains look distant and cold. Below the ridge, add a flat snowy plain with subtle blue shadows, faint ice cracks, and gentle snowdrifts. The background should feel vast, frozen, and remote.
 
-Layer 6, farthest depth and atmosphere: The sky is a clear cold gradient of light to medium
-blue, with subtle mist, windblown snow, and a faint diagonal streak of cloud or light near
-the upper left. The overall composition is vertical, painted in a classic fantasy illustration
-style, dominated by icy blues, whites, silver metal, dramatic motion, and a heroic central
-silhouette advancing directly toward the viewer.
+Layer 6 — farthest sky and atmosphere: Draw a clear arctic sky filling the top and sides of a vertical portrait canvas. Use a cold gradient from light blue near the horizon to deeper blue toward the top. Add soft mist, faint windblown snow, and a pale diagonal streak of cloud or light crossing near the upper left. Keep the sky open and bright, with a crisp frozen atmosphere. The mood should be epic, cold, and magical, like a classic painted fantasy book cover.
 ```
 
 ---
@@ -154,35 +138,27 @@ Both machines claim remaining tasks until all 6 layers generated.
 | Layers Created | 6 |
 | Errors | None |
 
-### Layer Generation — RTX 5090 Laptop (Solo)
+### Layer Generation — Run #2 (Coordinated 2-Machine)
 | Layer | Content | Worker | Time | Status |
 |-------|---------|--------|------|--------|
-| 1 | Polar bears (foreground) | laptop-5090 | 25s | ✅ |
-| 2 | Sled | laptop-5090 | 25s | ✅ |
-| 3 | Warrior | laptop-5090 | 25s | ✅ |
-| 4 | Warrior upper | laptop-5090 | 25s | ✅ |
-| 5 | Mountains | laptop-5090 | 25s | ✅ |
-| 6 | Sky | laptop-5090 | 25s | ✅ |
+| 1 | Snow foreground | ___ | ___ | ⬜ |
+| 2 | Polar bears | ___ | ___ | ⬜ |
+| 3 | Sled + runners | ___ | ___ | ⬜ |
+| 4 | Warrior | ___ | ___ | ⬜ |
+| 5 | Mountains | ___ | ___ | ⬜ |
+| 6 | Sky | ___ | ___ | ⬜ |
 
-**Total: ~2.5 minutes for all 6 layers** (768x576, 15 steps, chroma-key to RGBA).
-RTX 5090 24GB generated all layers at ~25 seconds each before Desktop could claim any.
-Desktop RTX 4070 Ti was ready but outpaced.
+### Distribution Plan (Run #2)
+- **Laptop RTX 5090:** Layers 1, 2, 3 (foreground complex: snow, bears, sled)
+- **Desktop RTX 4070 Ti:** Layers 4, 5, 6 (background: warrior, mountains, sky)
+- **Strategy:** Laptop claims tasks 1-3 manually after split, Desktop auto-gen claims 4-6.
+  Both generate SIMULTANEOUSLY.
 
-### Final Output
-- [x] All 6 layers generated
-- [x] All RGBA with green chroma-key transparency
-- [x] Question marked "completed" in database
-- [x] All files saved to src/output/
-
-### Output Files
-| File | Size |
-|------|------|
-| task6_layer1.png (polar bears) | 542 KB |
-| task5_layer2.png (sled) | 654 KB |
-| task4_layer3.png (warrior) | 549 KB |
-| task3_layer4.png (warrior upper) | 554 KB |
-| task2_layer5.png (mountains) | 495 KB |
-| task1_layer6.png (sky) | 419 KB |
+### Final Output (Run #2)
+- [ ] All 6 layers generated
+- [ ] Both machines contributed (Desktop ≠ 0 layers)
+- [ ] All RGBA with transparency
+- [ ] Question marked "completed"
 
 ### Lessons Learned
 - **RTX 5090 24GB is a BEAST.** 25 seconds per layer at 768×576 with 15 steps. Desktop RTX 4070 Ti takes ~9 minutes per layer. The 5090 generated all 6 layers before Desktop could claim one.
