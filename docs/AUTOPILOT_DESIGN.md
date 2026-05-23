@@ -21,7 +21,7 @@ User pastes scene → clicks Submit → walks away ☕
 ```
 
 The architecture is ALREADY designed for this (see DESIGN.md Polling Mechanism,
-TTG_DESIGN.md §5.2 boss_loop, §6.1 worker_loop). The infrastructure exists —
+TEXT_TO_GHOST_DESIGN.md §5.2 boss_loop, §6.1 worker_loop). The infrastructure exists —
 we just need to wire the final automation into the GUI.
 
 ---

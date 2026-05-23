@@ -607,6 +607,15 @@ class BossWidget_TTG(QWidget):
         self.split_btn = QPushButton("Auto-Split with LLM")
         self.split_btn.clicked.connect(self.auto_split)
         split_layout.addWidget(self.split_btn)
+        pilot_row = QHBoxLayout()
+        self.auto_pilot_cb = QCheckBox("Auto-Pilot")
+        self.auto_pilot_cb.setToolTip("Auto-detect new pending scenes and split them without manual input")
+        self.auto_pilot_cb.toggled.connect(self.toggle_auto_pilot)
+        pilot_row.addWidget(self.auto_pilot_cb)
+        self.pilot_status = QLabel("")
+        pilot_row.addWidget(self.pilot_status)
+        pilot_row.addStretch()
+        split_layout.addLayout(pilot_row)
         self.split_status = QLabel("")
         split_layout.addWidget(self.split_status)
         split_group.setLayout(split_layout)
@@ -638,6 +647,10 @@ class BossWidget_TTG(QWidget):
 
         layout.addLayout(right)
         self.current_question = None
+        self.boss_poll_timer = QTimer()
+        self.boss_poll_timer.timeout.connect(self._boss_poll)
+        self._splitting_now = False
+        self._split_ids = set()
 
     def get_server(self):
         return self._mw.get_server()
@@ -778,6 +791,51 @@ class BossWidget_TTG(QWidget):
             self.split_status.setText(f"Error: {e}")
         self.split_btn.setEnabled(True)
 
+    def toggle_auto_pilot(self, checked):
+        if checked:
+            self.boss_poll_timer.start(3000)
+            self.pilot_status.setText("ON — watching for new scenes...")
+            self.pilot_status.setStyleSheet("color: #4caf50; font-weight: bold;")
+            self._boss_poll()
+        else:
+            self.boss_poll_timer.stop()
+            self.pilot_status.setText("")
+            self._splitting_now = False
+
+    def _boss_poll(self):
+        if self._splitting_now:
+            return
+        try:
+            r = requests.get(f"{self.get_server()}/api/questions?type=TTG&status=pending", timeout=10)
+            if r.ok:
+                questions = r.json()
+                new_pending = [q for q in questions if q["id"] not in self._split_ids]
+                if new_pending:
+                    q = new_pending[0]
+                    self._split_ids.add(q["id"])
+                    self.pilot_status.setText(f"ON — auto-splitting #{q['id']}...")
+                    self.pilot_status.setStyleSheet("color: #ffc107; font-weight: bold;")
+                    self._splitting_now = True
+                    provider = self.llm_combo.currentText()
+                    model = self.llm_model.currentText()
+                    r2 = requests.post(
+                        f"{self.get_server()}/api/question/{q['id']}/split",
+                        json={"provider": provider, "model": model}, timeout=180)
+                    if r2.ok:
+                        self.pilot_status.setText(f"ON — #{q['id']} split! {len(r2.json().get('tasks', []))} layers")
+                        self.pilot_status.setStyleSheet("color: #4caf50; font-weight: bold;")
+                    else:
+                        self.pilot_status.setText(f"ON — split #{q['id']} failed: {r2.json().get('error', r2.text)[:40]}")
+                        self.pilot_status.setStyleSheet("color: #e94560; font-weight: bold;")
+                    self._splitting_now = False
+                else:
+                    self.pilot_status.setText("ON — watching for new scenes...")
+                    self.pilot_status.setStyleSheet("color: #4caf50; font-weight: bold;")
+        except Exception as e:
+            self._splitting_now = False
+            self.pilot_status.setText(f"ON — error: {str(e)[:40]}")
+            self.pilot_status.setStyleSheet("color: #e94560; font-weight: bold;")
+
 
 class WorkerWidget_TTG(QWidget):
     def __init__(self, main_window):
@@ -808,6 +866,9 @@ class WorkerWidget_TTG(QWidget):
         self.poll_toggle.setCheckable(True)
         self.poll_toggle.clicked.connect(self.toggle_polling)
         config_row.addWidget(self.poll_toggle)
+        self.auto_gen_cb = QCheckBox("Auto-Generate")
+        self.auto_gen_cb.setToolTip("Auto-claim, generate, and upload tasks without manual input")
+        config_row.addWidget(self.auto_gen_cb)
         layout.addLayout(config_row)
 
         self.status_label = QLabel("Not polling")
@@ -919,11 +980,13 @@ class WorkerWidget_TTG(QWidget):
                     item.setData(Qt.ItemDataRole.UserRole, t)
                     self.tasks_list.addItem(item)
                 self.status_label.setText(f"Polling... ({len(tasks)} tasks available)")
-        except Exception as e:
+                if self.auto_gen_cb.isChecked() and tasks and not self.active_task:
+                    self.claim_task(task_dict=tasks[0])
+            except Exception as e:
             self.status_label.setText(f"Poll error: {e}")
 
-    def claim_task(self, item):
-        t = item.data(Qt.ItemDataRole.UserRole)
+    def claim_task(self, item=None, task_dict=None):
+        t = task_dict if task_dict else item.data(Qt.ItemDataRole.UserRole)
         if not t:
             return
         try:
@@ -941,6 +1004,8 @@ class WorkerWidget_TTG(QWidget):
                 self.image_preview.setVisible(False)
                 self.status_label.setText("Task claimed! Edit negative prompt if needed, then Generate.")
                 self.tasks_list.clear()
+                if hasattr(self, 'auto_gen_cb') and self.auto_gen_cb.isChecked():
+                    self.generate_image()
             else:
                 self.status_label.setText(f"Claim error: {r.json().get('error', r.text)}")
         except Exception as e:
@@ -958,7 +1023,7 @@ class WorkerWidget_TTG(QWidget):
         self.progress.setValue(0)
         output_dir = os.path.join(os.path.dirname(__file__), "output")
         self.gen_thread = GenerateThread(
-            self.active_task_label.toPlainText().strip() or self.active_task["prompt"],
+            self.active_task["prompt"],
             method, output_dir, num_steps=15,
             key_color=self.key_combo.currentText(),
             negative_prompt=self.neg_input.toPlainText().strip() or None,
@@ -977,7 +1042,11 @@ class WorkerWidget_TTG(QWidget):
         self.progress.setValue(100)
         self.upload_btn.setEnabled(True)
         self.generate_btn.setEnabled(True)
-        self.status_label.setText("Generated! Click Upload Result PNG.")
+        if hasattr(self, 'auto_gen_cb') and self.auto_gen_cb.isChecked():
+            self.status_label.setText("Generated! Auto-uploading...")
+            self.upload_result()
+        else:
+            self.status_label.setText("Generated! Click Upload Result PNG.")
         pixmap = QPixmap(path)
         if not pixmap.isNull():
             scaled = pixmap.scaledToWidth(500, Qt.TransformationMode.SmoothTransformation)
@@ -1022,6 +1091,8 @@ class WorkerWidget_TTG(QWidget):
                 self.image_preview.setVisible(False)
                 self.neg_input.setVisible(False)
                 self.neg_label.setVisible(False)
+                if hasattr(self, 'auto_gen_cb') and self.auto_gen_cb.isChecked():
+                    self.poll_tasks()
             else:
                 self.status_label.setText(f"Upload error: {r.json().get('error', r.text)}")
         except Exception as e:
