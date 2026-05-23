@@ -4,6 +4,27 @@
 
 ---
 
+## ⛔⛔⛔ NOT BUILDING YET — READ THIS FIRST ⛔⛔⛔
+
+**These features are intentionally SKIPPED in this build. They are tracked in MEMORY.md and will be built later. DO NOT expect them to work when testing:**
+
+| # | Skipped Feature | Why | Impact |
+|---|----------------|-----|--------|
+| 1 | **Mid-level Boss Z-ordering** | `itg_node.py` doesn't do it either — creates children, marks self done, never waits for children. Complex to implement. | Only Top Boss (depth 0) does Z-ordering. Works fine for depth ≤ 2. |
+| 2 | **Multi-level recursive splitting (depth > 2)** | Each depth level doubles the tasks. Depth 2 already creates up to 7 nodes. Beyond that is exponential. | Test will use max_depth=2 only. |
+| 3 | **Mid-level node waiting for children completion** | Nodes don't poll for children status. They fire-and-forget. | Only Top Boss collects final results. |
+| 4 | **Per-level Z-order upload** (`PUT /api/task/{id}/zorder`) | The Z-order endpoint exists in app.py but is never called by any code. | Top Boss does one final Z-ordering from all leaf results. |
+| 5 | **ComfyUI intermediate progress bar** | ComfyUI API only reports "done" or "error" — no intermediate progress. | GUI shows "Splitting... (X seconds elapsed)" with a pulsing bar, not a real percentage. |
+| 6 | **Multiple ComfyUI instances / GPU pool** | Only one ComfyUI per machine. Splits are serialized. | If two tasks need splitting on same machine, second one waits. GUI shows "ComfyUI busy." |
+| 7 | **ITG scene_viewer.py integration** | Existing scene_viewer only handles TTG layers. | ITG layers viewable as regular PNGs but no special viewer. |
+| 8 | **Client auto-polling for completion** | Client tab currently has no poll timer. | Client must manually click "Refresh." Timer can be added after. |
+| 9 | **Boss "Arrange Z-Order" button** | Currently always disabled. | Will be wired to call `determine_z_order()` but only after children complete. |
+| 10 | **Error recovery for failed branches** | If a sub-branch fails (dual-garbage ×3), it gets marked "failed" and is skipped. No automatic rebalancing. | Fewer than 6 layers possible. Empty transparent layers fill the gap. |
+
+**⚠️ IF YOU'RE TESTING AND SOMETHING FROM THIS LIST DOESN'T WORK — IT'S NOT A BUG. IT'S NOT BUILT YET. CHECK THIS LIST FIRST.**
+
+---
+
 ## 🎯 Goal
 
 Wire up the ITG Boss and Worker GUI tabs so Lan Test #02 can run as a GUI clicking experience (like Lan Test #01 for TTG).
@@ -125,19 +146,6 @@ Both Boss and Worker do the EXACT same thing (split 1→2, judge). The only diff
 - Worker (depth ≥ max_depth): uploads final result
 
 `ITGSplitThread` handles only the split+judge. Post-split logic stays in the GUI main thread.
-
----
-
-## 📋 What We're NOT Building Yet
-
-```
-✗ Mid-level node waiting for children completion
-✗ Per-level Z-ordering (only Top Boss does it)
-✗ ComfyUI progress bar (ComfyUI doesn't expose intermediate progress)
-✗ ITG scene_viewer.py integration
-✗ GPU pool management (multiple ComfyUI instances)
-✗ Recursive splitting depth > 2
-```
 
 ---
 

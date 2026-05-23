@@ -61,6 +61,27 @@ Preserved context, decisions, and direction.
 - Qwen-Image-Layered research
 - Fine Art Decomposition
 
+### 🔴 ITG Known Gaps — NOT YET BUILT (Tracked May 23, 2026)
+
+These are intentionally skipped in the current ITG build. Do NOT expect them to work.
+Tracked so we don't forget. Will be built in future sessions.
+
+| # | Gap | Status |
+|---|-----|--------|
+| 1 | Mid-level Boss Z-ordering (nodes don't wait for children) | ⏳ Planned |
+| 2 | Multi-level recursive splitting (depth > 2) | ⏳ Planned |
+| 3 | Mid-level node polling for children completion | ⏳ Planned |
+| 4 | Per-level Z-order upload (`PUT /api/task/{id}/zorder`) | ⏳ Planned |
+| 5 | ComfyUI intermediate progress (API only gives done/error) | ⏳ Planned |
+| 6 | Multiple ComfyUI instances / GPU pool management | ⏳ Planned |
+| 7 | ITG scene_viewer.py integration | ⏳ Planned |
+| 8 | Client auto-polling for completion status | ⏳ Planned |
+| 9 | Boss "Arrange Z-Order" button wiring | 🔧 In current build |
+| 10 | Error recovery for failed branches (rebalancing) | ⏳ Planned |
+| 11 | ITG GUI wiring (Boss + Worker stubs → real functions) | 🔧 In current build |
+
+See: `docs/ITG_GUI_WIRING_PLAN.md` for full details on items 9 and 11.
+
 ---
 
 ## 🔴 SESSION LOG — May 23, 2026 (LAPTOP AI — Nir's Laptop) — Session #1
