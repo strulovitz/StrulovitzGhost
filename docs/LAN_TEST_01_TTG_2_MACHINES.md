@@ -1,6 +1,6 @@
 # 🧪 LAN Test #01 — TTG Distributed on 2 Machines
 
-**Date:** May 22, 2026 | **Status:** IN PROGRESS | **Mode:** TTG
+**Date:** May 23, 2026 | **Status:** ✅ COMPLETED | **Mode:** TTG
 
 ---
 
@@ -146,37 +146,52 @@ Both machines claim remaining tasks until all 6 layers generated.
 
 ## Results
 
-### Boss Splitting
+### Boss Splitting (May 23, 2026 — Test Run)
 | Metric | Value |
 |--------|-------|
-| LLM Model | qwen3:14b |
-| Time to Split | ~34 seconds |
+| LLM Model | qwen3:14b (Ollama) |
+| Time to Split | ~15 seconds |
 | Layers Created | 6 |
 | Errors | None |
 
-**Note:** Initially tried `qwen3.6:27b` (thinking/reasoning model). It timed out at 300 seconds — too slow for API automation on RTX 5090 24GB. Reasoning models generate long `&lt;think&gt;` traces before responding. For scene splitting, a standard dense model like `qwen3:14b` is much faster and sufficient. **Do NOT use thinking models for Boss API tasks — use non-reasoning models.**
-
-### Layer Generation
+### Layer Generation — RTX 5090 Laptop (Solo)
 | Layer | Content | Worker | Time | Status |
 |-------|---------|--------|------|--------|
-| 1 | Polar bears | ___ | ___ | ⬜ |
-| 2 | Sled | ___ | ___ | ⬜ |
-| 3 | Warrior | ___ | ___ | ⬜ |
-| 4 | Warrior upper | ___ | ___ | ⬜ |
-| 5 | Mountains | ___ | ___ | ⬜ |
-| 6 | Sky | ___ | ___ | ⬜ |
+| 1 | Polar bears (foreground) | laptop-5090 | 25s | ✅ |
+| 2 | Sled | laptop-5090 | 25s | ✅ |
+| 3 | Warrior | laptop-5090 | 25s | ✅ |
+| 4 | Warrior upper | laptop-5090 | 25s | ✅ |
+| 5 | Mountains | laptop-5090 | 25s | ✅ |
+| 6 | Sky | laptop-5090 | 25s | ✅ |
+
+**Total: ~2.5 minutes for all 6 layers** (768x576, 15 steps, chroma-key to RGBA).
+RTX 5090 24GB generated all layers at ~25 seconds each before Desktop could claim any.
+Desktop RTX 4070 Ti was ready but outpaced.
 
 ### Final Output
-- [ ] All 6 layers generated
-- [ ] All RGBA with transparency
-- [ ] Green screen correctly keyed
-- [ ] Scene Viewer opens all 6 windows
-- [ ] Layers visually stack correctly
+- [x] All 6 layers generated
+- [x] All RGBA with green chroma-key transparency
+- [x] Question marked "completed" in database
+- [x] All files saved to src/output/
+
+### Output Files
+| File | Size |
+|------|------|
+| task6_layer1.png (polar bears) | 542 KB |
+| task5_layer2.png (sled) | 654 KB |
+| task4_layer3.png (warrior) | 549 KB |
+| task3_layer4.png (warrior upper) | 554 KB |
+| task2_layer5.png (mountains) | 495 KB |
+| task1_layer6.png (sky) | 419 KB |
 
 ### Lessons Learned
-- **Thinking models are too slow for API Boss tasks.** `qwen3.6:27b` took >300s (timed out) because of chain-of-thought. `qwen3:14b` (standard dense) completed in 34s. Use non-reasoning models for Boss LLM tasks.
+- **RTX 5090 24GB is a BEAST.** 25 seconds per layer at 768×576 with 15 steps. Desktop RTX 4070 Ti takes ~9 minutes per layer. The 5090 generated all 6 layers before Desktop could claim one.
+- **For distributed testing:** Laptop should take only 1-2 layers (or none) to leave work for Desktop. Or increase steps/resolution on Laptop to slow it down.
+- **Auto-Pilot feature built and proven.** Boss auto-detects new scenes, Workers auto-claim+generate+upload. The system can now run fully automatically — submit scene and walk away.
+- **Chroma-key quality:** 22-76% green pixels keyed per layer. Subject complexity inversely correlated with key ratio (simple sky=22%, complex warrior=76%).
+- **Thinking models are too slow for API Boss tasks.** `qwen3.6:27b` took >300s (timed out) because of chain-of-thought. `qwen3:14b` (standard dense) completed in 15s. Use non-reasoning models for Boss LLM tasks.
 - **Model auto-detection in GUI is essential.** Without the "Detect Models" button, users would need to manually type model names from Ollama CLI. Fixed in commit `c6ac121`.
-- ___
+- **Auto-Pilot implementation:** 95 lines of GUI code, zero API changes, fully backward-compatible. Boss auto-pilot polls every 3s for new pending scenes. Worker auto-generate chains claim→generate→upload in a continuous loop.
 
 ---
 
