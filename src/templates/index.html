@@ -43,9 +43,15 @@
                             Layer {{ t.layer_number }}: {{ t.status.value }}
                             {% if t.result_filename %}
                             <a href="{{ url_for('serve_result', filename=t.result_filename) }}" target="_blank">📷 View</a>
+                            <a href="{{ url_for('serve_result', filename=t.result_filename) }}" download>⬇ DL</a>
                             {% endif %}
                         </div>
                         {% endfor %}
+                        {% if q.status.value == 'completed' and q.tasks %}
+                        <div class="download-all">
+                            <a href="/api/question/{{ q.id }}/layers/download"><strong>📦 Download All Layers (ZIP)</strong></a>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>

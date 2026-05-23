@@ -42,7 +42,7 @@ Layer 6 — farthest sky and atmosphere: Draw a clear arctic sky filling the top
 
 ## The Simulated Users (Who Runs What)
 
-We have 2 physical machines simulating 3 separate users. Each user opens their own
+We have 2 physical machines simulating 4 separate users. Each user opens their own
 instance of the StrulovitzGhost GUI and stays on the tab for their assigned role.
 
 | Physical Machine | Simulated User | GUI Instance | Tab | Role |
@@ -50,13 +50,14 @@ instance of the StrulovitzGhost GUI and stays on the tab for their assigned role
 | Laptop | DM | GUI #1 | **Boss** 👑 | Runs website + auto-splits scenes |
 | Laptop | Player #1 | GUI #2 | **Worker** 🔧 | Auto-generates layers with RTX 5090 |
 | Desktop | Player #2 | GUI #1 | **Worker** 🔧 | Auto-generates layers with RTX 4070 Ti |
+| Desktop | Player #3 | GUI #2 | **Client** 🙋 | Submits scene + downloads final layers |
 
-Plus a **browser** (any machine on the LAN) opened to `http://10.0.0.6:5000`
-for the Client 🙋 to submit the scene.
+**Total: 4 GUI windows on 2 machines.**
 
-Same app (`gui.py`), same tabs — but each instance only uses the tab for its role.
-In real life these would be different people on different computers. Here we
-simulate 3 users with 2 physical machines.
+The Client submits via the GUI's Client tab (or the website). When all 6 layers are
+done, they click "Download All Layers" → selects a folder → gets `layer1.png`
+through `layer6.png` with clean names. On the website, they click "📦 Download All
+Layers (ZIP)" to get the same files as a ZIP.
 
 ---
 
@@ -82,8 +83,9 @@ the GUI checkboxes and the website. This is exactly what a real user does.
 - [ ] Laptop: launch 2 GUI windows:
   - [ ] `python gui.py` → Boss tab (for the DM)
   - [ ] `python gui.py` → Worker tab (for Player #1)
-- [ ] Desktop: launch 1 GUI window:
+- [ ] Desktop: launch 2 GUI windows:
   - [ ] `python gui.py` → Worker tab (for Player #2)
+  - [ ] `python gui.py` → Client tab (for Player #3, the submitter)
 
 ### YOU DO — Laptop (3 things: website + 2 GUI windows):
 
@@ -116,17 +118,29 @@ Click "Submit Question"
 See: "Submitted! ✅ Refresh to see it."
 ```
 
-### YOU DO — Desktop (1 GUI window):
+### YOU DO — Desktop (2 GUI windows):
 
-**Set up Worker (Player #2 on Desktop's GPU):**
+**GUI window #1 — Set up Worker (Player #2 on Desktop's GPU):**
 ```
-GUI window on the "Worker" tab.
+Worker tab.
 Set Server URL: http://10.0.0.6:5000
 Set Worker ID: desktop-4070ti
 Click "Start Polling"
 Check: "Auto-Generate" ✅
 ```
-Done. Desktop Worker auto-polls Laptop's website, claims tasks, generates, uploads.
+
+**GUI window #2 — Set up Client (Player #3, the submitter):**
+```
+Client tab.
+Set Server URL: http://10.0.0.6:5000
+(This is where you'll paste the scene — or use the website at http://10.0.0.6:5000)
+```
+
+### When all 6 layers are done:
+
+**Desktop Client GUI:** Select the completed question → click "Download All Layers" → pick a folder → gets `layer1.png` through `layer6.png`.
+
+**OR on the website:** Refresh → see "📦 Download All Layers (ZIP)" → click → downloads `scene_X_layers.zip`.
 
 ### What you should see on the website (Refresh periodically):
 

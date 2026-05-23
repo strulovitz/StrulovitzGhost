@@ -1,4 +1,4 @@
-import os, sys, shutil, glob, json as json_module
+import os, sys, shutil, glob, json as json_module, io, zipfile
 from logger import setup_logging
 setup_logging()
 
@@ -599,6 +599,34 @@ def health_llm():
 @app.route("/api/result/<filename>")
 def serve_result(filename):
     return serve_file(filename)
+
+
+@app.route("/api/question/<int:question_id>/layers/download")
+def download_layers_zip(question_id):
+    question = Question.query.get_or_404(question_id)
+    if question.status != QuestionStatus.COMPLETED:
+        return jsonify({"error": "question is not completed yet"}), 400
+    tasks = Task.query.filter_by(question_id=question_id, depth=0).order_by(Task.layer_number).all()
+    if not tasks:
+        return jsonify({"error": "no tasks found"}), 404
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for t in tasks:
+            if not t.result_filename:
+                continue
+            filepath = None
+            for d in [ORIGINALS, TTG_TEMP, TTG_FINAL, ITG_TEMP, ITG_FINAL, OUTPUT_DIR]:
+                fp = os.path.join(d, t.result_filename)
+                if os.path.exists(fp):
+                    filepath = fp
+                    break
+            if filepath:
+                zipname = f"layer{t.layer_number}.png"
+                zf.write(filepath, zipname)
+    buf.seek(0)
+    from flask import send_file
+    return send_file(buf, mimetype="application/zip", as_attachment=True,
+                     download_name=f"scene_{question_id}_layers.zip")
 
 
 if __name__ == "__main__":

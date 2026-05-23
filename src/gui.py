@@ -488,6 +488,47 @@ class ClientWidget_TTG(QWidget):
         self.refresh_btn.clicked.connect(self.refresh)
         layout.addWidget(self.refresh_btn)
 
+        self.download_btn = QPushButton("Download All Layers")
+        self.download_btn.clicked.connect(self.download_all_layers)
+        self.download_btn.setEnabled(False)
+        self.download_btn.setToolTip("Download all completed layers as layer1.png through layer6.png")
+        layout.addWidget(self.download_btn)
+
+        self.question_list.itemClicked.connect(self._on_client_select)
+        self._selected_client_q = None
+
+    def _on_client_select(self):
+        item = self.question_list.currentItem()
+        if item:
+            q = item.data(Qt.ItemDataRole.UserRole)
+            self._selected_client_q = q
+            self.download_btn.setEnabled(q.get("status") == "completed" and q.get("tasks"))
+
+    def download_all_layers(self):
+        q = self._selected_client_q
+        if not q or not q.get("tasks"):
+            return
+        folder = QFileDialog.getExistingDirectory(self, "Save layers to...")
+        if not folder:
+            return
+        try:
+            tasks = sorted(q["tasks"], key=lambda t: t.get("layer_number", 0))
+            count = 0
+            for t in tasks:
+                fname = t.get("result_filename")
+                if not fname:
+                    continue
+                r = requests.get(f"{self.get_server()}/api/result/{fname}", timeout=30)
+                if r.ok:
+                    layer = t.get("layer_number", count + 1)
+                    outpath = os.path.join(folder, f"layer{layer}.png")
+                    with open(outpath, "wb") as f:
+                        f.write(r.content)
+                    count += 1
+            self.status_label.setText(f"Downloaded {count} layers to {folder}")
+        except Exception as e:
+            self.status_label.setText(f"Download error: {e}")
+
     def get_server(self):
         return self._mw.get_server()
 
