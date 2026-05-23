@@ -1,8 +1,10 @@
 # 🧪 LAN Test #01 — TTG Distributed on 2 Machines
 
-**Date:** May 23, 2026 | **Status:** ✅ RUN #2 COMPLETED | **Mode:** TTG
+**Date:** May 23, 2026 | **Status:** ⚠️ AWAITING REAL GUI TEST | **Mode:** TTG
 
-**Summary:** Both machines contributed — TRUE distributed generation. GPT-5.5 pre-split prompts. API-coordinated via seance.
+**Summary:** Runs #1 and #2 were API-only — not valid user tests. The actual test must use
+the GUI with Auto-Pilot checkboxes, exactly as a real human would. See "REAL User Flow" below.
+Runs #1 and #2 results preserved for reference but do NOT count as LAN test passes.
 
 ---
 
@@ -59,72 +61,72 @@ Layer 6 — farthest sky and atmosphere: Draw a clear arctic sky filling the top
 
 ---
 
-## Step-by-Step Instructions
+## The REAL User Flow (One-Click Auto-Pilot) ⭐
 
-### Step 1: Laptop — Pull Boss Model
-```powershell
-ollama pull qwen3:14b
+**This is how actual users will experience the system.** No terminal commands after setup.
+No manual task claiming. No API calls. No seance coordination between AIs.
+The system runs itself — the user just submits the scene and walks away.
+
+### ⚠️ CRITICAL RULE FOR TESTERS
+**DO NOT bypass the GUI.** Do NOT use `curl`, `requests.post()`, or `python -c` to
+submit, split, claim, generate, or upload. The entire point of this test is to
+prove the GUI Auto-Pilot works for a real human user. If you can't use the GUI
+because it requires manual clicks, that's a bug to fix — not an excuse to use the API.
+
+### The user does exactly this (on EACH machine):
+
+```
+On LAPTOP:
+  1. Start Flask server: python app.py  (Terminal 1)
+  2. Start GUI: python gui.py  (Terminal 2)
+  3. Boss tab: check "Auto-Pilot" ✅
+  4. Worker tab: set Worker ID → "Start Polling" → check "Auto-Generate" ✅
+  5. Client tab: paste scene → set style → click "Submit New Scene"
+  6. Done. Walk away. Watch progress bars fill automatically.
+
+On DESKTOP:
+  1. Start GUI: python gui.py
+  2. Set Server URL: http://10.0.0.6:5000
+  3. Worker tab: set Worker ID → "Start Polling" → check "Auto-Generate" ✅
+  4. Done. Watch it auto-claim, auto-generate, auto-upload.
+
+That's it. The Boss auto-detects the new scene and auto-splits it.
+Both Workers auto-claim pending tasks, auto-generate each layer, auto-upload results.
+All 6 layers complete. Both machines contribute naturally.
 ```
 
-### Step 2: Laptop — Start Flask Website (Terminal 1)
-```powershell
-cd C:\Users\nir_s\StrulovitzGhost\src
-C:\Users\nir_s\miniconda3\envs\strulovitzghost\python.exe app.py
+### What happens automatically (zero user interaction):
+
 ```
-Wait for: `Running on http://127.0.0.1:5000`
-
-### Step 3: Laptop — Open GUI (Terminal 2)
-```powershell
-cd C:\Users\nir_s\StrulovitzGhost\src
-C:\Users\nir_s\miniconda3\envs\strulovitzghost\python.exe gui.py
+1. Boss poll timer (3s) detects new "pending" question
+2. Boss auto-splits with Ollama qwen3:14b → creates 6 tasks
+3. Laptop Worker poll timer (5s) sees pending tasks → auto-claims one
+4. Laptop Worker auto-generates with Qwen → auto-uploads result
+5. Desktop Worker poll timer (5s) sees pending tasks → auto-claims one
+6. Desktop Worker auto-generates with Qwen → auto-uploads result
+7. Both Workers continue looping until no pending tasks remain
+8. All 6 layers complete. Question marked "completed" in DB.
 ```
 
-### Step 4: Laptop — Client: Submit Scene
-1. Tab: "Text To Ghost" | Role: "Client"
-2. Paste the Silver Warrior scene description (above)
-3. Click **Submit New Scene**
-4. Note Question ID: ___
+### What users NEVER do:
+- ❌ Run Python API commands in terminal
+- ❌ Manually claim specific task IDs
+- ❌ Coordinate who does which layer
+- ❌ Upload files manually
+- ❌ Use seance to orchestrate (seance is for AI-to-AI dev chat, not production)
 
-### Step 5: Laptop — Boss: Split Scene into 6 Layers
-1. Tab: "Text To Ghost" | Role: "Boss"
-2. Click **Detect Models** → select `qwen3:14b`
-3. Click **Refresh** → select the new question
-4. Click **Auto-Split with LLM**
-5. Wait for thinking model (~60-120 sec)
-6. Verify 6 layers appear in tasks list
+---
 
-### Step 6: Laptop — Worker: Generate Layer
-1. Tab: "Text To Ghost" | Role: "Worker"
-2. Click **Start Polling**
-3. Click a task to claim it
-4. Click **Generate with Qwen AI**
-5. Wait ~9 minutes
-6. Click **Upload Result PNG**
+## Setup Prerequisites (one-time, done by Nir)
 
-### Step 7: Desktop — Worker: Generate Layer
-1. Open GUI on Desktop
-2. Set Server URL to: `http://10.0.0.6:5000`
-3. Tab: "Text To Ghost" | Role: "Worker"
-4. Click **Start Polling**
-5. Claim a different task
-6. Click **Generate with Qwen AI**
-7. Wait ~9 minutes (RTX 4070 Ti)
-8. Click **Upload Result PNG**
+### On both machines:
+- Conda env `strulovitzghost` with all packages
+- Qwen-Image-2512 4-bit model cached
+- Ollama installed with `qwen3:14b` pulled
+- Latest code pulled from GitHub
 
-### Step 8: Repeat Steps 6-7
-Both machines claim remaining tasks until all 6 layers generated.
-
-### Step 9: Client — Download Final Scene
-1. Role: "Client"
-2. Click **Refresh**
-3. Question status should show "completed"
-4. Download all 6 layers
-
-### Step 10: Open in Scene Viewer
-1. Role: "Viewer"
-2. Select the scene
-3. Click **Open Layer Windows**
-4. Verify all 6 layers display correctly
+### On Laptop only:
+- Flask server started before GUI
 
 ---
 
@@ -164,13 +166,47 @@ Both machines claim remaining tasks until all 6 layers generated.
 - [x] Question marked "completed" ✅
 
 ### Lessons Learned
-- **RTX 5090 24GB is a BEAST.** 25 seconds per layer at 768×576 with 15 steps. Desktop RTX 4070 Ti takes ~9 minutes per layer. The 5090 generated all 6 layers before Desktop could claim one.
-- **For distributed testing:** Laptop should take only 1-2 layers (or none) to leave work for Desktop. Or increase steps/resolution on Laptop to slow it down.
-- **Auto-Pilot feature built and proven.** Boss auto-detects new scenes, Workers auto-claim+generate+upload. The system can now run fully automatically — submit scene and walk away.
-- **Chroma-key quality:** 22-76% green pixels keyed per layer. Subject complexity inversely correlated with key ratio (simple sky=22%, complex warrior=76%).
-- **Thinking models are too slow for API Boss tasks.** `qwen3.6:27b` took >300s (timed out) because of chain-of-thought. `qwen3:14b` (standard dense) completed in 15s. Use non-reasoning models for Boss LLM tasks.
-- **Model auto-detection in GUI is essential.** Without the "Detect Models" button, users would need to manually type model names from Ollama CLI. Fixed in commit `c6ac121`.
-- **Auto-Pilot implementation:** 95 lines of GUI code, zero API changes, fully backward-compatible. Boss auto-pilot polls every 3s for new pending scenes. Worker auto-generate chains claim→generate→upload in a continuous loop.
+
+#### 🚨 WHAT WENT WRONG — RUNS #1 AND #2 ARE INVALID
+
+| Problem | Run #1 | Run #2 |
+|---------|--------|--------|
+| Used API instead of GUI | ❌ Laptop used `python -c` loop | ❌ Both machines used `python -c` commands |
+| Manual task assignment | ❌ Laptop grabbed all 6 tasks | ❌ Tasks manually claimed by ID |
+| No GUI Auto-Pilot used | ❌ Boss/Worker auto-pilot never tested | ❌ Same |
+| Seance used as production coordinator | ❌ Tried to orchestrate via seance | ❌ Used seance for task distribution |
+| Zero user-facing testing | ❌ No GUI buttons clicked | ❌ Same |
+
+**Root cause:** The testers (AI agents) couldn't interact with the GUI (it requires
+human hands to click checkboxes). Instead of fixing that limitation, they bypassed
+the GUI entirely and tested the raw API — which proves the plumbing works but
+proves NOTHING about whether a real user can use the system.
+
+**The fix:** The test must use the GUI. If the GUI can't be operated by the AI agent,
+Nir must do the GUI clicks. The AI agent handles only the terminal commands
+(Flask server start, GUI launch) — never the API directly.
+
+#### ✅ What actually works
+
+- **RTX 5090 24GB is fast.** 25 seconds per layer at 768×576 with 15 steps.
+- **Desktop RTX 4070 Ti works.** ~9-10 minutes per layer.
+
+- **Auto-Pilot code exists** in gui.py — but has NEVER been tested through the GUI.
+- **API endpoints all work** — submit, split, claim, generate, upload all functional.
+- **Flask server accessible over LAN** at 10.0.0.6:5000.
+- **Ollama qwen3:14b** splitting works fast (~15s).
+- **GPT-5.5 pre-split prompts** produce better layer descriptions.
+- **Chroma-key green → RGBA** works reliably.
+- **Desktop can claim + generate + upload** over LAN using the same codebase.
+
+#### 🔜 For the REAL test
+
+**Nir must perform the GUI interactions** (check Auto-Pilot, Start Polling, Auto-Generate)
+because the AI agents cannot click GUI buttons. Then:
+1. Nir submits the scene in Client tab
+2. Nir watches both machines' progress bars fill automatically
+3. Nir verifies both machines contributed
+4. Only then is the test valid
 
 ---
 
