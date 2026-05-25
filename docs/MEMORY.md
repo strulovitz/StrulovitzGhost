@@ -6,6 +6,45 @@ Preserved context, decisions, and direction.
 
 ---
 
+
+## 🔴 SESSION LOG — May 25, 2026 (LAPTOP AI — Nir's Laptop) — Session #3 🧪
+
+### Events
+
+1. **LAN Test #02 ITG prepared** — comprehensive test plan written, all 6 Desktop-discovered bugs fixed, children-waiting hierarchy built (parents now poll until children complete before marking themselves done).
+
+2. **⛔ RULE LEARNED: PowerShell Start-Process -NoExit creates zombie windows.** When launching GUIs from the AI, `-NoExit` keeps every PowerShell console alive forever. After 5-6 restart cycles, 13+ shells accumulate. **Fix:** Use `-NoExit` ONLY for interactive debug windows (ComfyUI, Flask). For GUIs, omit `-NoExit` or use `cmd /c start`. Always count open shells after multiple restarts and clean up with `Get-Process powershell | Stop-Process`.
+
+3. **⛔ RULE LEARNED: Hidden UI elements are bugs.** The Worker ITG Auto-Process checkbox was below a 300px image preview area, invisible without scrolling. Users can't scroll to discover hidden checkboxes. All critical controls must be in the top config row, visible without scrolling. Fixed in commit `695ab68`.
+
+4. **⛔ RULE LEARNED: Dropdowns must query reality, not hardcode vendor names.** Vision model dropdown hardcoded "qwen3-vl:4b/8b/30b". If a user has Gemma-vision or LLaVA, they get wrong options. Fixed to query `ollama list` for ALL installed models — let the user pick. No vendor name filtering. Fixed in commits `a403853`, `6208d69`.
+
+5. **5 ITG bugs fixed** per Desktop review v2: ComfyUI host param, non-leaf result endpoint, auto-complete, ZIP download, load_children query. All pushed.
+
+6. **qwen3-vl:32b (20GB) pulled** on Laptop. Google research saved to `docs/QWEN3_VL_GOOGLE_RESEARCH.md`.
+
+### Code Changes
+| File | Change |
+|------|--------|
+| `src/gui.py` | ITG children waiting (Boss auto-Z-order, Worker child polling). Vision dropdown queries Ollama. Auto-Process moved to top row. ComfyUI host extraction. |
+| `src/app.py` | Non-leaf result endpoint accepts form-only. ITG ZIP download reads final dir. Auto-complete skips ITG. |
+| `src/itg_splitter.py` | Added `comfyui_host` parameter throughout function chain. |
+| `docs/LAN_TEST_02_ITG_2_MACHINES.md` | Complete test plan with observation dashboard. |
+| `docs/LAN_TEST_02_ITG_DESKTOP_REVIEW_V2.md` | Desktop corrected review (v2). |
+| `docs/QWEN3_VL_GOOGLE_RESEARCH.md` | Verbatim Google AI answer on Qwen3-VL. |
+
+### Current State
+| Item | Status |
+|------|--------|
+| ComfyUI (0.0.0.0:8188) | ✅ Running |
+| Flask (0.0.0.0:5000) | ✅ Running |
+| qwen3-vl:32b | ✅ Pulled |
+| Ollama | ✅ Running |
+| 6 bugs fixed | ✅ All pushed |
+| Children waiting | ✅ Built |
+| LAN Test #02 | ⏳ Ready to execute |
+
+---
 ## 🔴 SESSION LOG — May 23, 2026 (LAPTOP AI — Nir's Laptop) — Session #2 🎯
 
 ### Events
