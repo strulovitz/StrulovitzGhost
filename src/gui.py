@@ -2072,8 +2072,8 @@ class WorkerWidget_ITG(QWidget):
             self.status_label.setText("Not polling")
 
     def poll_tasks(self):
-        if self.active_task or getattr(self, '_watching_children', False):
-            return  # already busy
+        if self.active_task and self.split_thread is not None:
+            return  # GPU busy with an active split
         try:
             r = requests.get(f"{self.get_server()}/api/tasks?status=pending&type=ITG", timeout=10)
             if r.ok:
