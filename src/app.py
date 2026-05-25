@@ -394,30 +394,10 @@ def submit_result(task_id):
     if task.status != TaskStatus.CLAIMED:
         return jsonify({"error": "task is not claimed or already completed"}), 409
 
-    images = request.files.getlist("images")
-    if not images:
-        images = [request.files["image"]] if "image" in request.files else []
-
-    if not images:
-        return jsonify({"error": "at least one image file is required"}), 400
-
     question = Question.query.get(task.question_id)
-    temp_dir = ITG_TEMP if (question and question.type == JobType.ITG) else TTG_TEMP
+    is_itg = question and question.type == JobType.ITG
 
-    saved = []
-    for i, file in enumerate(images):
-        if file.filename == "" or not allowed_file(file.filename):
-            continue
-        suffix = f"_{i+1}" if len(images) > 1 else ""
-        filename = secure_filename(f"task{task.id}{suffix}_{file.filename}")
-        filepath = os.path.join(temp_dir, filename)
-        file.save(filepath)
-        saved.append(filename)
-
-    task.status = TaskStatus.COMPLETED
-    task.result_filename = ",".join(saved) if len(saved) > 1 else (saved[0] if saved else None)
-    task.completed_at = datetime.now(timezone.utc)
-
+    # Form data (split_result metadata — non-leaf ITG tasks send this without images)
     if data := request.form:
         if data.get("split_result_1"):
             task.split_result_1 = data["split_result_1"]
@@ -426,6 +406,26 @@ def submit_result(task_id):
         if data.get("quality_judgment"):
             task.quality_judgment = data["quality_judgment"]
 
+    # Image file upload (leaf tasks)
+    images = request.files.getlist("images")
+    if not images:
+        images = [request.files["image"]] if "image" in request.files else []
+
+    if images:
+        temp_dir = ITG_TEMP if is_itg else TTG_TEMP
+        saved = []
+        for i, file in enumerate(images):
+            if file.filename == "" or not allowed_file(file.filename):
+                continue
+            suffix = f"_{i+1}" if len(images) > 1 else ""
+            filename = secure_filename(f"task{task.id}{suffix}_{file.filename}")
+            filepath = os.path.join(temp_dir, filename)
+            file.save(filepath)
+            saved.append(filename)
+        task.result_filename = ",".join(saved) if len(saved) > 1 else (saved[0] if saved else None)
+
+    task.status = TaskStatus.COMPLETED
+    task.completed_at = datetime.now(timezone.utc)
     db.session.commit()
 
     _auto_complete_question(question)
@@ -436,6 +436,8 @@ def submit_result(task_id):
 def _auto_complete_question(question):
     if not question or question.status == QuestionStatus.COMPLETED:
         return
+    if question.type == JobType.ITG:
+        return  # ITG completes via /api/question/<id>/complete (Boss manual combine)
     direct_children = Task.query.filter_by(question_id=question.id, depth=0).all()
     if direct_children and all(t.status == TaskStatus.COMPLETED for t in direct_children):
         question.status = QuestionStatus.COMPLETED
@@ -612,23 +614,31 @@ def download_layers_zip(question_id):
     question = Question.query.get_or_404(question_id)
     if question.status != QuestionStatus.COMPLETED:
         return jsonify({"error": "question is not completed yet"}), 400
-    tasks = Task.query.filter_by(question_id=question_id, depth=0).order_by(Task.layer_number).all()
-    if not tasks:
-        return jsonify({"error": "no tasks found"}), 404
+
+    is_itg = question.type == JobType.ITG
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for t in tasks:
-            if not t.result_filename:
-                continue
-            filepath = None
-            for d in [ORIGINALS, TTG_TEMP, TTG_FINAL, ITG_TEMP, ITG_FINAL, OUTPUT_DIR]:
-                fp = os.path.join(d, t.result_filename)
-                if os.path.exists(fp):
-                    filepath = fp
-                    break
-            if filepath:
-                zipname = f"layer{t.layer_number}.png"
-                zf.write(filepath, zipname)
+        if is_itg:
+            final_dir = ITG_FINAL
+            pattern = f"task{question_id}_layer_"
+            for fn in sorted(os.listdir(final_dir)):
+                if fn.startswith(pattern) and fn.endswith(".png"):
+                    filepath = os.path.join(final_dir, fn)
+                    zf.write(filepath, fn)
+        else:
+            tasks = Task.query.filter_by(question_id=question_id, depth=0).order_by(Task.layer_number).all()
+            for t in tasks:
+                if not t.result_filename:
+                    continue
+                filepath = None
+                for d in [ORIGINALS, TTG_TEMP, TTG_FINAL, ITG_TEMP, ITG_FINAL, OUTPUT_DIR]:
+                    fp = os.path.join(d, t.result_filename)
+                    if os.path.exists(fp):
+                        filepath = fp
+                        break
+                if filepath:
+                    zipname = f"layer{t.layer_number}.png"
+                    zf.write(filepath, zipname)
     buf.seek(0)
     from flask import send_file
     return send_file(buf, mimetype="application/zip", as_attachment=True,

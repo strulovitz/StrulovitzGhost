@@ -1482,14 +1482,15 @@ class BossWidget_ITG(QWidget):
     def load_children(self, q):
         self.children_list.clear()
         try:
-            r = requests.get(f"{self.get_server()}/api/tasks?parent_task_id=0&type=ITG", timeout=10)
+            r = requests.get(f"{self.get_server()}/api/question/{q['id']}/tree", timeout=10)
             if r.ok:
-                for t in r.json():
-                    if t.get("question_id") == q["id"]:
-                        text = f"Task #{t['id']} [{t['status']}] img={t.get('input_image','?')}"
-                        item = QListWidgetItem(text)
-                        item.setData(Qt.ItemDataRole.UserRole, t)
-                        self.children_list.addItem(item)
+                tree = r.json().get("tree", [])
+                for node in tree:
+                    t = node.get("task", {})
+                    text = f"Task #{t['id']} [{t['status']}] img={t.get('input_image','?')}"
+                    item = QListWidgetItem(text)
+                    item.setData(Qt.ItemDataRole.UserRole, t)
+                    self.children_list.addItem(item)
         except Exception:
             pass
 
@@ -1838,9 +1839,12 @@ class ITGSplitThread(QThread):
             # Step 2-4: Split + Judge with retry loop
             max_retries = 3
             port = 8188
+            host = "127.0.0.1"
             try:
-                port = int(self.comfy_url.rstrip("/").split(":")[-1])
-            except ValueError:
+                url_parts = self.comfy_url.rstrip("/").replace("://", ":").split(":")
+                host = url_parts[1] if len(url_parts) >= 2 else "127.0.0.1"
+                port = int(url_parts[-1])
+            except (ValueError, IndexError):
                 pass
 
             for attempt in range(max_retries):
@@ -1852,7 +1856,7 @@ class ITGSplitThread(QThread):
                 # Split
                 layer_files = split_image_into_n_layers(
                     input_path, self.output_dir, n=2,
-                    steps=20, cfg=4.0, comfyui_port=port,
+                    steps=20, cfg=4.0, comfyui_host=host, comfyui_port=port,
                     prompt=self.task.get("prompt", "") or ""
                 )
 

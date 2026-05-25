@@ -17,12 +17,12 @@ CLIP_NAME = "qwen_2.5_vl_7b_fp8_scaled.safetensors"
 VAE_NAME = "qwen_image_layered_vae.safetensors"
 
 
-def _comfy_url(port=None):
+def _comfy_url(host="127.0.0.1", port=None):
     p = port or COMFYUI_PORT
-    return f"http://127.0.0.1:{p}"
+    return f"http://{host}:{p}"
 
 
-def _comfy_upload(image_path, port=None):
+def _comfy_upload(image_path, host="127.0.0.1", port=None):
     boundary = "----FormBoundary7MA4YWxkTrZu0gW"
     with open(image_path, "rb") as f:
         img_bytes = f.read()
@@ -33,21 +33,21 @@ def _comfy_upload(image_path, port=None):
     ).encode() + img_bytes + f"\r\n--{boundary}--\r\n".encode()
 
     req = urllib.request.Request(
-        f"{_comfy_url(port)}/upload/image",
+        f"{_comfy_url(host, port)}/upload/image",
         data=body,
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
     )
     return json.loads(urllib.request.urlopen(req, timeout=30).read())["name"]
 
 
-def _comfy_submit(workflow, port=None):
+def _comfy_submit(workflow, host="127.0.0.1", port=None):
     payload = json.dumps({"prompt": workflow}).encode()
-    req = urllib.request.Request(f"{_comfy_url(port)}/prompt", data=payload)
+    req = urllib.request.Request(f"{_comfy_url(host, port)}/prompt", data=payload)
     return json.loads(urllib.request.urlopen(req, timeout=30).read())["prompt_id"]
 
 
-def _comfy_wait(prompt_id, output_dir, port=None, prefix="itg_split", timeout=600):
-    url = _comfy_url(port)
+def _comfy_wait(prompt_id, output_dir, host="127.0.0.1", port=None, prefix="itg_split", timeout=600):
+    url = _comfy_url(host, port)
     start = time.time()
     while time.time() - start < timeout:
         time.sleep(2)
@@ -72,8 +72,9 @@ def _comfy_wait(prompt_id, output_dir, port=None, prefix="itg_split", timeout=60
 
 
 def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
-                               seed=None, prompt="", comfyui_port=None,
-                               unet_name=None, clip_name=None, vae_name=None):
+                               seed=None, prompt="", comfyui_host=None,
+                               comfyui_port=None, unet_name=None, clip_name=None,
+                               vae_name=None):
     """
     Split one RGBA image into N layers using Qwen-Image-Layered via ComfyUI.
 
@@ -85,6 +86,7 @@ def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
         cfg: CFG guidance scale (4.0 recommended)
         seed: Random seed (auto-generated if None)
         prompt: Decomposition prompt (empty = autonomous)
+        comfyui_host: ComfyUI server host (default "127.0.0.1")
         comfyui_port: ComfyUI server port (default 8188)
         unet_name, clip_name, vae_name: Override model filenames
 
@@ -95,6 +97,7 @@ def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
         seed = random.randint(0, 2**32 - 1)
 
     os.makedirs(output_dir, exist_ok=True)
+    host = comfyui_host or "127.0.0.1"
     port = comfyui_port or COMFYUI_PORT
 
     # Prepare input: pad to 640x640 square
@@ -110,7 +113,7 @@ def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
     print(f"  Prepared: {img.size} -> 640x640 padded", flush=True)
 
     # Upload to ComfyUI
-    image_name = _comfy_upload(prep_path, port)
+    image_name = _comfy_upload(prep_path, host, port)
 
     # Build workflow
     workflow = {
@@ -132,11 +135,11 @@ def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
         "9": {"class_type": "SaveImage", "inputs": {"images": ["8", 0], "filename_prefix": "itg_split"}},
     }
 
-    print(f"  Submitting to ComfyUI (port {port}, layers={n}, steps={steps}, cfg={cfg}, seed={seed})...", flush=True)
-    prompt_id = _comfy_submit(workflow, port)
+    print(f"  Submitting to ComfyUI ({host}:{port}, layers={n}, steps={steps}, cfg={cfg}, seed={seed})...", flush=True)
+    prompt_id = _comfy_submit(workflow, host, port)
     print(f"  Job submitted: {prompt_id}", flush=True)
 
-    all_files = _comfy_wait(prompt_id, output_dir, port)
+    all_files = _comfy_wait(prompt_id, output_dir, host, port)
     print(f"  ComfyUI returned {len(all_files)} files", flush=True)
 
     # Filter: remove composite (file ending with _00001_ or the first one)
