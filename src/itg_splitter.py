@@ -144,6 +144,15 @@ def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
     all_files = _comfy_wait(prompt_id, output_dir, host, port)
     print(f"  ComfyUI returned {len(all_files)} files", flush=True)
 
+    # Free ComfyUI VRAM so judge can load vision model
+    try:
+        free_req = urllib.request.Request(f"{_comfy_url(host, port)}/free", data=b'{"unload_models": true}', headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(free_req, timeout=10)
+        itg_log("splitter", "COMFYUI_UNLOAD", detail="VRAM freed for judge")
+        time.sleep(3)  # Let GPU memory fully release
+    except Exception as e:
+        itg_log("splitter", "COMFYUI_UNLOAD_FAIL", detail=str(e)[:100])
+
     # Filter: remove composite (file ending with _00001_ or the first one)
     layer_files = sorted([f for f in all_files if f.lower().endswith(".png")])
     if len(layer_files) > n:
