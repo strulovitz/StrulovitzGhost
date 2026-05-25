@@ -150,7 +150,7 @@ See: "Submitted! ✅ Refresh to see it."
 **GUI window #1 — Set up Worker (Player #2 on Desktop's GPU):**
 ```
 Worker tab.
-Set Server URL: http://10.0.0.6:5000
+Set Server URL: http://10.0.0.5:5000
 Set Worker ID: desktop-4070ti
 Click "Start Polling"
 Check: "Auto-Generate" ✅
@@ -159,8 +159,8 @@ Check: "Auto-Generate" ✅
 **GUI window #2 — Set up Client (Player #3, the submitter):**
 ```
 Client tab.
-Set Server URL: http://10.0.0.6:5000
-(This is where you'll paste the scene — or use the website at http://10.0.0.6:5000)
+Set Server URL: http://10.0.0.5:5000
+(This is where you'll paste the scene — or use the website at http://10.0.0.5:5000)
 ```
 
 ### When all 6 layers are done:
@@ -196,7 +196,7 @@ Zero manual coordination. The system works.
 - Latest code pulled from GitHub ✅
 
 ### What the AI agent does (before Nir touches anything):
-- Laptop: start Flask server (`python app.py` from src/) → serves at http://10.0.0.6:5000
+- Laptop: start Flask server (`python app.py` from src/) → serves at http://10.0.0.5:5000
 - Laptop: start GUI (`python gui.py` from src/)
 - Desktop: start GUI (`python gui.py` from src/)
 
@@ -213,8 +213,8 @@ Zero manual coordination. The system works.
 |---------|--------|-----|-------|
 | Laptop | GUI #1 | Boss | Detect qwen3:14b → Auto-Pilot ✅ |
 | Laptop | GUI #2 | Worker | ID: laptop-5090 → Polling → Auto-Generate ✅ |
-| Desktop | GUI #1 | Worker | URL: 10.0.0.6:5000 → ID: desktop-4070ti → Polling → Auto-Generate ✅ |
-| Desktop | GUI #2 | Client | URL: 10.0.0.6:5000 → Paste scene → Submit ✅ |
+| Desktop | GUI #1 | Worker | URL: 10.0.0.5:5000 → ID: desktop-4070ti → Polling → Auto-Generate ✅ |
+| Desktop | GUI #2 | Client | URL: 10.0.0.5:5000 → Paste scene → Submit ✅ |
 
 ### Submission
 - Submitted from Desktop Client tab (proper user flow)

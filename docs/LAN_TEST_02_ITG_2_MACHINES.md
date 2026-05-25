@@ -1,242 +1,357 @@
-# 🧪 LAN Test #02 — ITG Distributed on 2 Machines
+# 🧪 LAN Test #02 — ITG Distributed on 2 Machines (GUI Test)
 
-**Date:** May 23, 2026 | **Status:** ⏳ READY TO PLAN | **Mode:** ITG (Image To Ghost)
+**Date:** May 25, 2026 | **Status:** ⏳ READY TO EXECUTE | **Mode:** ITG (Image To Ghost) | **Author:** Laptop AI
 
 ---
 
 ## 🤖 AI AGENTS — START HERE ON RESTART
 
+**You are simulating real human users. Do NOT use the API directly.**
+Your ONLY job is terminal commands to start servers/GUIs. Nir clicks everything else.
+
 ### Laptop AI (you):
 ```
 1. git pull (in StrulovitzGhost)
-2. Start ComfyUI with Qwen-Image-Layered:   python main.py (from ComfyUI dir, port 8188)
-3. Start Flask:   python app.py (from src/, in background)
-4. Start Ollama with qwen3-vl:4b (for quality judging)
-5. Launch process #1:  python itg_node.py --server http://localhost:5000 --id boss-laptop --once  (Boss)
-6. Launch process #2:  python itg_node.py --server http://localhost:5000 --id worker-laptop (Worker)
-7. Tell Nir: "Ready. ComfyUI + Flask + Boss + Worker online."
-8. Tell Desktop via seance: "Start ComfyUI on port 8188, then launch Worker node."
+2. Start ComfyUI (port 8188):  cd C:\Users\nir_s\ComfyUI; python main.py --port 8188
+3. Start Flask:   cd C:\Users\nir_s\StrulovitzGhost\src; python app.py  (background)
+4. Verify Ollama has qwen3-vl:4b → ollama list | findstr qwen3-vl
+5. Launch GUI #1: cd C:\Users\nir_s\StrulovitzGhost\src; python gui.py  → Boss ITG tab
+6. Launch GUI #2: cd C:\Users\nir_s\StrulovitzGhost\src; python gui.py  → Worker ITG tab
+7. Tell Nir: "Ready. ComfyUI + Flask + Ollama. 2 GUI windows open. Set up Boss + Worker."
+8. Tell Desktop via seance: "Start your 2 GUIs — Worker ITG + Client ITG tabs."
 ```
 Do NOT submit images, do NOT split. Just launch infrastructure.
 
 ### Desktop AI (via seance):
 ```
 1. git pull (in StrulovitzGhost)
-2. Start ComfyUI on port 8188 (if different GPU, otherwise skip — see notes)
-3. Launch Worker:  python itg_node.py --server http://10.0.0.6:5000 --id worker-desktop
-4. Tell Laptop via seance: "Desktop Worker ready."
+2. Launch GUI #1: cd C:\Users\nir_s\StrulovitzGhost\src; python gui.py  → Worker ITG tab
+3. Launch GUI #2: cd C:\Users\nir_s\StrulovitzGhost\src; python gui.py  → Client ITG tab
+4. Tell Laptop via seance: "Ready. 2 GUI windows open."
 ```
-DO NOT submit images. Just launch infrastructure.
+Do NOT submit images. Just launch the windows.
 
 ### Nir (human) — after both AIs say ready:
-1. Open website: http://localhost:5000
-2. Switch to ITG tab (or use the Client ITG tab in GUI)
-3. Upload test image
-4. Watch website for task tree growing
-5. When all complete → Download All Layers (ZIP)
-6. Inspect 6 RGBA layers
+Follow "Nir's Instructions" below. It's ~2 minutes of clicking checkboxes
+and uploading an image. Then walk away. The system does the rest.
 
 ---
 
-## Test Goal
+## 🔴 PRE-REQUISITES — MUST BE DONE BEFORE THE TEST
 
-End-to-end distributed Image To Ghost pipeline across 2 machines over LAN:
-- **Laptop (RTX 5090, 24GB VRAM):** Website server + ComfyUI + Boss + Worker
-- **Desktop (RTX 4070 Ti, 12GB VRAM):** Worker (optional — may share Laptop ComfyUI or run own)
+### On Laptop (Nir must do these manually):
 
-Prove: Two computers cooperate to decompose a single image into 6 depth layers for Pepper's Ghost.
+**1. Pull qwen3-vl:4b into Ollama (CRITICAL — NOT YET INSTALLED):**
+```
+ollama pull qwen3-vl:4b
+```
+This model is needed for quality judging and Z-ordering. Without it, the test will fail.
+Size: ~4-5 GB. Time: ~5 minutes.
+
+**2. Verify ComfyUI models are present:**
+```
+dir C:\Users\nir_s\ComfyUI\models\diffusion_models\qwen_image_layered_bf16.safetensors
+dir C:\Users\nir_s\ComfyUI\models\vae\qwen_image_layered_vae.safetensors
+dir C:\Users\nir_s\ComfyUI\models\text_encoders\qwen_2.5_vl_7b_fp8_scaled.safetensors
+```
+✅ All 3 confirmed present (May 25).
+
+**3. Reset the database (clean slate for test):**
+```
+del C:\Users\nir_s\StrulovitzGhost\src\instance\strulovitz.db
+```
+(This recreates on next Flask start. Optional — old data won't hurt but a clean DB is cleaner.)
 
 ---
 
-## How ITG Differs from TTG
+## 🎯 Test Goal
+
+End-to-end distributed Image To Ghost pipeline across 2 machines over LAN, using the GUI
+(not CLI, not API). Equivalent to LAN Test #01 (TTG) but for image decomposition.
+
+- **Laptop (RTX 5090, 24GB VRAM):** Website server + ComfyUI + Flask + Boss + Worker
+- **Desktop (RTX 4070 Ti, 12GB VRAM):** Worker (uses Laptop's ComfyUI over LAN)
+- **Prove:** Two computers cooperate to decompose a single image into 6 depth layers for Pepper's Ghost.
+- **Use real GUI checkboxes:** Auto-Pilot ✅, Auto-Process ✅ — Nir clicks, system runs.
+
+---
+
+## 🖼️ The Test Image
+
+**Eagle Nebula (M16 — Hubble photo)** — Known from previous testing to produce good decomposition.
+Has clear depth planes: foreground stars, midground gas clouds, distant space background.
+
+**Source:** `C:\Users\nir_s\StrulovitzGhost\src\output\comfy_eagle_00001_.png` (or similar)
+
+If not available, download any high-res Eagle Nebula / Pillars of Creation photo.
+
+**⚠️ AVOID:** Impressionist paintings (Van Gogh, Monet). Stick to photos with clear depth.
+
+---
+
+## 🏗️ Architecture — How ITG Differs from TTG
 
 | Aspect | TTG (Test #01) | ITG (This Test) |
 |--------|---------------|-----------------|
-| **Input** | Text description | Image file (photo/painting) |
+| **Input** | Text description | Image file (photo) |
 | **Boss work** | LLM splits text into 6 prompts | Qwen-Image-Layered splits image 1→2 (needs ComfyUI GPU) |
-| **Worker work** | Qwen-Image-2512 generates from prompt | Qwen-Image-Layered splits sub-images further (same model) |
-| **Pipeline shape** | Flat: Boss → 6 parallel Workers | Recursive tree: 1→2→4→8→... (controlled by max_depth) |
-| **Max layers** | Fixed 6 | Variable (tree grows per depth) |
-| **Combining to 6** | N/A (already flat 6) | Pair-combine from farthest end if >6; empty transparent if <6 |
-| **GUI autopilot** | ✅ Full auto-pilot | ❌ CLI-based (GUI stubs not yet wired) |
+| **Worker work** | Qwen-Image-2512 generates from prompt | Qwen-Image-Layered splits sub-images further (same model, same GPU) |
+| **Pipeline shape** | Flat: Boss → 6 parallel Workers | Recursive tree: 1→2→4 (with max_depth=2) |
+| **Max layers** | Fixed 6 | Variable (tree grows per depth, then reduced to 6) |
+| **Combining to 6** | N/A (already flat 6) | Pair-combine from farthest if >6; empty transparent if <6 |
+| **GUI autopilot** | ✅ Full auto-pilot (Boss+Worker) | ✅ Boss auto-pilot + Worker auto-process (Z-order button is manual) |
 | **Models used** | Qwen-Image-2512 (diffusers) + qwen3:14b | Qwen-Image-Layered (ComfyUI) + qwen3-vl:4b |
-| **Per-node GPU** | Workers only | EVERY node (Boss + all Workers) |
 
 ---
 
-## The Test Image
+## 👥 Simulated Users (4 Users on 2 Machines)
 
-**Option A: Eagle Nebula (Hubble photo)** — Known to produce good decomposition. Cosmic Pillars (M16) with clear depth planes: foreground stars, midground gas clouds, distant space background. ~600×800px.
+| Physical Machine | Simulated User | GUI Instance | Tab | Role |
+|-----------------|----------------|-------------|-----|------|
+| Laptop | DM (Dungeon Master) | GUI #1 | **Boss ITG** 👑 | Splits root image, coordinates, final Z-order + combine |
+| Laptop | Player #1 | GUI #2 | **Worker ITG** 🔧 | Claims tasks, splits with ComfyUI, uploads results |
+| Desktop | Player #2 | GUI #1 | **Worker ITG** 🔧 | Claims tasks, uses Laptop's ComfyUI over LAN, uploads results |
+| Desktop | Player #3 | GUI #2 | **Client ITG** 🙋 | Uploads test image + downloads final layers |
 
-**Option B: ISS Earth photo** — Previously attempted. 640×427px. 7 layers in ~2.5 min on RTX 4070 Ti. Output was bad (deleted). Retry with adjusted settings may work.
-
-**Option C: Boris Vallejo "Opium Dream"** — 4 good layers confirmed. Classic fantasy art with clear foreground figure, midground elements, background.
-
-**Option D (Recommended 🔮): A high-res photo of a complex scene** — City street with clear near/far depth, or nature scene with close subject + distant background. Qwen-Image-Layered works best with photographic depth cues.
-
-**⚠️ AVOID:** Impressionist paintings (Van Gogh, Monet). Model was trained on Photoshop PSDs — not trained for brushstroke decomposition. Produces garbage.
-
-**Decision:** Choose Option ___ (to be decided before test).
+**Total: 4 GUI windows on 2 machines.** (Same pattern as TTG test.)
 
 ---
 
-## Software
+## 🔧 Software Stack
 
-| Component | Version/Model |
-|-----------|---------------|
-| Flask Server | app.py (May 23, commit with cleanup fix) |
-| ComfyUI | Custom install at `C:\Users\nir_s\ComfyUI` |
-| Qwen-Image-Layered UNET | `qwen_image_layered_bf16.safetensors` (~40 GB) |
-| Qwen-Image-Layered CLIP | `qwen_2.5_vl_7b_fp8_scaled.safetensors` |
-| Qwen-Image-Layered VAE | `qwen_image_layered_vae.safetensors` |
-| Vision Judge | qwen3-vl:4b (Ollama, for quality + Z-order) |
-| ITG Node | `itg_node.py` CLI (poll→claim→download→split→judge→upload loop) |
-
----
-
-## Infrastructure Setup (Done by AI Agents)
-
-### Laptop AI — 4 things to start:
-```
-1. ComfyUI (port 8188):
-   cd C:\Users\nir_s\ComfyUI
-   python main.py --port 8188
-
-2. Flask server (port 5000, minimized):
-   cd C:\Users\nir_s\StrulovitzGhost\src
-   python app.py
-
-3. Ollama (should already be running):
-   Verify qwen3-vl:4b is pulled → ollama list
-
-4. Boss node (depth 0):
-   cd C:\Users\nir_s\StrulovitzGhost\src
-   python itg_node.py --server http://localhost:5000 --id boss-laptop --once
-
-5. Worker node:
-   cd C:\Users\nir_s\StrulovitzGhost\src
-   python itg_node.py --server http://localhost:5000 --id worker-laptop
-```
-Total: 1 ComfyUI process, 1 Flask process, 2 ITG node processes (Boss + Worker).
-
-### Desktop AI — 2 things to start:
-```
-1. ComfyUI (port 8188, optional):
-   If Desktop has Qwen-Image-Layered models:
-   cd C:\Users\nir_s\ComfyUI
-   python main.py --port 8188
-
-2. Worker node (points to Laptop Flask):
-   cd C:\Users\nir_s\StrulovitzGhost\src
-   python itg_node.py --server http://10.0.0.6:5000 --id worker-desktop
-```
-Note: If Desktop doesn't have ComfyUI+models (40+ GB), Desktop Worker can point to Laptop's ComfyUI at `--comfy-url http://10.0.0.6:8188`. See `--help` for CLI flags.
+| Component | Machine | Version/Model |
+|-----------|---------|---------------|
+| Flask Server | Laptop port 5000 | app.py (May 25, commit with cleanup fix) |
+| ComfyUI | Laptop port 8188 | Custom install at `C:\Users\nir_s\ComfyUI` |
+| Qwen-Image-Layered UNET | Laptop ComfyUI | `qwen_image_layered_bf16.safetensors` (~40 GB) |
+| Qwen-Image-Layered CLIP | Laptop ComfyUI | `qwen_2.5_vl_7b_fp8_scaled.safetensors` |
+| Qwen-Image-Layered VAE | Laptop ComfyUI | `qwen_image_layered_vae.safetensors` |
+| Vision Judge | Both (Ollama) | `qwen3-vl:4b` (for quality + Z-order) |
+| PyQt6 GUI | Both | gui.py (May 23, ITG tabs wired) |
 
 ---
 
-## Nir's Instructions — What YOU Do ⭐
+## 📋 Nir's Instructions — What YOU Do ⭐
 
 ### PREP (done by AI agents before Nir touches anything):
 - [ ] Laptop: ComfyUI running (port 8188)
-- [ ] Laptop: Flask server running (port 5000)
-- [ ] Laptop: Ollama running (qwen3-vl:4b available)
-- [ ] Laptop: Boss node started (`itg_node.py --id boss-laptop --once`)
-- [ ] Laptop: Worker node started (`itg_node.py --id worker-laptop`)
-- [ ] Desktop: Worker node started (`itg_node.py --id worker-desktop`)
+- [ ] Laptop: Flask server running (port 5000)  
+- [ ] Laptop: Ollama running (`qwen3-vl:4b` pulled and available)
+- [ ] Laptop: GUI #1 open — **Boss ITG tab** selected
+- [ ] Laptop: GUI #2 open — **Worker ITG tab** selected
+- [ ] Desktop: GUI #1 open — **Worker ITG tab** selected
+- [ ] Desktop: GUI #2 open — **Client ITG tab** selected
 
-### YOU DO — Laptop (2 things):
+---
 
-**Step 1 — Open the website:**
-```
-Browser → http://localhost:5000
-```
-Dashboard with "Submit New Scene" form. Switch to ITG mode if needed.
+### STEP 1 — Laptop GUI #1: Set up Boss ITG 👑
 
-**Step 2 — Upload test image:**
 ```
-Click "Choose Image" → select test image
-Set Max Depth: 2 (default, produces up to 2²+1 = 5 layers per branch, 
-                  lots of sub-tasks for workers)
+Mode dropdown: "Boss" (top of window)
+ITG tab: selected (tabs at bottom)
+
+Boss ID: boss-laptop  (or leave default "boss-1")
+ComfyUI: http://127.0.0.1:8188  (default)
+Vision: qwen3-vl:4b  (select from dropdown)
+✅ Check: "Auto-Pilot"
+
+Click "Test ComfyUI" → should say "ComfyUI: connected" ✅
+Status should change to: "ON — scanning for ITG questions..."
+```
+
+### STEP 2 — Laptop GUI #2: Set up Worker ITG 🔧
+
+```
+Mode dropdown: "Worker"
+ITG tab: selected
+
+Worker ID: worker-laptop
+ComfyUI: http://127.0.0.1:8188
+Vision: qwen3-vl:4b
+✅ Check: "Auto-Process"
+
+Click "Test ComfyUI" → should say "ComfyUI: connected"
+Click "Start Polling" → status: "Polling for ITG tasks..."
+```
+
+### STEP 3 — Desktop GUI #1: Set up Worker ITG 🔧
+
+```
+Mode dropdown: "Worker"
+ITG tab: selected
+
+Worker ID: worker-desktop
+ComfyUI: http://10.0.0.5:8188  ← LAPTOP'S IP + ComfyUI port!
+Vision: qwen3-vl:4b
+✅ Check: "Auto-Process"
+
+Click "Test ComfyUI" → may fail (firewall) — skip if so. The worker will try when it splits.
+Click "Start Polling" → status: "Polling for ITG tasks..."
+```
+
+**⚠️ Desktop uses Laptop's ComfyUI over LAN!** Desktop's RTX 4070 Ti (12GB) cannot fit the 40GB UNET. Desktop Worker points its ComfyUI URL at the Laptop's instance. Splits are serialized by Laptop's ComfyUI automatically.
+
+### STEP 4 — Desktop GUI #2: Client ITG — Upload the test image 🙋
+
+```
+Mode dropdown: "Client"  
+ITG tab: selected
+
+Click "Choose Image" → select the test image (Eagle Nebula PNG)
+You should see a preview of the image ✅
+
+Manual depth: leave OFF (auto — Qwen3-VL decides)
 Click "Submit for Decomposition"
-See: "Submitted! Refresh to see it."
+→ Should see: "Submitted! ID: 1"
 ```
 
-### Then watch the website (Refresh periodically):
+### STEP 5 — Watch the magic happen 🎬
 
+**Laptop Boss GUI #1:**
 ```
-Question #1 → processing → completed
-  Task Tree:
-    Task 1 (depth 0, Boss): processing → split into 2 → children created
-      Task 2 (depth 1, Worker laptop): claimed → processing → completed
-      Task 3 (depth 1, Worker desktop): claimed → processing → completed
-        Task 4 (depth 2): ...
-        Task 5 (depth 2): ...
-  Z-Order: arranged
-  Combined: 6 layers ✅
+State should change:
+  "PROCESSING — Question #1"  →  root split running (ComfyUI ~30s-2min)
+  then: "WAITING — children of Question #1"
+  Children list populates as workers create tasks
 ```
 
-### When complete:
+**Laptop Worker GUI #2:**
 ```
-Refresh → see "📦 Download All Layers (ZIP)" → click → get 6 RGBA PNGs
+"Polling... (N ITG tasks)" → claims task → downloads → splits → judges → uploads
+Progress bar appears during splits
+Image preview shows split results
+Then: creates children (if depth < 2) or uploads final (if depth = 2)
+Then: auto-claims next task
+```
+
+**Desktop Worker GUI #1:**
+```
+Same as Laptop Worker — claims tasks from the pool, splits via Laptop's ComfyUI
+You'll see it competing with Laptop Worker for pending tasks
+Expected: both machines contribute layers
+```
+
+### STEP 6 — When all tasks complete — Combine 🧩
+
+**Laptop Boss GUI #1:**
+```
+Refresh periodically (click "Refresh") to see children status
+When all children show "completed":
+  Click "Arrange Z-Order + Upload" button
+  → Downloads all leaf results
+  → Qwen3-VL ranks them by depth (Z-order)
+  → Reduces to 6 layers
+  → Uploads to server
+  → Status: "Uploaded 6 final layers!" ✅
+  → State: "DONE" ✅
+```
+
+### STEP 7 — Desktop GUI #2: Download final layers 📦
+
+```
+Client ITG tab
+Auto-refreshes every 5 seconds
+When question shows "completed":
+  Click "📦 Download Layers (Question #1)"
+  → Save ZIP to a folder
+  → Extract: layer_1.png through layer_6.png (RGBA with transparency)
 ```
 
 ---
 
-## ⚠️ Important Notes
+## 📊 Expected Results
 
-### Why CLI not GUI for ITG
-The ITG Boss/Worker GUI tabs currently have stub buttons (show "use itg_node.py terminal interface"). The terminal interface IS fully functional — just not wired to GUI buttons yet. This test uses the CLI path which exercises the same code that will eventually be behind the GUI buttons.
+### Task Tree (max_depth=2, assuming 2 good layers per split)
 
-### VRAM Constraints
-- Qwen-Image-Layered UNET is ~40 GB. Even with heavy offloading, 12 GB GPUs struggle.
-- Laptop RTX 5090 (24 GB): Can run ComfyUI comfortably
-- Desktop RTX 4070 Ti (12 GB): May need Laptop's ComfyUI instance over LAN
-- Only ONE ComfyUI instance needed total (2 nodes on same machine serialize automatically)
+```
+Question #1 (Eagle Nebula)
+  └── Root Task (depth 0) [boss-laptop]
+       ├── Child Task (depth 1) [worker-laptop OR worker-desktop]
+       │    ├── Grandchild Task (depth 2, final) [any worker]
+       │    └── Grandchild Task (depth 2, final) [any worker]
+       └── Child Task (depth 1) [worker-laptop OR worker-desktop]
+            ├── Grandchild Task (depth 2, final) [any worker]
+            └── Grandchild Task (depth 2, final) [any worker]
+```
 
-### Known Issues
-- **Impressionist paintings produce garbage** — Use photos only
-- **Dual-garbage retry:** If both split layers fail quality check, retries 3× then marks branch failed
-- **Z-order fragility:** Qwen3-VL determines depth ordering. No programmatic backup. Human review needed.
-- **Aspect ratio padding:** Extreme ratios get padded to 640×640 square (transparent padding)
+**Expected: ~7 tasks total, both machines contributing.**
+
+### Layer Generation Estimates
+
+| Phase | Time | Notes |
+|-------|------|-------|
+| Root split (Boss) | 30s – 2 min | ComfyUI on RTX 5090, 640x640, 20 steps |
+| Depth 1 splits (2 tasks) | 30s – 2 min each | Workers serialize — Laptop first, then Desktop |
+| Depth 2 splits (4 tasks) | 30s – 2 min each | Workers serialize |
+| Z-order (Qwen3-VL) | ~10-30s | One image per layer, parent-anchored |
+| Combine to 6 | ~2s | PIL alpha_composite, pair from farthest |
+| **Total (all automated)** | **~3 – 15 min** | Serialized through one ComfyUI |
+
+### Final Output Verification
+
+| Check | Expected |
+|-------|----------|
+| All 6 layers generated | ✅ layer_1.png through layer_6.png (RGBA) |
+| Both machines contributed | ✅ Laptop + Desktop workers both in task list |
+| All RGBA with transparency | ✅ Non-black alpha channel |
+| Question marked "completed" | ✅ Website shows completed |
+| Files survive cleanup | ✅ Moved to `output/itg/final/` |
+| ZIP download works | ✅ 6 PNGs in ZIP |
 
 ---
 
-## Results
+## ⚠️ Known Limitations (NOT bugs — not built yet)
 
-### Boss Splitting
-| Metric | Value |
-|--------|-------|
-| Model | Qwen-Image-Layered (BF16 via ComfyUI) |
-| Max Depth | 2 |
-| Time per Split | ~ |
-| Quality Judge | qwen3-vl:4b (Ollama) |
-| Errors | |
+| # | Limitation | Impact on Test |
+|---|-----------|----------------|
+| 1 | Boss Z-order is manual button click, not auto | Nir must click "Arrange Z-Order + Upload" when children complete |
+| 2 | Only one ComfyUI instance (serialized splits) | Workers queue up — no true parallel splitting |
+| 3 | Mid-level nodes don't wait for children | Only top Boss (depth 0) collects final results |
+| 4 | Desktop has no local ComfyUI (VRAM too small) | Desktop Worker uses Laptop's ComfyUI over LAN |
+| 5 | No ComfyUI progress (just on/off indicator) | GUI shows "Splitting..." with indeterminate progress bar |
+| 6 | Max depth limited to 2 | Tree is shallow (1→2→4), keeps complexity manageable |
+| 7 | qwen3-vl quality judge is best-effort | May misjudge — good layers marked garbage or vice versa |
+| 8 | Dual-garbage branches fail after 3 retries | Fewer than 6 layers possible, empty transparent fills gap |
 
-### Layer Generation
-| Layer | Content | Worker | Time | Status |
-|-------|---------|--------|------|--------|
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
-| 6 | | | | |
+---
 
-**Total: 2 machines, distributed decomposition proven.**
+## 🐛 Troubleshooting Guide
 
-### Task Distribution
-- Laptop RTX 5090: __ tasks
-- Desktop RTX 4070 Ti: __ tasks
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| Boss shows "ComfyUI: not reachable" | ComfyUI not started | Start ComfyUI on Laptop port 8188 |
+| Worker can't claim tasks | Flask server on wrong host | Verify Flask binds `0.0.0.0:5000` |
+| Desktop Worker "Split error" | Can't reach Laptop ComfyUI | Check Desktop firewall, try `http://10.0.0.5:8188` |
+| "No input_image in task" | Question upload failed | Re-submit from Client tab |
+| All layers garbage | Bad test image | Switch to Eagle Nebula photo (not painting) |
+| qwen3-vl errors | Model not pulled in Ollama | `ollama pull qwen3-vl:4b` |
+| ComfyUI crash mid-split | VRAM exhaustion | Restart ComfyUI, resume — task resets to pending |
+| Only 3-4 layers final | Some branches failed (dual-garbage) | Normal — rest filled with empty transparent |
 
-### Final Output
-- [ ] All 6 layers generated
-- [ ] Both machines contributed
-- [ ] All RGBA with transparency
-- [ ] Question marked "completed"
-- [ ] Files survive cleanup (moved to `output/itg/final/`)
+---
 
-### Lessons Learned
-- 
+## 📝 Post-Test: Save Results to GitHub
+
+After the test completes successfully:
+```
+1. Copy output/itg/final/ files to a permanent location
+2. Zip them + upload to GitHub as release artifact OR
+3. Take screenshots of each GUI window showing "DONE" state
+4. Update this document with actual results
+```
+
+---
+
+## 🔄 Differences from TTG Test (LAN Test #01)
+
+| Aspect | TTG Test | ITG Test |
+|--------|----------|----------|
+| Boss does GPU work? | No (LLM only) | Yes (ComfyUI splitting) |
+| Workers need ComfyUI? | No (diffusers) | Yes (same ComfyUI as Boss) |
+| Desktop needs models? | Qwen-Image-2512 (~13GB) | Nothing (uses Laptop's ComfyUI) |
+| Auto-pilot complete? | Fully auto, start to finish | Auto except Z-order button |
+| Pipeline shape | Flat (Boss → 6 Workers) | Recursive tree (Boss → Workers → Workers) |
+| Final layer count | Always 6 | Variable, then reduced to 6 |
 
 ---
 
