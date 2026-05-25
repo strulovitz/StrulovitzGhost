@@ -1175,18 +1175,18 @@ class WorkerWidget_TTG(QWidget):
 # ─── ITG Tab Widgets (with actual ITG workers) ──────────────────────────
 
 def _get_ollama_vision_models():
-    """Query Ollama for installed vision models (qwen3-vl family)."""
+    """Query Ollama for ALL installed models — user picks which supports vision."""
     import subprocess
     try:
         result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=10)
         models = []
-        for line in result.stdout.strip().split("\n")[1:]:  # skip header
+        for line in result.stdout.strip().split("\n")[1:]:
             parts = line.split()
-            if parts and any(p.startswith("qwen") and "vl" in p.lower() for p in parts):
+            if parts:
                 models.append(parts[0])
-        return models if models else ["qwen3-vl:32b"]  # fallback
+        return models if models else ["qwen3-vl:32b"]
     except Exception:
-        return ["qwen3-vl:32b"]  # fallback if ollama not running
+        return ["qwen3-vl:32b"]
 
 class ClientWidget_ITG(QWidget):
     def __init__(self, main_window):
