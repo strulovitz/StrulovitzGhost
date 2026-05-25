@@ -1677,9 +1677,9 @@ class BossWidget_ITG(QWidget):
                 try:
                     r = requests.post(f"{self.get_server()}/api/tasks/batch",
                                       json={"tasks": child_tasks}, timeout=10)
-                if r.ok:
-                    self.status_label.setText(f"Created {len(child_tasks)} children — waiting...")
-                    itg_log(self.boss_id.text(), "CHILDREN_CREATED", self.root_task["id"], f"count={len(child_tasks)} depth={(depth or 0)+1}")
+                    if r.ok:
+                        self.status_label.setText(f"Created {len(child_tasks)} children — waiting...")
+                        itg_log(self.boss_id.text(), "CHILDREN_CREATED", self.root_task["id"], f"count={len(child_tasks)} depth={(depth or 0)+1}")
                 except Exception as e:
                     self.status_label.setText(f"Children error: {e}")
 
