@@ -2072,6 +2072,8 @@ class WorkerWidget_ITG(QWidget):
             self.status_label.setText("Not polling")
 
     def poll_tasks(self):
+        if self.active_task or getattr(self, '_watching_children', False):
+            return  # already busy
         try:
             r = requests.get(f"{self.get_server()}/api/tasks?status=pending&type=ITG", timeout=10)
             if r.ok:
@@ -2082,6 +2084,9 @@ class WorkerWidget_ITG(QWidget):
                     item = QListWidgetItem(text)
                     item.setData(Qt.ItemDataRole.UserRole, t)
                     self.tasks_list.addItem(item)
+                if tasks and self.auto_process_cb.isChecked():
+                    # Auto-claim the first pending task
+                    self.claim_task(self.tasks_list.item(0))
                 self.status_label.setText(f"Polling... ({len(tasks)} ITG tasks)")
         except Exception as e:
             self.status_label.setText(f"Poll error: {e}")
