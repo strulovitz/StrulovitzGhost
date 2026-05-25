@@ -16,7 +16,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+ALLOWED_EXTENSIONS = {"png"}
 OUTPUT_ROOT = os.path.join(os.path.dirname(__file__), "output")
 TTG_TEMP = os.path.join(OUTPUT_ROOT, "ttg", "temp")
 TTG_FINAL = os.path.join(OUTPUT_ROOT, "ttg", "final")
