@@ -7,6 +7,7 @@ Reuses the node structure from run_comfy_decomp.py (proven working May 21).
 import os, sys, json, time, uuid, random, urllib.request
 from PIL import Image
 from io import BytesIO
+from itg_logger import itg_log, itg_error
 
 
 COMFYUI_PORT = 8188
@@ -111,6 +112,7 @@ def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
     prep_path = os.path.join(output_dir, f"split_input_{uuid.uuid4().hex[:6]}.png")
     square.save(prep_path, "PNG")
     print(f"  Prepared: {img.size} -> 640x640 padded", flush=True)
+    itg_log("splitter", "PREP", detail=f"{img.size} -> 640x640 padded")
 
     # Upload to ComfyUI
     image_name = _comfy_upload(prep_path, host, port)
@@ -136,8 +138,8 @@ def split_image_into_n_layers(image_path, output_dir, n=2, steps=20, cfg=4.0,
     }
 
     print(f"  Submitting to ComfyUI ({host}:{port}, layers={n}, steps={steps}, cfg={cfg}, seed={seed})...", flush=True)
+    itg_log("splitter", "COMFYUI_SUBMIT", detail=f"host={host}:{port} layers={n} steps={steps} cfg={cfg} seed={seed}")
     prompt_id = _comfy_submit(workflow, host, port)
-    print(f"  Job submitted: {prompt_id}", flush=True)
 
     all_files = _comfy_wait(prompt_id, output_dir, host, port)
     print(f"  ComfyUI returned {len(all_files)} files", flush=True)

@@ -10,6 +10,7 @@ import requests as http_requests
 sys.path.insert(0, os.path.dirname(__file__))
 from itg_splitter import split_image_into_n_layers
 from itg_judge import judge_layer_quality, determine_z_order
+from itg_logger import itg_log, itg_error
 
 
 class ITGNode:
@@ -92,6 +93,7 @@ class ITGNode:
                 comfyui_port=self.comfyui_port,
                 prompt=task.get("prompt", ""),
             )
+            itg_log(self.node_id, "SPLIT_DONE", task["id"], f"{len(layer_files)} layers")
         except Exception as e:
             print(f"  Split FAILED: {e}", flush=True)
             self._api("POST", f"/api/task/{task['id']}/reset")

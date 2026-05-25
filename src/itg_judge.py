@@ -5,6 +5,7 @@ Uses Ollama's vision API: ollama.chat(model="qwen3-vl:4b", images=[...]).
 
 import os, sys, json, base64, time
 import requests as http_requests
+from itg_logger import itg_log, itg_error
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 
@@ -62,7 +63,9 @@ Respond with ONLY this JSON:
 {{"quality": "good" or "garbage", "description": "brief description of visible contents", "confidence": 0.0-1.0}}"""
 
     try:
-        return _judge_with_retry(image_path, model, prompt)
+        result = _judge_with_retry(image_path, model, prompt)
+        itg_log("judge", "JUDGE_OK", detail=f"{result.get('quality')} | {result.get('description','')[:60]}")
+        return result
     except Exception as e:
         print(f"  Qwen3-VL quality check FAILED after retries: {e}", flush=True)
         raise

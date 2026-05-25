@@ -42,6 +42,7 @@ SERVER_URL = "http://localhost:5000"
 from itg_splitter import split_image_into_n_layers
 from itg_judge import judge_layer_quality, determine_z_order
 from itg_combine import reduce_to_6_layers
+from itg_logger import itg_log, itg_error
 
 
 class LayerWindow_(QWidget):
@@ -1555,6 +1556,7 @@ class BossWidget_ITG(QWidget):
             if r.ok:
                 tasks = r.json()
                 if tasks and all(t.get("status") == "completed" for t in tasks):
+                    itg_log(self.boss_id.text(), "CHILDREN_ALL_DONE", self.root_task["id"], f"starting Z-order")
                     requests.post(f"{self.get_server()}/api/task/{self.root_task['id']}/result",
                                   data={}, timeout=10)
                     self.status_label.setText("All children complete — arranging Z-order...")
@@ -1565,6 +1567,7 @@ class BossWidget_ITG(QWidget):
 
     def _start_root_split(self, q):
         self._boss_state = "processing_root"
+        itg_log(self.boss_id.text(), "BOSS_START_ROOT", detail=f"question={q['id']}")
         self.state_label.setText(f"PROCESSING — Question #{q['id']}")
         self.state_label.setStyleSheet("color: #ffab40; font-weight: bold;")
 
@@ -1618,7 +1621,7 @@ class BossWidget_ITG(QWidget):
         self.split_thread = ITGSplitThread(
             self.get_server(), self.root_task,
             self.comfy_url.text(), self.vision_model.currentText(),
-            output_dir
+            output_dir, self.boss_id.text()
         )
         self.split_thread.progress_signal.connect(self._on_boss_progress)
         self.split_thread.finished_signal.connect(self._on_boss_finished)
@@ -1674,8 +1677,9 @@ class BossWidget_ITG(QWidget):
                 try:
                     r = requests.post(f"{self.get_server()}/api/tasks/batch",
                                       json={"tasks": child_tasks}, timeout=10)
-                    if r.ok:
-                        self.status_label.setText(f"Created {len(child_tasks)} children — waiting...")
+                if r.ok:
+                    self.status_label.setText(f"Created {len(child_tasks)} children — waiting...")
+                    itg_log(self.boss_id.text(), "CHILDREN_CREATED", self.root_task["id"], f"count={len(child_tasks)} depth={(depth or 0)+1}")
                 except Exception as e:
                     self.status_label.setText(f"Children error: {e}")
 
@@ -1843,16 +1847,19 @@ class ITGSplitThread(QThread):
     finished_signal = pyqtSignal(object)   # ITGSplitResult
     error_signal = pyqtSignal(str)
 
-    def __init__(self, server_url, task, comfy_url, vision_model, output_dir):
+    def __init__(self, server_url, task, comfy_url, vision_model, output_dir, node_id="gui"):
         super().__init__()
         self.server_url = server_url
         self.task = task
         self.comfy_url = comfy_url
         self.vision_model = vision_model
         self.output_dir = output_dir
+        self.node_id = node_id
 
     def run(self):
         result = ITGSplitResult()
+        tid = self.task.get("id", "?")
+        itg_log(self.node_id, "THREAD_START", tid, f"depth={self.task.get('depth')}/{self.task.get('max_depth')}")
         try:
             depth = self.task.get("depth", 0) or 0
             max_depth = self.task.get("max_depth", 2) or 2
@@ -1908,12 +1915,14 @@ class ITGSplitThread(QThread):
                 # Judge each layer
                 good_layers = []
                 judgments = []
+                itg_log(self.node_id, "SPLIT_DONE", tid, f"attempt={attempt+1} layers={len(layer_files)}")
                 for i, lf in enumerate(layer_files):
                     self.progress_signal.emit(f"Judging layer {i + 1}/2...")
                     judgment = judge_layer_quality(
                         lf, model=self.vision_model,
                         parent_description=f"Sub-part {i + 1} from: {input_image}"
                     )
+                    itg_log(self.node_id, "JUDGE_RESULT", tid, f"layer={i+1} quality={judgment.get('quality')}")
                     judgments.append(judgment)
                     if judgment["quality"] == "good":
                         good_layers.append(lf)
@@ -2112,7 +2121,8 @@ class WorkerWidget_ITG(QWidget):
         self.split_thread = ITGSplitThread(
             self.get_server(), self.active_task,
             self.comfy_url.text(), self.vision_model.currentText(),
-            os.path.join("output", "itg", self.worker_id.text().replace(" ", "_"))
+            os.path.join("output", "itg", self.worker_id.text().replace(" ", "_")),
+            self.worker_id.text()
         )
         self.split_thread.progress_signal.connect(self._on_split_progress)
         self.split_thread.finished_signal.connect(self._on_split_finished)
