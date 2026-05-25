@@ -6,8 +6,26 @@
 
 ## 🤖 AI AGENTS — START HERE ON RESTART
 
-**You are simulating real human users. Do NOT use the API directly.**
-Your ONLY job is terminal commands to start servers/GUIs. Nir clicks everything else.
+### ⛔ CRITICAL: This is an EXPERIMENT, not a black box. Nir must SEE the system working.
+
+**Nir's observation dashboard — open ALL of these on the Laptop:**
+
+| Window | What | Why |
+|--------|------|-----|
+| **Browser** → `http://localhost:5000` | Website dashboard | Watch questions appear, tasks grow, layers complete |
+| **GUI #1 (Boss ITG)** | Boss state machine | Watch state changes: scanning → processing → waiting → combining → done |
+| **GUI #2 (Worker ITG)** | Worker progress | Watch progress bars, image previews, task claims |
+| **ComfyUI terminal** | Black PowerShell window | Shows real AI generation: "generating... (15s)", "generating... (32s)" |
+
+**On the Desktop, Nir must also watch:**
+| Window | What | Why |
+|--------|------|------|
+| **GUI #1 (Worker ITG)** | Desktop Worker | Watch it claim tasks and split via Laptop's ComfyUI over LAN |
+| **GUI #2 (Client ITG)** | Desktop Client | Upload image + watch auto-refresh + download final layers |
+
+**The experiment is NOT "click button → get ZIP."** The experiment IS watching the recursive tree grow, watching both machines compete for tasks in the pool, watching completion flow up the hierarchy, watching Qwen3-VL judge layers and arrange Z-order. Nir MUST be able to see each phase.
+
+---
 
 ### Laptop AI (you):
 ```
