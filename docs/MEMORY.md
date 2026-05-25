@@ -9,6 +9,10 @@ Preserved context, decisions, and direction.
 
 ## 🔴 SESSION LOG — May 25, 2026 (LAPTOP AI — Nir's Laptop) — Session #3 🧪
 
+### ⛔ RULE LEARNED: MODELS NEVER RUN CONCURRENTLY ON THE SAME GPU.
+
+This was Nir's explicit design direction and it was ignored. **Two AI models can never be loaded in VRAM simultaneously on the same GPU.** The splitter (ComfyUI, 40GB UNET) must COMPLETELY UNLOAD before the judge (Ollama, vision model) loads. On a 24GB RTX 5090, loading a 20GB vision model alongside a 40GB UNET causes VRAM thrashing → 5+ minute stalls or failures. **If a node does both split and judge, they MUST be serialized with proper GPU cleanup between steps.** This applies to ANY machine — 12GB RTX 4070 Ti would fail even faster. The code must enforce this, not rely on luck.
+
 ### Events
 
 1. **LAN Test #02 ITG prepared** — comprehensive test plan written, all 6 Desktop-discovered bugs fixed, children-waiting hierarchy built (parents now poll until children complete before marking themselves done).
