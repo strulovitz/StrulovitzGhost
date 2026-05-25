@@ -120,8 +120,12 @@ def upload_itg_question():
         return jsonify({"error": "image file is required for ITG"}), 400
 
     file = request.files["file"]
-    if file.filename == "" or not allowed_file(file.filename):
-        return jsonify({"error": "valid PNG file is required"}), 400
+    if file.filename == "":
+        return jsonify({"error": "no file selected"}), 400
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ("png", "jpg", "jpeg", "webp", "bmp"):
+        return jsonify({"error": f"unsupported format: .{ext}. Use PNG, JPG, JPEG, WebP, or BMP."}), 400
 
     url = request.form.get("url", None)
     max_depth = int(request.form.get("max_depth", 2))
@@ -133,6 +137,15 @@ def upload_itg_question():
 
     from PIL import Image
     img = Image.open(filepath)
+    # Auto-convert to PNG with RGBA so downstream ITG pipeline always gets alpha-capable images
+    if ext != "png":
+        img = img.convert("RGBA")
+        png_filename = f"{os.path.splitext(filename)[0]}.png"
+        png_filepath = os.path.join(ORIGINALS, png_filename)
+        img.save(png_filepath, "PNG")
+        os.remove(filepath)  # remove original non-PNG
+        filepath = png_filepath
+        filename = png_filename
     resolution = f"{img.width}x{img.height}"
 
     question = Question(
