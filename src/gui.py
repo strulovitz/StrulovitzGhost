@@ -1977,6 +1977,9 @@ class WorkerWidget_ITG(QWidget):
         self._populate_vision_models()
         config_row.addWidget(self.vision_model)
         config_row.addStretch()
+        self.auto_process_cb = QCheckBox("Auto-Process")
+        self.auto_process_cb.setToolTip("Automatically split+judge+upload when task is claimed")
+        config_row.addWidget(self.auto_process_cb)
         self.poll_toggle = QPushButton("Start Polling")
         self.poll_toggle.setCheckable(True)
         self.poll_toggle.clicked.connect(self.toggle_polling)
@@ -2011,10 +2014,6 @@ class WorkerWidget_ITG(QWidget):
         self.image_preview.setMaximumHeight(300)
         self.image_preview.setStyleSheet("border: 1px solid #333; border-radius: 6px; padding: 4px;")
         active_layout.addWidget(self.image_preview)
-
-        self.auto_process_cb = QCheckBox("Auto-Process")
-        self.auto_process_cb.setToolTip("Automatically split+judge+upload when task is claimed")
-        active_layout.addWidget(self.auto_process_cb)
 
         gen_row = QHBoxLayout()
         self.split_btn = QPushButton("Split Image (1->2)")
