@@ -14,12 +14,29 @@ def _encode_image(image_path):
         return base64.b64encode(f.read()).decode()
 
 
-def _ollama_chat(model, prompt, images_b64):
+def _ollama_chat(model, prompt, images_b64, timeout=300):
+    """Call Ollama chat API. Default 300s timeout — first cold-load of 20GB vision models can take 2-3 minutes."""
     messages = [{"role": "user", "content": prompt, "images": images_b64}]
-    resp = http_requests.post(OLLAMA_URL, json={"model": model, "messages": messages, "stream": False}, timeout=60)
+    resp = http_requests.post(OLLAMA_URL, json={"model": model, "messages": messages, "stream": False}, timeout=timeout)
     if resp.status_code != 200:
         raise RuntimeError(f"Ollama error: {resp.text}")
     return resp.json()["message"]["content"]
+
+
+def _judge_with_retry(image_path, model, prompt, max_retries=3):
+    """Call Qwen3-VL with retries. Cold-load of 20GB+ models can timeout on first attempt."""
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            img_b64 = _encode_image(image_path)
+            response = _ollama_chat(model, prompt, [img_b64], timeout=120 + (attempt * 60))
+            return json.loads(response.strip())
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                print(f"  Qwen3-VL attempt {attempt + 1} failed ({e}) — retrying...", flush=True)
+                time.sleep(2)
+    raise RuntimeError(f"Qwen3-VL failed after {max_retries} attempts: {last_error}")
 
 
 def judge_layer_quality(image_path, model="qwen3-vl:4b", parent_description=""):
@@ -45,12 +62,10 @@ Respond with ONLY this JSON:
 {{"quality": "good" or "garbage", "description": "brief description of visible contents", "confidence": 0.0-1.0}}"""
 
     try:
-        response = _ollama_chat(model, prompt, [img_b64])
-        result = json.loads(response.strip())
-        return result
+        return _judge_with_retry(image_path, model, prompt)
     except Exception as e:
-        print(f"  Qwen3-VL quality check failed: {e}", flush=True)
-        return {"quality": "good", "description": "judge offline — assuming good", "confidence": 0.5}
+        print(f"  Qwen3-VL quality check FAILED after retries: {e}", flush=True)
+        raise
 
 
 def judge_layer_position(sub_part_path, parent_image_path, model="qwen3-vl:4b", parent_description=""):
@@ -74,11 +89,10 @@ Respond ONLY with JSON:
 {{"position": "front" or "middle" or "back", "description": "brief spatial description of where this part is", "hides": "description of what it obscures, or 'nothing'"}}"""
 
     try:
-        response = _ollama_chat(model, prompt, [parent_b64, sub_b64])
-        return json.loads(response.strip())
+        return _judge_with_retry(sub_part_path, model, prompt)
     except Exception as e:
-        print(f"  Qwen3-VL position check failed: {e}", flush=True)
-        return {"position": "middle", "description": "judge offline", "hides": "unknown"}
+        print(f"  Qwen3-VL position check FAILED after retries: {e}", flush=True)
+        raise
 
 
 def determine_z_order(sub_part_paths, parent_image_path, model="qwen3-vl:4b", parent_description=""):
@@ -122,7 +136,7 @@ Respond ONLY with: "front", "behind", or "neither"
             try:
                 answer = _ollama_chat(model, prompt, [parent_b64, sub_b64]).strip().lower()
             except Exception:
-                answer = "neither"
+                answer = "neither"  # occlusion check is optional — "neither" is safe default
             middle_resolved.append((path, answer))
             time.sleep(0.3)
 
