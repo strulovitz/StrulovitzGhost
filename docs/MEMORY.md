@@ -89,6 +89,10 @@ This was Nir's explicit design direction and it was ignored. **Two AI models can
 | `docs/LAN_TEST_01_TTG_2_MACHINES.md` | Updated with Run #3 real GUI test results, bug fix documentation |
 | `docs/MEMORY.md` | This session log |
 
+### ⏳ TODO: Website shows wrong identifier for ITG tasks
+
+ITG tasks use ancestry naming (`task_Q_01_02.png`) with `depth` field, not `layer_number` (which is TTG-only). Website currently shows "layer none" for ITG. Fix: show branch path (`01`, `01-02`, etc.) derived from task depth + parent_task_id chain. Short, human-readable ancestry.
+
 ### Current State (end of session #2)
 | Item | Status |
 |------|--------|
