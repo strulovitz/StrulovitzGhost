@@ -1171,7 +1171,22 @@ class WorkerWidget_TTG(QWidget):
             self.status_label.setText(f"Upload error: {e}")
 
 
+
 # ─── ITG Tab Widgets (with actual ITG workers) ──────────────────────────
+
+def _get_ollama_vision_models():
+    """Query Ollama for installed vision models (qwen3-vl family)."""
+    import subprocess
+    try:
+        result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=10)
+        models = []
+        for line in result.stdout.strip().split("\n")[1:]:  # skip header
+            parts = line.split()
+            if parts and any(p.startswith("qwen") and "vl" in p.lower() for p in parts):
+                models.append(parts[0])
+        return models if models else ["qwen3-vl:32b"]  # fallback
+    except Exception:
+        return ["qwen3-vl:32b"]  # fallback if ollama not running
 
 class ClientWidget_ITG(QWidget):
     def __init__(self, main_window):
@@ -1371,7 +1386,8 @@ class BossWidget_ITG(QWidget):
         config_row.addWidget(self.test_comfy_btn)
         config_row.addWidget(QLabel("Vision:"))
         self.vision_model = QComboBox()
-        self.vision_model.addItems(["qwen3-vl:32b", "qwen3-vl:30b", "qwen3-vl:8b", "qwen3-vl:4b"])
+        self.vision_model.setEditable(True)
+        self._populate_vision_models()
         config_row.addWidget(self.vision_model)
         self.auto_pilot_cb = QCheckBox("Auto-Pilot")
         self.auto_pilot_cb.setToolTip("Automatically split pending ITG questions, wait for children, and combine to 6 layers")
@@ -1440,6 +1456,10 @@ class BossWidget_ITG(QWidget):
         self.split_thread = None
         self.split_result = None
         self.root_task = None
+
+    def _populate_vision_models(self):
+        self.vision_model.clear()
+        self.vision_model.addItems(_get_ollama_vision_models())
 
     def get_server(self):
         return self._mw.get_server()
@@ -1953,7 +1973,8 @@ class WorkerWidget_ITG(QWidget):
         config_row.addWidget(self.test_comfy_btn)
         config_row.addWidget(QLabel("Vision:"))
         self.vision_model = QComboBox()
-        self.vision_model.addItems(["qwen3-vl:32b", "qwen3-vl:8b", "qwen3-vl:4b"])
+        self.vision_model.setEditable(True)
+        self._populate_vision_models()
         config_row.addWidget(self.vision_model)
         config_row.addStretch()
         self.poll_toggle = QPushButton("Start Polling")
@@ -2016,6 +2037,10 @@ class WorkerWidget_ITG(QWidget):
         self.split_result = None
         self._children_timer = QTimer()
         self._watching_children = False
+
+    def _populate_vision_models(self):
+        self.vision_model.clear()
+        self.vision_model.addItems(_get_ollama_vision_models())
 
     def get_server(self):
         return self._mw.get_server()
