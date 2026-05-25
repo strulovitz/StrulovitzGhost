@@ -1510,7 +1510,10 @@ class BossWidget_ITG(QWidget):
     def _boss_poll(self):
         if self._boss_state == "processing_root" and self.split_thread is not None:
             return  # split already running
-        if self._boss_state in ("processing_root", "waiting_children", "combining"):
+        if self._boss_state == "waiting_children":
+            self._check_children_completion()
+            return
+        if self._boss_state in ("processing_root", "combining"):
             return  # already working on a question
 
         try:
@@ -1523,6 +1526,22 @@ class BossWidget_ITG(QWidget):
                     return
         except Exception as e:
             self.status_label.setText(f"Poll error: {e}")
+
+    def _check_children_completion(self):
+        if not self.root_task:
+            return
+        try:
+            r = requests.get(f"{self.get_server()}/api/tasks?parent_task_id={self.root_task['id']}", timeout=10)
+            if r.ok:
+                tasks = r.json()
+                if tasks and all(t.get("status") == "completed" for t in tasks):
+                    requests.post(f"{self.get_server()}/api/task/{self.root_task['id']}/result",
+                                  data={}, timeout=10)
+                    self.status_label.setText("All children complete — arranging Z-order...")
+                    self.combine_btn.setEnabled(True)
+                    self.arrange_zorder()
+        except Exception as e:
+            self.status_label.setText(f"Children check error: {e}")
 
     def _start_root_split(self, q):
         self._boss_state = "processing_root"
@@ -1640,15 +1659,15 @@ class BossWidget_ITG(QWidget):
                 except Exception as e:
                     self.status_label.setText(f"Children error: {e}")
 
-            # Mark root task complete
+            # Save split metadata (via PUT, NOT complete — wait for children)
             split_data = {}
             if len(result.uploaded_filenames) >= 1:
                 split_data["split_result_1"] = result.uploaded_filenames[0]
             if len(result.uploaded_filenames) >= 2:
                 split_data["split_result_2"] = result.uploaded_filenames[1]
             try:
-                requests.post(f"{self.get_server()}/api/task/{self.root_task['id']}/result",
-                              data=split_data, timeout=10)
+                requests.put(f"{self.get_server()}/api/task/{self.root_task['id']}",
+                             json=split_data, timeout=10)
             except Exception:
                 pass
 
@@ -1995,6 +2014,8 @@ class WorkerWidget_ITG(QWidget):
         self.active_task = None
         self.split_thread = None
         self.split_result = None
+        self._children_timer = QTimer()
+        self._watching_children = False
 
     def get_server(self):
         return self._mw.get_server()
@@ -2133,7 +2154,7 @@ class WorkerWidget_ITG(QWidget):
 
         try:
             if result.finish_type == "final" or depth >= max_depth:
-                # Upload final result PNGs
+                # LEAF — upload final images and complete immediately
                 files = []
                 for fn in result.uploaded_filenames:
                     fp = os.path.join(self.split_thread.output_dir, fn) if self.split_thread else None
@@ -2144,7 +2165,17 @@ class WorkerWidget_ITG(QWidget):
                                       files=files, timeout=30)
                     if r.ok:
                         self.status_label.setText("Final results uploaded!")
+                self._finish_task()
             else:
+                # NON-LEAF — save metadata, create children, wait for children
+                split_data = {}
+                if len(result.uploaded_filenames) >= 1:
+                    split_data["split_result_1"] = result.uploaded_filenames[0]
+                if len(result.uploaded_filenames) >= 2:
+                    split_data["split_result_2"] = result.uploaded_filenames[1]
+                requests.put(f"{self.get_server()}/api/task/{self.active_task['id']}",
+                             json=split_data, timeout=10)
+
                 # Create child tasks
                 child_tasks = []
                 for i, (fn, judgment) in enumerate(zip(result.uploaded_filenames, result.judgments)):
@@ -2162,31 +2193,59 @@ class WorkerWidget_ITG(QWidget):
                     r = requests.post(f"{self.get_server()}/api/tasks/batch",
                                       json={"tasks": child_tasks}, timeout=10)
                     if r.ok:
-                        self.status_label.setText(f"Created {len(child_tasks)} child tasks!")
+                        self.status_label.setText(f"Created {len(child_tasks)} children — watching...")
 
-            # Mark current task complete with split results
-            split_data = {}
-            if len(result.uploaded_filenames) >= 1:
-                split_data["split_result_1"] = result.uploaded_filenames[0]
-            if len(result.uploaded_filenames) >= 2:
-                split_data["split_result_2"] = result.uploaded_filenames[1]
-            requests.post(f"{self.get_server()}/api/task/{self.active_task['id']}/result",
-                          data=split_data, timeout=10)
-
-            self.status_label.setText("Uploaded! Ready for next task.")
+                # Start watching children (do NOT mark self complete yet)
+                self._start_watching_children()
 
         except Exception as e:
             self.status_label.setText(f"Upload error: {e}")
 
+    def _finish_task(self):
         self.active_task = None
         self.split_result = None
         self.split_btn.setEnabled(False)
         self.upload_btn.setEnabled(False)
         self.image_preview.setVisible(False)
         self.active_task_label.setPlainText("No active task")
-
         if self.auto_process_cb.isChecked():
             self.poll_tasks()
+
+    def _start_watching_children(self):
+        self._watching_children = True
+        try:
+            self._children_timer.timeout.disconnect()
+        except TypeError:
+            pass
+        self._children_timer.timeout.connect(self._check_children)
+        self._children_timer.start(5000)
+        self.split_btn.setEnabled(False)
+        self.upload_btn.setEnabled(False)
+
+    def _check_children(self):
+        if not self.active_task:
+            self._finish_watching()
+            return
+        try:
+            r = requests.get(f"{self.get_server()}/api/tasks?parent_task_id={self.active_task['id']}", timeout=10)
+            if r.ok:
+                tasks = r.json()
+                if tasks and all(t.get("status") == "completed" for t in tasks):
+                    requests.post(f"{self.get_server()}/api/task/{self.active_task['id']}/result",
+                                  data={}, timeout=10)
+                    self.status_label.setText("Children complete — task done!")
+                    self._finish_watching()
+        except Exception:
+            pass
+
+    def _finish_watching(self):
+        self._watching_children = False
+        try:
+            self._children_timer.stop()
+            self._children_timer.timeout.disconnect()
+        except TypeError:
+            pass
+        self._finish_task()
 
 
 # ─── Main Window with Tabs ──────────────────────────────────────────────
