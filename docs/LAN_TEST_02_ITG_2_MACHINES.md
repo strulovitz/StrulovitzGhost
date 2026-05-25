@@ -97,6 +97,8 @@ End-to-end distributed Image To Ghost pipeline across 2 machines over LAN, using
 ## 🖼️ The Test Image
 
 **Eagle Nebula (M16 — Hubble photo)** — Known from previous testing to produce good decomposition.
+
+**Image handling:** Any resolution, any aspect ratio. The splitter auto-resizes to 640×640 square with transparent padding (`img.thumbnail((640,640))` + square canvas). No manual resizing needed — users can upload any PNG/JPG/WebP. ✅
 Has clear depth planes: foreground stars, midground gas clouds, distant space background.
 
 **Source:** `C:\Users\nir_s\StrulovitzGhost\src\output\comfy_eagle_00001_.png` (or similar)
