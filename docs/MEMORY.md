@@ -7,6 +7,64 @@ Preserved context, decisions, and direction.
 ---
 
 
+## 🌐 NEW PROJECT — peaktogether.me Website (June 7, 2026)
+
+### Repo & Domain
+- **GitHub:** https://github.com/strulovitz/peaktogether-website
+- **Domain:** peaktogether.me (DreamHost, uploaded via SFTP/FileZilla)
+- **Local folder:** `C:\Users\nir_s\peaktogether-website`
+- **Style:** Warm cream `#FFF7EA`, rounded friendly fonts (Nunito + Inter), Pixar/Disney-cute aesthetic
+
+### Color Palette (from ChatGPT)
+| Purpose | Color | Hex |
+|---------|-------|-----|
+| Deep mountain blue | `#234E70` |
+| Sunrise orange | `#FFB86B` |
+| Soft lavender | `#B8A7FF` |
+| Mint green | `#8FE3C2` |
+| Warm cream background | `#FFF7EA` |
+| Dark readable text | `#1F2933` |
+| Soft pink accent | `#FF9BB3` |
+
+### Architecture Decisions
+1. **Reusable header/footer via JS components** — `header.html`, `footer.html` loaded by `components.js` into `<div data-component="...">` placeholders on every page. One change updates all pages.
+2. **Dropdown menu with sub-menus** — Desktop: hover dropdowns. Mobile: hamburger with slide-out panel + accordion submenus.
+3. **Directory URLs work** — Every folder has `index.html`, `.htaccess` ensures `/folder/` (with trailing slash) serves correctly.
+4. **Content structure** — Mountains (like "Everest: Riemann Hypothesis") → Paths → Base Camps (future). Subjects: Mathematics, Physics, Chemistry, Biology (latter 3 marked "soon").
+
+### Images (from Grok via OpenArt)
+Stored in `images/` folder (also in GitHub):
+- `Main-Hero-Image.png` — shy boy + curious girl at glowing math mountain
+- `Secondary-Illustration.png` — warm couple-illustration
+- `Card-1-Choose-Your-Mountain.png`
+- `Card-2-Set-Up-Base-Camp.png`
+- `Card-3-Climb-Together.png`
+
+### Riemann Hypothesis Mountain (Everest)
+9 paths created as folders with placeholder pages:
+1. Classical & Modern Analytic Number Theory
+2. Hilbert–Pólya: Spectral Theory & Operator Approaches
+3. Quantum Chaos, Random Matrices & Physics Connections
+4. Algebraic Geometry & Selberg Zeta Analogies
+5. Explicit Formulae & Weil's Criteria
+6. Strengthening of Partial Results (Density, Levinson, etc.)
+7. Generalized RH: Dirichlet & Broader L-functions
+8. Terence Tao's 2022 Entropy-Based Heuristic
+9. Ramanujan's Path
+
+Each path will get "base camps" (sub-folders) — content TBD by Nir.
+
+### Text Content (from Grok)
+- Homepage hero: "Let's climb the hardest mountains in science... together with me."
+- Flirty tagline: "Because the brain is the largest sexual organ… and brainy is incredibly sexy."
+- "Intellectual foreplay that actually feels good for the brain."
+
+### Git Commits
+1. `88500d5` — Initial website: homepage with hero, what-is, 3-step cards
+2. `4d052ce` — Reusable header/footer, hamburger menu, dropdowns, Riemann Hypothesis mountain with 9 paths
+
+---
+
 ## 🔴 SESSION LOG — May 25, 2026 (LAPTOP AI — Nir's Laptop) — Session #3 🧪
 
 ### ⛔ RULE LEARNED: MODELS NEVER RUN CONCURRENTLY ON THE SAME GPU.
